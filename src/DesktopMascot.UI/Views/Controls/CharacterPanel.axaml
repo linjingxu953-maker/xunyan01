@@ -1,0 +1,152 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DesktopMascot.UI.ViewModels"
+             x:Class="DesktopMascot.UI.Views.Controls.CharacterPanel"
+             x:DataType="vm:FloatingWindowViewModel">
+    <Border Classes="toolCard">
+        <StackPanel Spacing="12">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel>
+                    <TextBlock Text="角色定制"
+                               Classes="panelTitle"/>
+                    <TextBlock Text="{Binding CharacterSaveStatus}"
+                               Classes="captionText"/>
+                </StackPanel>
+                <Border Grid.Column="1"
+                        Width="42"
+                        Height="42"
+                        Background="{Binding MascotBackgroundBrush}"
+                        BorderBrush="{Binding StateAccentBrush}"
+                        BorderThickness="2"
+                        ClipToBounds="True"
+                        CornerRadius="21">
+                    <Grid>
+                        <Image Source="{Binding CharacterImageSource}"
+                               Stretch="Uniform"
+                               IsVisible="{Binding HasCharacterImage}"/>
+                        <TextBlock Text="{Binding CharacterAvatarText}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Foreground="{Binding StateAccentBrush}"
+                                   FontWeight="Bold"
+                                   FontSize="15"
+                                   TextAlignment="Center"
+                                   IsVisible="{Binding HasNoCharacterImage}"/>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <Grid ColumnDefinitions="*,*"
+                  RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                  ColumnSpacing="8"
+                  RowSpacing="8">
+                <TextBox Grid.Row="0"
+                         Grid.Column="0"
+                         Classes="formInput"
+                         PlaceholderText="角色名"
+                         Text="{Binding CharacterName}"
+                         MaxLength="12"/>
+                <TextBox Grid.Row="0"
+                         Grid.Column="1"
+                         Classes="formInput"
+                         PlaceholderText="头像文字"
+                         Text="{Binding CharacterAvatarText}"
+                         MaxLength="4"/>
+                <TextBox Grid.Row="1"
+                         Grid.ColumnSpan="2"
+                         Classes="formInput"
+                         PlaceholderText="角色定位"
+                         Text="{Binding CharacterRole}"
+                         MaxLength="24"/>
+                <TextBox Grid.Row="2"
+                         Grid.Column="0"
+                         Classes="formInput"
+                         PlaceholderText="气质"
+                         Text="{Binding CharacterPersonality}"
+                         MaxLength="12"/>
+                <TextBox Grid.Row="2"
+                         Grid.Column="1"
+                         Classes="formInput"
+                         PlaceholderText="口头禅"
+                         Text="{Binding CharacterCatchphrase}"
+                         MaxLength="40"/>
+                <TextBox Grid.Row="3"
+                         Grid.ColumnSpan="2"
+                         Classes="formInput"
+                         PlaceholderText="图片目录，例如 assets/characters/default"
+                         Text="{Binding CharacterImageFolder}"
+                         MaxLength="160"/>
+                <TextBox Grid.Row="4"
+                         Grid.Column="0"
+                         Classes="formInput"
+                         PlaceholderText="头像文件"
+                         Text="{Binding CharacterAvatarImage}"
+                         MaxLength="80"/>
+                <TextBlock Grid.Row="4"
+                           Grid.Column="1"
+                           Text="{Binding CharacterImageStatus}"
+                           Classes="captionText"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Center"/>
+            </Grid>
+
+            <StackPanel Spacing="7">
+                <TextBlock Text="预设"
+                           Classes="sectionTitle"/>
+                <WrapPanel>
+                    <Button Content="默认"
+                            Command="{Binding UseCharacterPresetCommand}"
+                            CommandParameter="default"
+                            Margin="0,0,6,6"
+                            Padding="10,5"/>
+                    <Button Content="开发伙伴"
+                            Command="{Binding UseCharacterPresetCommand}"
+                            CommandParameter="developer"
+                            Margin="0,0,6,6"
+                            Padding="10,5"/>
+                    <Button Content="任务管家"
+                            Command="{Binding UseCharacterPresetCommand}"
+                            CommandParameter="operator"
+                            Margin="0,0,6,6"
+                            Padding="10,5"/>
+                    <Button Content="阅读研究"
+                            Command="{Binding UseCharacterPresetCommand}"
+                            CommandParameter="study"
+                            Margin="0,0,6,6"
+                            Padding="10,5"/>
+                </WrapPanel>
+            </StackPanel>
+
+            <StackPanel Spacing="7">
+                <TextBlock Text="主题色"
+                           Classes="sectionTitle"/>
+                <WrapPanel>
+                    <Button Width="28" Height="28" Margin="0,0,8,0" Background="#2563EB"
+                            Command="{Binding ChooseAccentColorCommand}" CommandParameter="#2563EB"/>
+                    <Button Width="28" Height="28" Margin="0,0,8,0" Background="#0F766E"
+                            Command="{Binding ChooseAccentColorCommand}" CommandParameter="#0F766E"/>
+                    <Button Width="28" Height="28" Margin="0,0,8,0" Background="#7C3AED"
+                            Command="{Binding ChooseAccentColorCommand}" CommandParameter="#7C3AED"/>
+                    <Button Width="28" Height="28" Margin="0,0,8,0" Background="#C026D3"
+                            Command="{Binding ChooseAccentColorCommand}" CommandParameter="#C026D3"/>
+                    <Button Width="28" Height="28" Margin="0,0,8,0" Background="#7C2D12"
+                            Command="{Binding ChooseAccentColorCommand}" CommandParameter="#7C2D12"/>
+                    <Button Width="28" Height="28" Background="#DC2626"
+                            Command="{Binding ChooseAccentColorCommand}" CommandParameter="#DC2626"/>
+                </WrapPanel>
+            </StackPanel>
+
+            <Grid ColumnDefinitions="*,Auto">
+                <Button Content="恢复默认"
+                        Command="{Binding ResetCharacterCommand}"
+                        Padding="10,6"/>
+                <Button Grid.Column="1"
+                        Content="保存角色"
+                        Classes="primaryAction"
+                        Command="{Binding SaveCharacterCommand}"
+                        Background="{Binding StateAccentBrush}"
+                        Padding="12,6"/>
+            </Grid>
+        </StackPanel>
+    </Border>
+</UserControl>

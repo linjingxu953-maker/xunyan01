@@ -1,0 +1,53 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DesktopMascot.UI.ViewModels"
+        xmlns:controls="using:DesktopMascot.UI.Views.Controls"
+        x:Class="DesktopMascot.UI.Views.FloatingWindow"
+        x:DataType="vm:FloatingWindowViewModel"
+        Title="DesktopMascot"
+        Width="240" Height="340"
+        WindowStartupLocation="Manual"
+        Position="100,100"
+        Background="Transparent"
+        Topmost="True"
+        WindowDecorations="None"
+        TransparencyLevelHint="AcrylicBlur"
+        CanResize="False"
+        ShowInTaskbar="False"
+        ClipToBounds="False">
+
+    <Grid ClipToBounds="False">
+        <Border Classes="floatingShell"
+                IsHitTestVisible="{Binding IsMainAreaHitTestVisible}">
+            <Grid RowDefinitions="34,*">
+                <Border Grid.Row="0"
+                        Classes="windowTitleBar"
+                        PointerPressed="TitleBar_PointerPressed">
+                    <Grid ColumnDefinitions="*,Auto,Auto" Margin="12,0,8,0">
+                        <StackPanel VerticalAlignment="Center" IsHitTestVisible="False">
+                            <TextBlock Text="{Binding CharacterName}"
+                                       Classes="titleText"/>
+                            <TextBlock Text="{Binding CharacterRole}"
+                                       Classes="subtitleText"/>
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Classes="iconButton"
+                                Command="{Binding HideWindowCommand}"
+                                Content="-"
+                                Margin="0,0,4,0"/>
+                        <Button Grid.Column="2"
+                                Classes="iconButton"
+                                Command="{Binding ExitCommand}"
+                                Content="X"/>
+                    </Grid>
+                </Border>
+
+                <controls:MascotView Grid.Row="1"/>
+            </Grid>
+        </Border>
+
+        <controls:ChatPanel x:Name="ChatPanel"
+                            IsVisible="{Binding IsChatVisible}"
+                            IsHitTestVisible="{Binding IsChatPanelHitTestVisible}"/>
+    </Grid>
+</Window>

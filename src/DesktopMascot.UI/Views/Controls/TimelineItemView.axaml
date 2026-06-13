@@ -1,0 +1,53 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DesktopMascot.UI.ViewModels"
+             x:Class="DesktopMascot.UI.Views.Controls.TimelineItemView"
+             x:DataType="vm:TaskTimelineItem">
+    <Grid ColumnDefinitions="48,*"
+          Margin="0,0,0,8">
+        <Border Width="42"
+                Height="22"
+                Background="{StaticResource Brush.Info.Surface}"
+                CornerRadius="11"
+                VerticalAlignment="Top"
+                IsVisible="{Binding IsNotCurrent}">
+            <TextBlock Text="{Binding MarkerText}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       FontSize="10"
+                       Foreground="{StaticResource Brush.Info.Text}"/>
+        </Border>
+        <Border Width="42"
+                Height="22"
+                Background="{StaticResource Brush.Success.Surface}"
+                CornerRadius="11"
+                VerticalAlignment="Top"
+                IsVisible="{Binding IsCurrent}">
+            <TextBlock Text="当前"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       FontSize="10"
+                       FontWeight="SemiBold"
+                       Foreground="{StaticResource Brush.Success.Text}"/>
+        </Border>
+        <Border Grid.Column="1"
+                BorderBrush="{StaticResource Brush.Border.Subtle}"
+                BorderThickness="0,0,0,1"
+                Padding="0,0,0,8">
+            <Grid RowDefinitions="Auto,Auto"
+                  ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding StateText}"
+                           Foreground="{StaticResource Brush.Text.Primary}"
+                           FontSize="12"
+                           FontWeight="SemiBold"/>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding ProgressText}"
+                           Classes="captionText"/>
+                <TextBlock Grid.Row="1"
+                           Grid.ColumnSpan="2"
+                           Text="{Binding Message}"
+                           Classes="bodyText"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,174 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Styles.Resources>
+        <SolidColorBrush x:Key="Brush.Surface.Window" Color="#EEFFFFFF"/>
+        <SolidColorBrush x:Key="Brush.Surface.Panel" Color="#FFFFFFFF"/>
+        <SolidColorBrush x:Key="Brush.Surface.Subtle" Color="#F9FAFB"/>
+        <SolidColorBrush x:Key="Brush.Surface.Message" Color="#F2F4F7"/>
+        <SolidColorBrush x:Key="Brush.Border.Subtle" Color="#EAECF0"/>
+        <SolidColorBrush x:Key="Brush.Border.Strong" Color="#D0D5DD"/>
+        <SolidColorBrush x:Key="Brush.Border.Glass" Color="#40FFFFFF"/>
+        <SolidColorBrush x:Key="Brush.Text.Primary" Color="#101828"/>
+        <SolidColorBrush x:Key="Brush.Text.Secondary" Color="#344054"/>
+        <SolidColorBrush x:Key="Brush.Text.Muted" Color="#667085"/>
+        <SolidColorBrush x:Key="Brush.Text.Body" Color="#475467"/>
+        <SolidColorBrush x:Key="Brush.White" Color="#FFFFFFFF"/>
+        <SolidColorBrush x:Key="Brush.White.Subtle" Color="#DDFFFFFF"/>
+        <SolidColorBrush x:Key="Brush.White.Action" Color="#22FFFFFF"/>
+        <SolidColorBrush x:Key="Brush.White.Border" Color="#44FFFFFF"/>
+        <SolidColorBrush x:Key="Brush.Info.Surface" Color="#EFF8FF"/>
+        <SolidColorBrush x:Key="Brush.Info.Text" Color="#175CD3"/>
+        <SolidColorBrush x:Key="Brush.Warning.Surface" Color="#FFFBEB"/>
+        <SolidColorBrush x:Key="Brush.Warning.Border" Color="#FEDF89"/>
+        <SolidColorBrush x:Key="Brush.Warning.Text" Color="#B54708"/>
+        <SolidColorBrush x:Key="Brush.Success.Surface" Color="#F0FDF4"/>
+        <SolidColorBrush x:Key="Brush.Success.Text" Color="#15803D"/>
+
+        <CornerRadius x:Key="Radius.Window">18</CornerRadius>
+        <CornerRadius x:Key="Radius.Panel">14</CornerRadius>
+        <CornerRadius x:Key="Radius.Card">10</CornerRadius>
+        <CornerRadius x:Key="Radius.Control">8</CornerRadius>
+        <CornerRadius x:Key="Radius.Badge">9</CornerRadius>
+
+        <Thickness x:Key="Space.WindowOuter">12</Thickness>
+        <Thickness x:Key="Space.PanelPadding">14</Thickness>
+        <Thickness x:Key="Space.CardPadding">12</Thickness>
+        <Thickness x:Key="Space.InputPadding">10</Thickness>
+    </Styles.Resources>
+
+    <Style Selector="Border.floatingShell">
+        <Setter Property="CornerRadius" Value="{StaticResource Radius.Window}"/>
+        <Setter Property="Background" Value="{StaticResource Brush.Surface.Window}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.Border.Glass}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Margin" Value="{StaticResource Space.WindowOuter}"/>
+        <Setter Property="BoxShadow" Value="0 12 28 0 #24000000"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+    </Style>
+
+    <Style Selector="Border.chatShell">
+        <Setter Property="CornerRadius" Value="{StaticResource Radius.Panel}"/>
+        <Setter Property="Background" Value="{StaticResource Brush.Surface.Panel}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BoxShadow" Value="0 16 38 0 #28000000"/>
+    </Style>
+
+    <Style Selector="Border.toolCard">
+        <Setter Property="Background" Value="{StaticResource Brush.Surface.Subtle}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Radius.Card}"/>
+        <Setter Property="Padding" Value="{StaticResource Space.CardPadding}"/>
+    </Style>
+
+    <Style Selector="Border.inlineCard">
+        <Setter Property="Background" Value="{StaticResource Brush.Surface.Panel}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Radius.Control}"/>
+        <Setter Property="Padding" Value="10"/>
+    </Style>
+
+    <Style Selector="Border.confirmationCard">
+        <Setter Property="Background" Value="{StaticResource Brush.Warning.Surface}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.Warning.Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Radius.Control}"/>
+        <Setter Property="Padding" Value="10"/>
+    </Style>
+
+    <Style Selector="Border.windowTitleBar">
+        <Setter Property="Background" Value="#08FFFFFF"/>
+    </Style>
+
+    <Style Selector="TextBlock.titleText">
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Secondary}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="TextBlock.subtitleText">
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Muted}"/>
+        <Setter Property="FontSize" Value="9"/>
+    </Style>
+
+    <Style Selector="TextBlock.panelTitle">
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Primary}"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="TextBlock.sectionTitle">
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Secondary}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="TextBlock.bodyText">
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Body}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <Style Selector="TextBlock.captionText">
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Muted}"/>
+        <Setter Property="FontSize" Value="11"/>
+    </Style>
+
+    <Style Selector="Button.iconButton">
+        <Setter Property="Width" Value="26"/>
+        <Setter Property="Height" Value="24"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Muted}"/>
+    </Style>
+
+    <Style Selector="Button.headerAction">
+        <Setter Property="Padding" Value="10,4"/>
+        <Setter Property="Background" Value="{StaticResource Brush.White.Action}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.White.Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.White}"/>
+    </Style>
+
+    <Style Selector="Button.primaryAction">
+        <Setter Property="Foreground" Value="{StaticResource Brush.White}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Radius.Control}"/>
+    </Style>
+
+    <Style Selector="Button.secondaryAction">
+        <Setter Property="CornerRadius" Value="{StaticResource Radius.Control}"/>
+        <Setter Property="Padding" Value="10,6"/>
+    </Style>
+
+    <Style Selector="Button.settingsNavButton">
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="Padding" Value="12,9"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Radius.Control}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Secondary}"/>
+    </Style>
+
+    <Style Selector="Button.mascotButton">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Padding" Value="0"/>
+    </Style>
+
+    <Style Selector="TextBox.formInput">
+        <Setter Property="CornerRadius" Value="{StaticResource Radius.Control}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.Border.Strong}"/>
+    </Style>
+
+    <Style Selector="ProgressBar.compactProgress">
+        <Setter Property="Minimum" Value="0"/>
+        <Setter Property="Maximum" Value="100"/>
+        <Setter Property="Height" Value="6"/>
+    </Style>
+</Styles>

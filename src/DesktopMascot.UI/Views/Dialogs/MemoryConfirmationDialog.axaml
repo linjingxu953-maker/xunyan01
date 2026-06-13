@@ -1,0 +1,131 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DesktopMascot.UI.ViewModels"
+        x:Class="DesktopMascot.UI.Views.Dialogs.MemoryConfirmationDialog"
+        x:DataType="vm:MemoryConfirmationDialogViewModel"
+        Title="{Binding Title}"
+        Width="540"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Topmost="True">
+    <Border Background="{StaticResource Brush.Surface.Panel}"
+            Padding="18">
+        <StackPanel Spacing="14">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="3">
+                    <TextBlock Text="{Binding Title}"
+                               Foreground="{StaticResource Brush.Text.Primary}"
+                               FontSize="18"
+                               FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding Subtitle}"
+                               Classes="bodyText"
+                               MaxWidth="420"/>
+                </StackPanel>
+                <Border Grid.Column="1"
+                        Background="{StaticResource Brush.Info.Surface}"
+                        CornerRadius="12"
+                        Padding="9,4"
+                        VerticalAlignment="Top">
+                    <TextBlock Text="记忆确认"
+                               Foreground="{StaticResource Brush.Info.Text}"
+                               FontSize="11"
+                               FontWeight="SemiBold"/>
+                </Border>
+            </Grid>
+
+            <Border Classes="inlineCard">
+                <Grid ColumnDefinitions="110,*"
+                      RowDefinitions="Auto,Auto,Auto,Auto"
+                      RowSpacing="8"
+                      ColumnSpacing="12">
+                    <TextBlock Text="类型"
+                               Classes="captionText"/>
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding MemoryTypeText}"
+                               Classes="sectionTitle"/>
+
+                    <TextBlock Grid.Row="1"
+                               Text="来源"
+                               Classes="captionText"/>
+                    <TextBlock Grid.Row="1"
+                               Grid.Column="1"
+                               Text="{Binding SourceText}"
+                               Classes="bodyText"/>
+
+                    <TextBlock Grid.Row="2"
+                               Text="请求时间"
+                               Classes="captionText"/>
+                    <TextBlock Grid.Row="2"
+                               Grid.Column="1"
+                               Text="{Binding RequestedAtText}"
+                               Classes="bodyText"/>
+
+                    <TextBlock Grid.Row="3"
+                               Text="建议原因"
+                               Classes="captionText"/>
+                    <TextBlock Grid.Row="3"
+                               Grid.Column="1"
+                               Text="{Binding ReasonText}"
+                               Classes="bodyText"/>
+                </Grid>
+            </Border>
+
+            <Border Classes="confirmationCard">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="将保存的内容"
+                               Classes="sectionTitle"/>
+                    <TextBox Text="{Binding ContentDraft}"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             MinHeight="110"
+                             MaxHeight="180"
+                             BorderBrush="{StaticResource Brush.Warning.Border}"
+                             Background="{StaticResource Brush.Surface.Panel}"
+                             Foreground="{StaticResource Brush.Text.Primary}"/>
+                    <TextBlock Text="保存前可以直接编辑内容。"
+                               Classes="captionText"/>
+                </StackPanel>
+            </Border>
+
+            <ItemsControl ItemsSource="{Binding MetadataItems}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ConfirmationDetailItem">
+                        <Grid ColumnDefinitions="96,*"
+                              Margin="0,0,0,6">
+                            <TextBlock Text="{Binding Label}"
+                                       Classes="captionText"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Value}"
+                                       Foreground="{StaticResource Brush.Text.Body}"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"/>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto"
+                  ColumnSpacing="8">
+                <TextBlock Text="{Binding StatusText}"
+                           Classes="captionText"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"/>
+                <Button Grid.Column="1"
+                        Content="不保存"
+                        Classes="secondaryAction"
+                        Command="{Binding RejectCommand}"/>
+                <Button Grid.Column="2"
+                        Content="仅本次有效"
+                        Classes="secondaryAction"
+                        Command="{Binding TempOnlyCommand}"/>
+                <Button Grid.Column="3"
+                        Content="保存记忆"
+                        Classes="primaryAction"
+                        Command="{Binding SaveCommand}"
+                        Background="{StaticResource Brush.Info.Text}"
+                        Padding="14,7"/>
+            </Grid>
+        </StackPanel>
+    </Border>
+</Window>

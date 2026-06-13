@@ -1,0 +1,79 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DesktopMascot.UI.ViewModels"
+             x:Class="DesktopMascot.UI.Views.Controls.MascotView"
+             x:DataType="vm:FloatingWindowViewModel">
+    <Grid RowDefinitions="*,Auto">
+        <Button Grid.Row="0"
+                Classes="mascotButton"
+                Command="{Binding ToggleChatCommand}">
+            <Grid>
+                <Ellipse Width="116"
+                         Height="116"
+                         Fill="{Binding MascotBackgroundBrush}"
+                         Stroke="{Binding StateAccentBrush}"
+                         StrokeThickness="3"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"/>
+                <Ellipse Width="86"
+                         Height="86"
+                         Fill="{StaticResource Brush.White}"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"/>
+                <Border Width="94"
+                        Height="94"
+                        ClipToBounds="True"
+                        CornerRadius="47"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        IsVisible="{Binding HasCharacterImage}">
+                    <Image Source="{Binding CharacterImageSource}"
+                           Stretch="Uniform"/>
+                </Border>
+                <TextBlock Text="{Binding CharacterAvatarText}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           FontSize="32"
+                           FontWeight="Bold"
+                           Foreground="{Binding StateAccentBrush}"
+                           MaxWidth="72"
+                           TextAlignment="Center"
+                           IsVisible="{Binding HasNoCharacterImage}"
+                           IsHitTestVisible="False"/>
+                <Border Background="{Binding StateAccentBrush}"
+                        CornerRadius="10"
+                        Padding="8,3"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,0,22"
+                        IsHitTestVisible="False">
+                    <TextBlock Text="{Binding StateHint}"
+                               FontSize="11"
+                               Foreground="{StaticResource Brush.White}"
+                               FontWeight="SemiBold"/>
+                </Border>
+            </Grid>
+        </Button>
+
+        <StackPanel Grid.Row="1"
+                    Margin="14,0,14,14"
+                    Spacing="8">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding CurrentStateText}"
+                           Foreground="{StaticResource Brush.Text.Primary}"
+                           FontSize="15"
+                           FontWeight="SemiBold"/>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding CharacterPersonality}"
+                           Classes="captionText"
+                           VerticalAlignment="Center"/>
+            </Grid>
+            <TextBlock Text="{Binding StatusMessage}"
+                       Classes="bodyText"
+                       MaxLines="2"/>
+            <ProgressBar Classes="compactProgress"
+                         Value="{Binding CurrentProgress}"
+                         Height="5"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

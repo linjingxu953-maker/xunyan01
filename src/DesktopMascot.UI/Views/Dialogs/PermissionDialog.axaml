@@ -1,0 +1,114 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DesktopMascot.UI.ViewModels"
+        x:Class="DesktopMascot.UI.Views.Dialogs.PermissionDialog"
+        x:DataType="vm:PermissionDialogViewModel"
+        Title="{Binding Title}"
+        Width="480"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Topmost="True">
+    <Border Background="{StaticResource Brush.Surface.Panel}"
+            Padding="18">
+        <StackPanel Spacing="14">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="3">
+                    <TextBlock Text="{Binding Title}"
+                               Foreground="{StaticResource Brush.Text.Primary}"
+                               FontSize="18"
+                               FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding Subtitle}"
+                               Classes="bodyText"
+                               MaxWidth="390"/>
+                </StackPanel>
+                <Border Grid.Column="1"
+                        Background="{StaticResource Brush.Warning.Surface}"
+                        BorderBrush="{StaticResource Brush.Warning.Border}"
+                        BorderThickness="1"
+                        CornerRadius="12"
+                        Padding="9,4"
+                        VerticalAlignment="Top">
+                    <TextBlock Text="{Binding CategoryText}"
+                               Foreground="{StaticResource Brush.Warning.Text}"
+                               FontSize="11"
+                               FontWeight="SemiBold"/>
+                </Border>
+            </Grid>
+
+            <Border Classes="confirmationCard">
+                <Grid RowDefinitions="Auto,Auto"
+                      ColumnDefinitions="*,Auto">
+                    <StackPanel>
+                        <TextBlock Text="{Binding TargetLabel}"
+                                   Classes="sectionTitle"/>
+                        <TextBlock Text="{Binding TargetText}"
+                                   Foreground="{StaticResource Brush.Text.Primary}"
+                                   FontSize="13"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <Border Grid.Column="1"
+                            Background="{StaticResource Brush.Surface.Panel}"
+                            CornerRadius="10"
+                            Padding="8,3"
+                            VerticalAlignment="Top">
+                        <TextBlock Text="{Binding RiskText}"
+                                   Foreground="{StaticResource Brush.Warning.Text}"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"/>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <Border Classes="inlineCard">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="{Binding PreviewTitle}"
+                               Classes="sectionTitle"/>
+                    <TextBox Text="{Binding PreviewText}"
+                             IsReadOnly="True"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             MaxHeight="140"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             Foreground="{StaticResource Brush.Text.Primary}"/>
+                </StackPanel>
+            </Border>
+
+            <ItemsControl ItemsSource="{Binding Details}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ConfirmationDetailItem">
+                        <Grid ColumnDefinitions="96,*"
+                              Margin="0,0,0,6">
+                            <TextBlock Text="{Binding Label}"
+                                       Classes="captionText"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Value}"
+                                       Foreground="{StaticResource Brush.Text.Body}"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"/>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                <Button Content="拒绝"
+                        Classes="secondaryAction"
+                        Command="{Binding DenyCommand}"/>
+                <Button Grid.Column="2"
+                        Content="始终允许"
+                        Classes="secondaryAction"
+                        Command="{Binding AllowAlwaysCommand}"
+                        IsVisible="{Binding ShowAllowAlways}"
+                        Margin="0,0,8,0"/>
+                <Button Grid.Column="3"
+                        Content="{Binding PrimaryActionText}"
+                        Classes="primaryAction"
+                        Command="{Binding AllowOnceCommand}"
+                        Background="{StaticResource Brush.Warning.Text}"
+                        Padding="14,7"/>
+            </Grid>
+        </StackPanel>
+    </Border>
+</Window>

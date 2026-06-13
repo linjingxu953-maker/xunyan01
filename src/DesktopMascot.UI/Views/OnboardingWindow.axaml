@@ -1,0 +1,409 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DesktopMascot.UI.ViewModels"
+        x:Class="DesktopMascot.UI.Views.OnboardingWindow"
+        x:DataType="vm:OnboardingWindowViewModel"
+        Title="DesktopMascot 初始设置"
+        Width="820"
+        Height="620"
+        MinWidth="720"
+        MinHeight="560"
+        WindowStartupLocation="CenterScreen">
+    <Border Background="{StaticResource Brush.Surface.Panel}">
+        <Grid ColumnDefinitions="230,*"
+              RowDefinitions="*,Auto">
+            <Border Grid.RowSpan="2"
+                    Background="{StaticResource Brush.Surface.Subtle}"
+                    BorderBrush="{StaticResource Brush.Border.Subtle}"
+                    BorderThickness="0,0,1,0"
+                    Padding="22">
+                <StackPanel Spacing="20">
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="首次启动"
+                                   Foreground="{StaticResource Brush.Text.Primary}"
+                                   FontSize="22"
+                                   FontWeight="SemiBold"/>
+                        <TextBlock Text="先完成运行模式和模型配置"
+                                   Classes="bodyText"/>
+                    </StackPanel>
+
+                    <StackPanel Spacing="10">
+                        <Border Classes="inlineCard">
+                            <Grid ColumnDefinitions="34,*">
+                                <Border Width="24"
+                                        Height="24"
+                                        Background="{StaticResource Brush.Info.Surface}"
+                                        CornerRadius="12">
+                                    <TextBlock Text="1"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="{StaticResource Brush.Info.Text}"
+                                               FontWeight="SemiBold"/>
+                                </Border>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="运行模式"
+                                               Classes="sectionTitle"/>
+                                    <TextBlock Text="{Binding ModeSummaryText}"
+                                               Classes="captionText"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="inlineCard">
+                            <Grid ColumnDefinitions="34,*">
+                                <Border Width="24"
+                                        Height="24"
+                                        Background="{StaticResource Brush.Info.Surface}"
+                                        CornerRadius="12">
+                                    <TextBlock Text="2"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="{StaticResource Brush.Info.Text}"
+                                               FontWeight="SemiBold"/>
+                                </Border>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="模型 Provider"
+                                               Classes="sectionTitle"/>
+                                    <TextBlock Text="{Binding SelectedProvider.DisplayName}"
+                                               Classes="captionText"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="inlineCard"
+                                IsVisible="{Binding NeedsMimoCodeStep}">
+                            <Grid ColumnDefinitions="34,*">
+                                <Border Width="24"
+                                        Height="24"
+                                        Background="{StaticResource Brush.Info.Surface}"
+                                        CornerRadius="12">
+                                    <TextBlock Text="3"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="{StaticResource Brush.Info.Text}"
+                                               FontWeight="SemiBold"/>
+                                </Border>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="MiMo Code"
+                                               Classes="sectionTitle"/>
+                                    <TextBlock Text="{Binding MimoCodeModelModeText}"
+                                               Classes="captionText"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="inlineCard">
+                            <Grid ColumnDefinitions="34,*">
+                                <Border Width="24"
+                                        Height="24"
+                                        Background="{StaticResource Brush.Success.Surface}"
+                                        CornerRadius="12">
+                                    <TextBlock Text="✓"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="{StaticResource Brush.Success.Text}"
+                                               FontWeight="SemiBold"/>
+                                </Border>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="进入桌面"
+                                               Classes="sectionTitle"/>
+                                    <TextBlock Text="配置会保存到本机"
+                                               Classes="captionText"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <ScrollViewer Grid.Column="1"
+                          Padding="26"
+                          VerticalScrollBarVisibility="Auto">
+                <Grid>
+                    <StackPanel Spacing="18"
+                                IsVisible="{Binding IsModeStep}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="选择运行模式"
+                                       Foreground="{StaticResource Brush.Text.Primary}"
+                                       FontSize="22"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="之后可以随时在设置中心切换。"
+                                       Classes="bodyText"/>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,*"
+                              ColumnSpacing="12">
+                            <Border Classes="toolCard">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="内置 Agent"
+                                               Classes="panelTitle"/>
+                                    <TextBlock Text="直接使用桌面小人内置 Agent，适合日常问答、上下文读取和工具调用。"
+                                               Classes="bodyText"/>
+                                    <Button Content="使用内置 Agent"
+                                            Classes="primaryAction"
+                                            Command="{Binding SelectAgentModeCommand}"
+                                            CommandParameter="BuiltIn"
+                                            Background="{StaticResource Brush.Info.Text}"
+                                            Padding="14,8"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="1"
+                                    Classes="toolCard">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="MiMo Code"
+                                               Classes="panelTitle"/>
+                                    <TextBlock Text="代码任务交给本机 MiMo Code CLI，不弹出 MiMo Code 窗口。模型仍由用户自己配置。"
+                                               Classes="bodyText"/>
+                                    <Button Content="使用 MiMo Code"
+                                            Classes="primaryAction"
+                                            Command="{Binding SelectAgentModeCommand}"
+                                            CommandParameter="MimoCode"
+                                            Background="{StaticResource Brush.Info.Text}"
+                                            Padding="14,8"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Border Classes="inlineCard">
+                            <TextBlock Text="{Binding SetupStatus}"
+                                       Classes="bodyText"/>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Spacing="18"
+                                IsVisible="{Binding IsModelStep}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="配置模型 Provider"
+                                       Foreground="{StaticResource Brush.Text.Primary}"
+                                       FontSize="22"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="应用不会内置、上传或代管 API Key。"
+                                       Classes="bodyText"/>
+                        </StackPanel>
+
+                        <Border Classes="toolCard">
+                            <StackPanel Spacing="14">
+                                <Grid ColumnDefinitions="150,*"
+                                      RowDefinitions="Auto,Auto,Auto,Auto"
+                                      ColumnSpacing="14"
+                                      RowSpacing="12">
+                                    <TextBlock Text="Provider"
+                                               Classes="sectionTitle"
+                                               VerticalAlignment="Center"/>
+                                    <ComboBox Grid.Column="1"
+                                              ItemsSource="{Binding Providers}"
+                                              SelectedItem="{Binding SelectedProvider}"
+                                              MinWidth="260"/>
+
+                                    <TextBlock Grid.Row="1"
+                                               Text="API Key"
+                                               Classes="sectionTitle"
+                                               VerticalAlignment="Center"/>
+                                    <TextBox Grid.Row="1"
+                                             Grid.Column="1"
+                                             Classes="formInput"
+                                             PasswordChar="*"
+                                             PlaceholderText="sk-..."
+                                             Text="{Binding ApiKey}"/>
+
+                                    <TextBlock Grid.Row="2"
+                                               Text="Base URL"
+                                               Classes="sectionTitle"
+                                               VerticalAlignment="Center"/>
+                                    <TextBox Grid.Row="2"
+                                             Grid.Column="1"
+                                             Classes="formInput"
+                                             Text="{Binding ApiEndpoint}"/>
+
+                                    <TextBlock Grid.Row="3"
+                                               Text="模型名"
+                                               Classes="sectionTitle"
+                                               VerticalAlignment="Center"/>
+                                    <TextBox Grid.Row="3"
+                                             Grid.Column="1"
+                                             Classes="formInput"
+                                             Text="{Binding ModelName}"/>
+                                </Grid>
+
+                                <Grid ColumnDefinitions="*,Auto,Auto">
+                                    <TextBlock Text="{Binding ModelTestStatus}"
+                                               Classes="captionText"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap"/>
+                                    <Button Grid.Column="1"
+                                            Content="填入默认"
+                                            Classes="secondaryAction"
+                                            Command="{Binding UseProviderDefaultsCommand}"
+                                            Margin="8,0,0,0"/>
+                                    <Button Grid.Column="2"
+                                            Content="测试连接"
+                                            Classes="secondaryAction"
+                                            Command="{Binding TestModelConnectionCommand}"
+                                            Margin="8,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Spacing="18"
+                                IsVisible="{Binding IsMimoCodeStep}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="检测 MiMo Code"
+                                       Foreground="{StaticResource Brush.Text.Primary}"
+                                       FontSize="22"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="只检测本机 CLI 和工作目录，不上传或内置模型 Key。"
+                                       Classes="bodyText"/>
+                        </StackPanel>
+
+                        <Border Classes="toolCard">
+                            <StackPanel Spacing="14">
+                                <Grid ColumnDefinitions="150,*"
+                                      RowDefinitions="Auto,Auto"
+                                      ColumnSpacing="14"
+                                      RowSpacing="12">
+                                    <TextBlock Text="可执行路径"
+                                               Classes="sectionTitle"
+                                               VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1"
+                                             Classes="formInput"
+                                             Text="{Binding MimoCodeExecutablePath}"
+                                             PlaceholderText="mimo"/>
+
+                                    <TextBlock Grid.Row="1"
+                                               Text="工作目录"
+                                               Classes="sectionTitle"
+                                               VerticalAlignment="Center"/>
+                                    <TextBox Grid.Row="1"
+                                             Grid.Column="1"
+                                             Classes="formInput"
+                                             Text="{Binding MimoCodeWorkspacePath}"
+                                             PlaceholderText="留空则使用当前目录"/>
+                                </Grid>
+
+                                <Border Classes="inlineCard">
+                                    <StackPanel Spacing="10">
+                                        <TextBlock Text="模型配置来源"
+                                                   Classes="sectionTitle"/>
+                                        <Grid ColumnDefinitions="*,*"
+                                              ColumnSpacing="10">
+                                            <Button Content="使用本向导 Provider/API Key"
+                                                    Classes="secondaryAction"
+                                                    Command="{Binding UseAppProviderForMimoCodeCommand}"/>
+                                            <Button Grid.Column="1"
+                                                    Content="使用 MiMo 本机配置"
+                                                    Classes="secondaryAction"
+                                                    Command="{Binding UseMimoLocalConfigCommand}"/>
+                                        </Grid>
+                                        <TextBlock Text="{Binding MimoCodeModelModeText}"
+                                                   Classes="bodyText"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="{Binding MimoCodeTestStatus}"
+                                               Classes="captionText"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap"/>
+                                    <Button Grid.Column="1"
+                                            Content="检测"
+                                            Classes="secondaryAction"
+                                            Command="{Binding TestMimoCodeCommand}"
+                                            Margin="8,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Spacing="18"
+                                IsVisible="{Binding IsReviewStep}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="确认配置"
+                                       Foreground="{StaticResource Brush.Text.Primary}"
+                                       FontSize="22"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="保存后进入桌面小人。"
+                                       Classes="bodyText"/>
+                        </StackPanel>
+
+                        <Border Classes="toolCard">
+                            <StackPanel Spacing="12">
+                                <Grid ColumnDefinitions="150,*"
+                                      RowDefinitions="Auto,Auto,Auto,Auto"
+                                      ColumnSpacing="14"
+                                      RowSpacing="10">
+                                    <TextBlock Text="运行模式"
+                                               Classes="captionText"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding ModeSummaryText}"
+                                               Classes="sectionTitle"/>
+
+                                    <TextBlock Grid.Row="1"
+                                               Text="Provider"
+                                               Classes="captionText"/>
+                                    <TextBlock Grid.Row="1"
+                                               Grid.Column="1"
+                                               Text="{Binding SelectedProvider.DisplayName}"
+                                               Classes="sectionTitle"/>
+
+                                    <TextBlock Grid.Row="2"
+                                               Text="模型"
+                                               Classes="captionText"/>
+                                    <TextBlock Grid.Row="2"
+                                               Grid.Column="1"
+                                               Text="{Binding ModelName}"
+                                               Classes="bodyText"/>
+
+                                    <TextBlock Grid.Row="3"
+                                               Text="MiMo Code"
+                                               Classes="captionText"/>
+                                    <TextBlock Grid.Row="3"
+                                               Grid.Column="1"
+                                               Text="{Binding MimoCodeModelModeText}"
+                                               Classes="bodyText"/>
+                                </Grid>
+
+                                <Border Classes="inlineCard">
+                                    <TextBlock Text="{Binding SetupStatus}"
+                                               Classes="bodyText"/>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+
+            <Border Grid.Column="1"
+                    Grid.Row="1"
+                    BorderBrush="{StaticResource Brush.Border.Subtle}"
+                    BorderThickness="0,1,0,0"
+                    Padding="18">
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                    <TextBlock Text="{Binding SetupStatus}"
+                               Classes="captionText"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap"/>
+                    <Button Grid.Column="1"
+                            Content="跳过"
+                            Classes="secondaryAction"
+                            Command="{Binding SkipSetupCommand}"
+                            Margin="8,0,0,0"/>
+                    <Button Grid.Column="2"
+                            Content="返回"
+                            Classes="secondaryAction"
+                            Command="{Binding BackCommand}"
+                            IsEnabled="{Binding CanGoBack}"
+                            Margin="8,0,0,0"/>
+                    <Button Grid.Column="3"
+                            Content="{Binding ContinueButtonText}"
+                            Classes="primaryAction"
+                            Command="{Binding ContinueCommand}"
+                            Background="{StaticResource Brush.Info.Text}"
+                            Margin="8,0,0,0"
+                            Padding="16,8"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

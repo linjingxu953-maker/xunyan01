@@ -1,0 +1,179 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DesktopMascot.UI.ViewModels"
+             xmlns:controls="using:DesktopMascot.UI.Views.Controls"
+             x:Class="DesktopMascot.UI.Views.Controls.TaskDetailPanel"
+             x:DataType="vm:FloatingWindowViewModel">
+    <Border Classes="toolCard">
+        <StackPanel Spacing="12">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel>
+                    <TextBlock Text="{Binding ActiveTaskTitle}"
+                               Classes="panelTitle"/>
+                    <TextBlock Text="{Binding ActiveTaskTypeText}"
+                               Classes="captionText"/>
+                </StackPanel>
+                <controls:StatusBadge Grid.Column="1"/>
+            </Grid>
+            <TextBlock Text="{Binding TaskSummary}"
+                       Classes="bodyText"
+                       MaxLines="3"/>
+
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel>
+                    <TextBlock Text="当前步骤"
+                               Classes="sectionTitle"/>
+                    <TextBlock Text="{Binding ActiveStepText}"
+                               Classes="bodyText"/>
+                </StackPanel>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding TaskProgressText}"
+                           Foreground="{Binding StateAccentBrush}"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+            </Grid>
+
+            <ProgressBar Classes="compactProgress"
+                         Value="{Binding CurrentProgress}"/>
+
+            <Border Classes="confirmationCard"
+                    IsVisible="{Binding IsWaitingForUserConfirmation}">
+                <StackPanel Spacing="8">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding PendingConfirmationTitle}"
+                                   Foreground="{StaticResource Brush.Warning.Text}"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"/>
+                        <Border Grid.Column="1"
+                                Background="{StaticResource Brush.Surface.Panel}"
+                                CornerRadius="8"
+                                Padding="7,2">
+                            <TextBlock Text="{Binding PendingConfirmationRiskText}"
+                                       Foreground="{StaticResource Brush.Warning.Text}"
+                                       FontSize="10"
+                                       FontWeight="SemiBold"/>
+                        </Border>
+                    </Grid>
+                    <TextBlock Text="{Binding PendingConfirmationDescription}"
+                               Foreground="{StaticResource Brush.Text.Body}"
+                               FontSize="12"
+                               TextWrapping="Wrap"/>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding TaskActionStatus}"
+                                   Classes="captionText"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1"
+                                   Text="请在弹窗中确认"
+                                   Foreground="{StaticResource Brush.Warning.Text}"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <StackPanel Spacing="8">
+                <TextBlock Text="步骤时间线"
+                           Classes="sectionTitle"/>
+                <ItemsControl ItemsSource="{Binding TaskTimeline}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:TaskTimelineItem">
+                            <controls:TimelineItemView/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+
+            <StackPanel Spacing="8">
+                <TextBlock Text="工具调用记录"
+                           Classes="sectionTitle"/>
+                <TextBlock Text="暂无调用记录"
+                           Classes="captionText"
+                           IsVisible="{Binding HasNoToolCallRecords}"/>
+                <ItemsControl ItemsSource="{Binding TaskToolCalls}"
+                              IsVisible="{Binding HasToolCallRecords}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:TaskToolCallItem">
+                            <Border Classes="inlineCard"
+                                    Margin="0,0,0,6">
+                                <Grid ColumnDefinitions="*,Auto"
+                                      RowDefinitions="Auto,Auto">
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="6">
+                                        <TextBlock Text="{Binding ToolName}"
+                                                   Foreground="{StaticResource Brush.Text.Primary}"
+                                                   FontSize="12"
+                                                   FontWeight="SemiBold"/>
+                                        <Border Background="{StaticResource Brush.Info.Surface}"
+                                                CornerRadius="8"
+                                                Padding="6,1">
+                                            <TextBlock Text="{Binding StatusText}"
+                                                       Foreground="{StaticResource Brush.Info.Text}"
+                                                       FontSize="10"
+                                                       FontWeight="SemiBold"/>
+                                        </Border>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding TimeText}"
+                                               Classes="captionText"/>
+                                    <TextBlock Grid.Row="1"
+                                               Grid.ColumnSpan="2"
+                                               Text="{Binding Detail}"
+                                               Classes="bodyText"
+                                               Margin="0,4,0,0"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+
+            <StackPanel Spacing="8">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="任务结果"
+                               Classes="sectionTitle"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding TaskResultStatusText}"
+                               Classes="captionText"/>
+                </Grid>
+
+                <Border Classes="inlineCard">
+                    <TextBlock Text="{Binding TaskResultPreview}"
+                               Foreground="{StaticResource Brush.Text.Primary}"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               MaxLines="6"/>
+                </Border>
+
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                    <TextBlock Text="{Binding TaskActionStatus}"
+                               Classes="captionText"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap"/>
+                    <Button Grid.Column="1"
+                            Content="复制"
+                            Classes="secondaryAction"
+                            Command="{Binding CopyTaskResultCommand}"
+                            IsEnabled="{Binding CanUseTaskResultActions}"
+                            Margin="8,0,0,0"/>
+                    <Button Grid.Column="2"
+                            Content="保存"
+                            Classes="secondaryAction"
+                            Command="{Binding SaveTaskResultCommand}"
+                            IsEnabled="{Binding CanUseTaskResultActions}"
+                            Margin="8,0,0,0"/>
+                    <Button Grid.Column="3"
+                            Content="重试"
+                            Classes="primaryAction"
+                            Command="{Binding RetryTaskCommand}"
+                            Background="{Binding StateAccentBrush}"
+                            IsVisible="{Binding CanRetryTask}"
+                            Margin="8,0,0,0"
+                            Padding="10,6"/>
+                </Grid>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

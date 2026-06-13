@@ -1,0 +1,1092 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DesktopMascot.UI.ViewModels"
+        x:Class="DesktopMascot.UI.Views.SettingsWindow"
+        x:DataType="vm:SettingsWindowViewModel"
+        Title="DesktopMascot 设置"
+        Width="840"
+        Height="620"
+        MinWidth="680"
+        MinHeight="460"
+        WindowStartupLocation="CenterOwner">
+    <Border Background="{StaticResource Brush.Surface.Panel}">
+        <Grid ColumnDefinitions="210,*">
+            <Border Grid.Column="0"
+                    Background="{StaticResource Brush.Surface.Subtle}"
+                    BorderBrush="{StaticResource Brush.Border.Subtle}"
+                    BorderThickness="0,0,1,0"
+                    Padding="16">
+                <Grid RowDefinitions="Auto,*">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="设置"
+                                   Foreground="{StaticResource Brush.Text.Primary}"
+                                   FontSize="20"
+                                   FontWeight="SemiBold"/>
+                        <TextBlock Text="桌面小人的运行配置"
+                                   Classes="captionText"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1"
+                                Margin="0,22,0,0"
+                                Spacing="8">
+                        <Button Content="模型"
+                                Classes="settingsNavButton"
+                                Command="{Binding SelectSectionCommand}"
+                                CommandParameter="model"/>
+                        <Button Content="Mimo Code"
+                                Classes="settingsNavButton"
+                                Command="{Binding SelectSectionCommand}"
+                                CommandParameter="mimoCode"/>
+                        <Button Content="权限"
+                                Classes="settingsNavButton"
+                                Command="{Binding SelectSectionCommand}"
+                                CommandParameter="permission"/>
+                        <Button Content="记忆"
+                                Classes="settingsNavButton"
+                                Command="{Binding SelectSectionCommand}"
+                                CommandParameter="memory"/>
+                        <Button Content="快捷键"
+                                Classes="settingsNavButton"
+                                Command="{Binding SelectSectionCommand}"
+                                CommandParameter="hotkey"/>
+                        <Button Content="日志/数据"
+                                Classes="settingsNavButton"
+                                Command="{Binding SelectSectionCommand}"
+                                CommandParameter="data"/>
+                        <Button Content="角色外观"
+                                Classes="settingsNavButton"
+                                Command="{Binding SelectSectionCommand}"
+                                CommandParameter="appearance"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <ScrollViewer Grid.Column="1"
+                          Padding="24"
+                          VerticalScrollBarVisibility="Auto">
+                <Grid>
+                    <StackPanel Spacing="18"
+                                IsVisible="{Binding IsModelSectionSelected}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="模型设置"
+                                       Foreground="{StaticResource Brush.Text.Primary}"
+                                       FontSize="22"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="配置 LLM Provider、API Key、Base URL 和默认模型。"
+                                       Classes="bodyText"/>
+                        </StackPanel>
+
+                        <Border Classes="toolCard">
+                            <StackPanel Spacing="14">
+                                <Grid ColumnDefinitions="150,*"
+                                      RowDefinitions="Auto,Auto,Auto,Auto"
+                                      ColumnSpacing="14"
+                                      RowSpacing="12">
+                                    <TextBlock Text="Provider"
+                                               Classes="sectionTitle"
+                                               VerticalAlignment="Center"/>
+                                    <ComboBox Grid.Column="1"
+                                              ItemsSource="{Binding Providers}"
+                                              SelectedItem="{Binding SelectedProvider}"
+                                              MinWidth="260"/>
+
+                                    <TextBlock Grid.Row="1"
+                                               Text="API Key"
+                                               Classes="sectionTitle"
+                                               VerticalAlignment="Center"/>
+                                    <TextBox Grid.Row="1"
+                                             Grid.Column="1"
+                                             Classes="formInput"
+                                             PasswordChar="*"
+                                             PlaceholderText="sk-..."
+                                             Text="{Binding ApiKey}"/>
+
+                                    <TextBlock Grid.Row="2"
+                                               Text="Base URL"
+                                               Classes="sectionTitle"
+                                               VerticalAlignment="Center"/>
+                                    <TextBox Grid.Row="2"
+                                             Grid.Column="1"
+                                             Classes="formInput"
+                                             Text="{Binding ApiEndpoint}"/>
+
+                                    <TextBlock Grid.Row="3"
+                                               Text="模型名"
+                                               Classes="sectionTitle"
+                                               VerticalAlignment="Center"/>
+                                    <TextBox Grid.Row="3"
+                                             Grid.Column="1"
+                                             Classes="formInput"
+                                             Text="{Binding ModelName}"/>
+                                </Grid>
+
+                                <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                                    <TextBlock Text="{Binding ModelSettingsStatus}"
+                                               Classes="captionText"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap"/>
+                                    <Button Grid.Column="1"
+                                            Content="填入默认"
+                                            Classes="secondaryAction"
+                                            Command="{Binding UseProviderDefaultsCommand}"
+                                            Margin="8,0,0,0"/>
+                                    <Button Grid.Column="2"
+                                            Content="测试连接"
+                                            Classes="secondaryAction"
+                                            Command="{Binding TestConnectionCommand}"
+                                            Margin="8,0,0,0"/>
+                                    <Button Grid.Column="3"
+                                            Content="保存"
+                                            Classes="primaryAction"
+                                            Command="{Binding SaveModelSettingsCommand}"
+                                            Background="{StaticResource Brush.Info.Text}"
+                                            Margin="8,0,0,0"
+                                            Padding="14,7"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Classes="inlineCard">
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="连接测试说明"
+                                           Classes="sectionTitle"/>
+                                <TextBlock Text="测试连接会用当前表单发送一次最小 OpenAI-compatible 请求。API Key 只用于本次请求和本机保存，不会随应用内置。"
+                                           Classes="bodyText"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Classes="inlineCard">
+                            <Grid ColumnDefinitions="*,Auto"
+                                  ColumnSpacing="12">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="首次启动向导"
+                                               Classes="sectionTitle"/>
+                                    <TextBlock Text="重新选择内置 Agent / Mimo Code，并复用当前 Provider 检测和本机配置保存流程。"
+                                               Classes="bodyText"/>
+                                </StackPanel>
+                                <Button Grid.Column="1"
+                                        Content="重新运行"
+                                        Classes="secondaryAction"
+                                        Command="{Binding ReopenOnboardingCommand}"
+                                        VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Spacing="14"
+                                IsVisible="{Binding IsMimoCodeSectionSelected}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Mimo Code"
+                                       Foreground="{StaticResource Brush.Text.Primary}"
+                                       FontSize="22"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="接入本机 Mimo Code 代码能力。模型调用仍使用用户自己的 API 配置。"
+                                       Classes="bodyText"/>
+                        </StackPanel>
+
+                        <Border Classes="toolCard">
+                            <StackPanel Spacing="14">
+                                <Grid ColumnDefinitions="150,*"
+                                      RowDefinitions="Auto,Auto,Auto"
+                                      ColumnSpacing="14"
+                                      RowSpacing="12">
+                                    <TextBlock Text="启用接入"
+                                               Classes="sectionTitle"
+                                               VerticalAlignment="Center"/>
+                                    <CheckBox Grid.Column="1"
+                                              Content="启用 Mimo Code connector"
+                                              IsChecked="{Binding IsMimoCodeEnabled}"/>
+
+                                    <TextBlock Grid.Row="1"
+                                               Text="可执行路径"
+                                               Classes="sectionTitle"
+                                               VerticalAlignment="Center"/>
+                                    <TextBox Grid.Row="1"
+                                             Grid.Column="1"
+                                             Classes="formInput"
+                                             Text="{Binding MimoCodeExecutablePath}"
+                                             PlaceholderText="mimo"/>
+
+                                    <TextBlock Grid.Row="2"
+                                               Text="工作目录"
+                                               Classes="sectionTitle"
+                                               VerticalAlignment="Center"/>
+                                    <TextBox Grid.Row="2"
+                                             Grid.Column="1"
+                                             Classes="formInput"
+                                             Text="{Binding MimoCodeWorkspacePath}"
+                                             PlaceholderText="留空则使用当前项目目录"/>
+                                </Grid>
+
+                                <Border Classes="inlineCard">
+                                    <StackPanel Spacing="10">
+                                        <TextBlock Text="模型配置来源"
+                                                   Classes="sectionTitle"/>
+                                        <Grid ColumnDefinitions="*,*"
+                                              ColumnSpacing="10">
+                                            <Button Content="使用桌面小人 Provider/API Key"
+                                                    Classes="secondaryAction"
+                                                    Command="{Binding UseAppProviderForMimoCodeCommand}"/>
+                                            <Button Grid.Column="1"
+                                                    Content="使用 Mimo Code 本机配置"
+                                                    Classes="secondaryAction"
+                                                    Command="{Binding UseMimoLocalConfigCommand}"/>
+                                        </Grid>
+                                        <TextBlock Text="{Binding MimoCodeStatus}"
+                                                   Classes="bodyText"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <Grid ColumnDefinitions="*,Auto,Auto">
+                                    <TextBlock Text="不会内置、上传或代管模型 API Key；用户需要自行配置。"
+                                               Classes="captionText"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap"/>
+                                    <Button Grid.Column="1"
+                                            Content="检测"
+                                            Classes="secondaryAction"
+                                            Command="{Binding TestMimoCodeConnectionCommand}"
+                                            Margin="8,0,0,0"/>
+                                    <Button Grid.Column="2"
+                                            Content="保存"
+                                            Classes="primaryAction"
+                                            Command="{Binding SaveMimoCodeSettingsCommand}"
+                                            Background="{StaticResource Brush.Info.Text}"
+                                            Margin="8,0,0,0"
+                                            Padding="14,7"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="接入说明"
+                                   Classes="sectionTitle"/>
+                        <ItemsControl ItemsSource="{Binding MimoCodeReadinessItems}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SettingsListItem">
+                                    <Border Classes="inlineCard"
+                                            Margin="0,0,0,8">
+                                        <Grid ColumnDefinitions="*,Auto"
+                                              RowDefinitions="Auto,Auto"
+                                              ColumnSpacing="10">
+                                            <TextBlock Text="{Binding Title}"
+                                                       Classes="sectionTitle"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Value}"
+                                                       Classes="captionText"/>
+                                            <TextBlock Grid.Row="1"
+                                                       Grid.ColumnSpan="2"
+                                                       Text="{Binding Description}"
+                                                       Classes="bodyText"
+                                                       Margin="0,4,0,0"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Border Classes="inlineCard">
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="MIT 协议注意"
+                                           Classes="sectionTitle"/>
+                                <TextBlock Text="Mimo Code 使用 MIT 开源协议。后续若随应用分发其代码或二进制，需要保留原版权声明和许可证文本；当前页面只保存本机接入配置。"
+                                           Classes="bodyText"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Spacing="14"
+                                IsVisible="{Binding IsPermissionSectionSelected}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="权限"
+                                       Foreground="{StaticResource Brush.Text.Primary}"
+                                       FontSize="22"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="管理自动批准策略、确认入口和审计状态。M29 接入时可直接挂载真实权限数据。"
+                                       Classes="bodyText"/>
+                        </StackPanel>
+
+                        <Border Classes="toolCard">
+                            <StackPanel Spacing="14">
+                                <Grid ColumnDefinitions="150,*"
+                                      RowDefinitions="Auto,Auto"
+                                      ColumnSpacing="14"
+                                      RowSpacing="12">
+                                    <TextBlock Text="自动批准等级"
+                                               Classes="sectionTitle"
+                                               VerticalAlignment="Center"/>
+                                    <ComboBox Grid.Column="1"
+                                              ItemsSource="{Binding PermissionAutoApproveLevels}"
+                                              SelectedItem="{Binding SelectedAutoApproveLevel}"
+                                              MinWidth="300"/>
+
+                                    <TextBlock Grid.Row="1"
+                                               Text="审计保留天数"
+                                               Classes="sectionTitle"
+                                               VerticalAlignment="Center"/>
+                                    <TextBox Grid.Row="1"
+                                             Grid.Column="1"
+                                             Classes="formInput"
+                                             Text="{Binding AuditLogRetentionDays}"
+                                             MaxWidth="180"
+                                             HorizontalAlignment="Left"/>
+                                </Grid>
+
+                                <Grid ColumnDefinitions="*,Auto,Auto">
+                                    <TextBlock Text="{Binding PermissionSettingsStatus}"
+                                               Classes="captionText"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap"/>
+                                    <Button Grid.Column="1"
+                                            Content="刷新状态"
+                                            Classes="secondaryAction"
+                                            Command="{Binding RefreshPermissionStatusCommand}"
+                                            Margin="8,0,0,0"/>
+                                    <Button Grid.Column="2"
+                                            Content="保存策略"
+                                            Classes="primaryAction"
+                                            Command="{Binding SavePermissionSettingsCommand}"
+                                            Background="{StaticResource Brush.Info.Text}"
+                                            Margin="8,0,0,0"
+                                            Padding="14,7"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="接入状态"
+                                   Classes="sectionTitle"/>
+                        <ItemsControl ItemsSource="{Binding PermissionReadinessItems}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SettingsListItem">
+                                    <Border Classes="inlineCard"
+                                            Margin="0,0,0,8">
+                                        <Grid ColumnDefinitions="*,Auto"
+                                              RowDefinitions="Auto,Auto"
+                                              ColumnSpacing="10">
+                                            <TextBlock Text="{Binding Title}"
+                                                       Classes="sectionTitle"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Value}"
+                                                       Classes="captionText"/>
+                                            <TextBlock Grid.Row="1"
+                                                       Grid.ColumnSpan="2"
+                                                       Text="{Binding Description}"
+                                                       Classes="bodyText"
+                                                       Margin="0,4,0,0"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Text="确认类型"
+                                   Classes="sectionTitle"/>
+                        <ItemsControl ItemsSource="{Binding PermissionRequestTypeItems}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SettingsListItem">
+                                    <Border Classes="inlineCard"
+                                            Margin="0,0,0,8">
+                                        <Grid ColumnDefinitions="*,Auto"
+                                              RowDefinitions="Auto,Auto"
+                                              ColumnSpacing="10">
+                                            <TextBlock Text="{Binding Title}"
+                                                       Classes="sectionTitle"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Value}"
+                                                       Classes="captionText"/>
+                                            <TextBlock Grid.Row="1"
+                                                       Grid.ColumnSpan="2"
+                                                       Text="{Binding Description}"
+                                                       Classes="bodyText"
+                                                       Margin="0,4,0,0"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Border Classes="toolCard">
+                            <StackPanel Spacing="12">
+                                <Grid ColumnDefinitions="*,Auto,Auto">
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="审计和授权"
+                                                   Classes="sectionTitle"/>
+                                        <TextBlock Text="先展示当前配置摘要；真实审计列表由 M29 接入 IPermissionManager 后填充。"
+                                                   Classes="bodyText"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1"
+                                            Content="永久授权"
+                                            Classes="secondaryAction"
+                                            Command="{Binding ManagePermanentPermissionsCommand}"
+                                            Margin="8,0,0,0"/>
+                                    <Button Grid.Column="2"
+                                            Content="审计日志"
+                                            Classes="secondaryAction"
+                                            Command="{Binding OpenPermissionAuditCommand}"
+                                            Margin="8,0,0,0"/>
+                                </Grid>
+
+                                <ItemsControl ItemsSource="{Binding PermissionAuditItems}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:SettingsListItem">
+                                            <Grid ColumnDefinitions="120,90,*"
+                                                  Margin="0,0,0,8"
+                                                  ColumnSpacing="12">
+                                                <TextBlock Text="{Binding Title}"
+                                                           Classes="sectionTitle"/>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Value}"
+                                                           Classes="captionText"/>
+                                                <TextBlock Grid.Column="2"
+                                                           Text="{Binding Description}"
+                                                           Classes="bodyText"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Spacing="14"
+                                IsVisible="{Binding IsMemorySectionSelected}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="记忆"
+                                       Foreground="{StaticResource Brush.Text.Primary}"
+                                       FontSize="22"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="管理记忆开关、确认入口、统计摘要和导入导出入口。M30 已提供确认接口，后续可接真实数据源。"
+                                       Classes="bodyText"/>
+                        </StackPanel>
+
+                        <Border Classes="toolCard">
+                            <StackPanel Spacing="14">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="记忆保存"
+                                                   Classes="sectionTitle"/>
+                                        <TextBlock Text="{Binding MemorySettingsStatus}"
+                                                   Classes="bodyText"/>
+                                    </StackPanel>
+                                    <CheckBox Grid.Column="1"
+                                              Content="启用"
+                                              IsChecked="{Binding IsMemoryEnabled}"
+                                              VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <Grid ColumnDefinitions="*,Auto,Auto">
+                                    <TextBlock Text="保存后，记忆确认服务可以直接读取 AppSettings.MemoryEnabled。"
+                                               Classes="captionText"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap"/>
+                                    <Button Grid.Column="1"
+                                            Content="刷新状态"
+                                            Classes="secondaryAction"
+                                            Command="{Binding RefreshMemoryStatusCommand}"
+                                            Margin="8,0,0,0"/>
+                                    <Button Grid.Column="2"
+                                            Content="保存开关"
+                                            Classes="primaryAction"
+                                            Command="{Binding SaveMemorySettingsCommand}"
+                                            Background="{StaticResource Brush.Info.Text}"
+                                            Margin="8,0,0,0"
+                                            Padding="14,7"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="接入状态"
+                                   Classes="sectionTitle"/>
+                        <ItemsControl ItemsSource="{Binding MemoryReadinessItems}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SettingsListItem">
+                                    <Border Classes="inlineCard"
+                                            Margin="0,0,0,8">
+                                        <Grid ColumnDefinitions="*,Auto"
+                                              RowDefinitions="Auto,Auto"
+                                              ColumnSpacing="10">
+                                            <TextBlock Text="{Binding Title}"
+                                                       Classes="sectionTitle"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Value}"
+                                                       Classes="captionText"/>
+                                            <TextBlock Grid.Row="1"
+                                                       Grid.ColumnSpan="2"
+                                                       Text="{Binding Description}"
+                                                       Classes="bodyText"
+                                                       Margin="0,4,0,0"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Border Classes="toolCard">
+                            <StackPanel Spacing="12">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="待确认记忆"
+                                                   Classes="sectionTitle"/>
+                                        <TextBlock Text="用于承载 MemoryConfirmationRequest 队列。当前弹窗 prompt 已可独立处理单次确认。"
+                                                   Classes="bodyText"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1"
+                                               Text="M30"
+                                               Classes="captionText"
+                                               VerticalAlignment="Top"/>
+                                </Grid>
+
+                                <Grid ColumnDefinitions="250,*"
+                                      ColumnSpacing="12">
+                                    <Border Classes="inlineCard">
+                                        <Grid>
+                                            <TextBlock Text="当前没有待确认记忆。"
+                                                       Classes="bodyText"
+                                                       IsVisible="{Binding HasNoPendingMemoryReviews}"
+                                                       VerticalAlignment="Center"
+                                                       HorizontalAlignment="Center"
+                                                       TextAlignment="Center"
+                                                       Margin="10"/>
+
+                                            <ListBox ItemsSource="{Binding PendingMemoryReviews}"
+                                                     SelectedItem="{Binding SelectedPendingMemoryReview}"
+                                                     IsVisible="{Binding HasPendingMemoryReviews}"
+                                                     MinHeight="210"
+                                                     MaxHeight="260">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:PendingMemoryReviewItem">
+                                                        <StackPanel Spacing="4"
+                                                                    Margin="0,4">
+                                                            <Grid ColumnDefinitions="*,Auto">
+                                                                <TextBlock Text="{Binding Key}"
+                                                                           Classes="sectionTitle"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Grid.Column="1"
+                                                                           Text="{Binding Status}"
+                                                                           Classes="captionText"
+                                                                           Margin="8,0,0,0"/>
+                                                            </Grid>
+                                                            <TextBlock Text="{Binding Reason}"
+                                                                       Classes="bodyText"
+                                                                       MaxHeight="36"/>
+                                                            <Grid ColumnDefinitions="*,Auto">
+                                                                <TextBlock Text="{Binding Type}"
+                                                                           Classes="captionText"/>
+                                                                <TextBlock Grid.Column="1"
+                                                                           Text="{Binding RequestedAt}"
+                                                                           Classes="captionText"/>
+                                                            </Grid>
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </Grid>
+                                    </Border>
+
+                                    <Border Grid.Column="1"
+                                            Classes="inlineCard">
+                                        <Grid>
+                                            <TextBlock Text="选择一条待确认记忆后查看详情。"
+                                                       Classes="bodyText"
+                                                       IsVisible="{Binding HasNoPendingMemoryReviewSelected}"
+                                                       VerticalAlignment="Center"
+                                                       HorizontalAlignment="Center"
+                                                       TextAlignment="Center"
+                                                       Margin="10"/>
+
+                                            <StackPanel Spacing="10"
+                                                        IsVisible="{Binding IsPendingMemoryReviewSelected}">
+                                                <Grid ColumnDefinitions="100,*"
+                                                      RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                                                      RowSpacing="7"
+                                                      ColumnSpacing="10">
+                                                    <TextBlock Text="类型"
+                                                               Classes="captionText"/>
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding SelectedPendingMemoryReview.Type}"
+                                                               Classes="sectionTitle"/>
+
+                                                    <TextBlock Grid.Row="1"
+                                                               Text="Key"
+                                                               Classes="captionText"/>
+                                                    <TextBlock Grid.Row="1"
+                                                               Grid.Column="1"
+                                                               Text="{Binding SelectedPendingMemoryReview.Key}"
+                                                               Classes="bodyText"/>
+
+                                                    <TextBlock Grid.Row="2"
+                                                               Text="来源"
+                                                               Classes="captionText"/>
+                                                    <TextBlock Grid.Row="2"
+                                                               Grid.Column="1"
+                                                               Text="{Binding SelectedPendingMemoryReview.Source}"
+                                                               Classes="bodyText"/>
+
+                                                    <TextBlock Grid.Row="3"
+                                                               Text="标签"
+                                                               Classes="captionText"/>
+                                                    <TextBlock Grid.Row="3"
+                                                               Grid.Column="1"
+                                                               Text="{Binding SelectedPendingMemoryReview.Tags}"
+                                                               Classes="bodyText"/>
+
+                                                    <TextBlock Grid.Row="4"
+                                                               Text="过期时间"
+                                                               Classes="captionText"/>
+                                                    <TextBlock Grid.Row="4"
+                                                               Grid.Column="1"
+                                                               Text="{Binding SelectedPendingMemoryReview.ExpiresAt}"
+                                                               Classes="bodyText"/>
+                                                </Grid>
+
+                                                <StackPanel Spacing="6">
+                                                    <TextBlock Text="记忆内容"
+                                                               Classes="sectionTitle"/>
+                                                    <TextBox Text="{Binding PendingMemoryDraftContent}"
+                                                             AcceptsReturn="True"
+                                                             TextWrapping="Wrap"
+                                                             MinHeight="90"
+                                                             MaxHeight="150"
+                                                             Classes="formInput"/>
+                                                </StackPanel>
+
+                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+                                                      ColumnSpacing="8">
+                                                    <TextBlock Text="{Binding SelectedPendingMemoryReview.Reason}"
+                                                               Classes="captionText"
+                                                               VerticalAlignment="Center"
+                                                               TextWrapping="Wrap"/>
+                                                    <Button Grid.Column="1"
+                                                            Content="不保存"
+                                                            Classes="secondaryAction"
+                                                            Command="{Binding RejectPendingMemoryReviewCommand}"/>
+                                                    <Button Grid.Column="2"
+                                                            Content="仅本次"
+                                                            Classes="secondaryAction"
+                                                            Command="{Binding TempOnlyPendingMemoryReviewCommand}"/>
+                                                    <Button Grid.Column="3"
+                                                            Content="保存"
+                                                            Classes="secondaryAction"
+                                                            Command="{Binding ConfirmPendingMemoryReviewCommand}"/>
+                                                    <Button Grid.Column="4"
+                                                            Content="编辑后保存"
+                                                            Classes="primaryAction"
+                                                            Command="{Binding SaveEditedPendingMemoryReviewCommand}"
+                                                            Background="{StaticResource Brush.Info.Text}"
+                                                            Padding="12,7"/>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Classes="toolCard">
+                            <StackPanel Spacing="12">
+                                <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="记忆管理"
+                                                   Classes="sectionTitle"/>
+                                        <TextBlock Text="统计和列表先保留结构；后续接入 IMemoryStore 后填充真实数量和记录。"
+                                                   Classes="bodyText"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1"
+                                            Content="浏览"
+                                            Classes="secondaryAction"
+                                            Command="{Binding OpenMemoryBrowserCommand}"
+                                            Margin="8,0,0,0"/>
+                                    <Button Grid.Column="2"
+                                            Content="导出"
+                                            Classes="secondaryAction"
+                                            Command="{Binding ExportMemoryCommand}"
+                                            Margin="8,0,0,0"/>
+                                    <Button Grid.Column="3"
+                                            Content="导入"
+                                            Classes="secondaryAction"
+                                            Command="{Binding ImportMemoryCommand}"
+                                            Margin="8,0,0,0"/>
+                                </Grid>
+
+                                <ItemsControl ItemsSource="{Binding MemoryStatsItems}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:SettingsListItem">
+                                            <Grid ColumnDefinitions="120,90,*"
+                                                  Margin="0,0,0,8"
+                                                  ColumnSpacing="12">
+                                                <TextBlock Text="{Binding Title}"
+                                                           Classes="sectionTitle"/>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Value}"
+                                                           Classes="captionText"/>
+                                                <TextBlock Grid.Column="2"
+                                                           Text="{Binding Description}"
+                                                           Classes="bodyText"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="清理记忆会保留为高风险操作，真实删除前需要 M30 的二次确认弹窗。"
+                                               Classes="captionText"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap"/>
+                                    <Button Grid.Column="1"
+                                            Content="清理"
+                                            Classes="secondaryAction"
+                                            Command="{Binding ClearMemoryCommand}"
+                                            Margin="8,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Spacing="14"
+                                IsVisible="{Binding IsHotkeySectionSelected}">
+                        <TextBlock Text="快捷键"
+                                   Foreground="{StaticResource Brush.Text.Primary}"
+                                   FontSize="22"
+                                   FontWeight="SemiBold"/>
+                        <Border Classes="toolCard">
+                            <TextBlock Text="快捷键冲突提示和自定义热键会在桌面体验后续迭代中接入。"
+                                       Classes="bodyText"/>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Spacing="14"
+                                IsVisible="{Binding IsDataSectionSelected}">
+                        <TextBlock Text="日志/数据"
+                                   Foreground="{StaticResource Brush.Text.Primary}"
+                                   FontSize="22"
+                                   FontWeight="SemiBold"/>
+                        <Border Classes="toolCard">
+                            <TextBlock Text="日志目录、数据目录和清理策略会在设置中心后续迭代中补齐。"
+                                       Classes="bodyText"/>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Spacing="14"
+                                IsVisible="{Binding IsAppearanceSectionSelected}">
+                        <Border Classes="toolCard">
+                            <Grid ColumnDefinitions="190,*"
+                                  ColumnSpacing="18">
+                                <StackPanel Spacing="12">
+                                    <TextBlock Text="角色外观"
+                                               Foreground="{StaticResource Brush.Text.Primary}"
+                                               FontSize="22"
+                                               FontWeight="SemiBold"/>
+                                    <Border Width="160"
+                                            Height="210"
+                                            Background="{Binding CharacterBackgroundBrush}"
+                                            BorderBrush="{Binding CharacterAccentBrush}"
+                                            BorderThickness="2"
+                                            ClipToBounds="True"
+                                            CornerRadius="8"
+                                            HorizontalAlignment="Left">
+                                        <Grid>
+                                            <Image Source="{Binding CharacterImageSource}"
+                                                   Stretch="Uniform"
+                                                   IsVisible="{Binding HasCharacterImage}"/>
+                                            <TextBlock Text="{Binding CharacterAvatarText}"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{Binding CharacterAccentBrush}"
+                                                       FontWeight="Bold"
+                                                       FontSize="30"
+                                                       TextAlignment="Center"
+                                                       IsVisible="{Binding HasNoCharacterImage}"/>
+                                        </Grid>
+                                    </Border>
+                                    <ComboBox ItemsSource="{Binding CharacterStateImageItems}"
+                                              SelectedItem="{Binding SelectedCharacterStateImage}"
+                                              MinWidth="160"/>
+                                    <Button Content="选择当前状态图"
+                                            Classes="secondaryAction"
+                                            Command="{Binding PickSelectedStateImageCommand}"
+                                            HorizontalAlignment="Stretch"/>
+                                    <TextBlock Text="{Binding CharacterImageStatus}"
+                                               Classes="captionText"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding CharacterAssetWarningText}"
+                                               Classes="captionText"
+                                               TextWrapping="Wrap"/>
+                                    <StackPanel Spacing="8"
+                                                Margin="0,4,0,0">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Text="角色库"
+                                                           Classes="sectionTitle"/>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding CharacterLibraryStatus}"
+                                                           Classes="captionText"
+                                                           TextWrapping="Wrap"
+                                                           MaxWidth="120"/>
+                                            </Grid>
+
+                                            <TextBlock Text="暂无保存的角色档案。"
+                                                       Classes="bodyText"
+                                                       IsVisible="{Binding HasNoCharacterProfiles}"/>
+
+                                            <ListBox ItemsSource="{Binding CharacterProfiles}"
+                                                     SelectedItem="{Binding SelectedCharacterProfile}"
+                                                     IsVisible="{Binding HasCharacterProfiles}"
+                                                     MinHeight="110"
+                                                     MaxHeight="150">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:CharacterProfileListItem">
+                                                        <StackPanel Spacing="3"
+                                                                    Margin="0,4">
+                                                            <Grid ColumnDefinitions="42,*,Auto"
+                                                                  ColumnSpacing="10">
+                                                                <Border Width="36"
+                                                                        Height="36"
+                                                                        CornerRadius="8"
+                                                                        Background="{Binding AccentBrush}"
+                                                                        ClipToBounds="True">
+                                                                    <Grid>
+                                                                        <Image Source="{Binding Thumbnail}"
+                                                                               Stretch="UniformToFill"
+                                                                               IsVisible="{Binding HasThumbnail}"/>
+                                                                        <TextBlock Text="{Binding AvatarText}"
+                                                                                   Foreground="{StaticResource Brush.White}"
+                                                                                   FontSize="14"
+                                                                                   FontWeight="SemiBold"
+                                                                                   HorizontalAlignment="Center"
+                                                                                   VerticalAlignment="Center"
+                                                                                   IsVisible="{Binding HasNoThumbnail}"/>
+                                                                    </Grid>
+                                                                </Border>
+                                                                <StackPanel Grid.Column="1"
+                                                                            Spacing="2">
+                                                                    <TextBlock Text="{Binding Name}"
+                                                                               Classes="sectionTitle"
+                                                                               TextTrimming="CharacterEllipsis"/>
+                                                                    <TextBlock Text="{Binding Role}"
+                                                                               Classes="bodyText"
+                                                                               TextTrimming="CharacterEllipsis"/>
+                                                                </StackPanel>
+                                                                <TextBlock Grid.Column="2"
+                                                                           Text="{Binding ActiveText}"
+                                                                           Classes="captionText"
+                                                                           IsVisible="{Binding IsActive}"/>
+                                                            </Grid>
+                                                            <TextBlock Text="{Binding UpdatedAtText}"
+                                                                       Classes="captionText"/>
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+
+                                            <TextBox Classes="formInput"
+                                                     PlaceholderText="角色档案名称"
+                                                     Text="{Binding CharacterProfileNameDraft}"
+                                                     MaxLength="24"/>
+
+                                            <WrapPanel>
+                                                <Button Content="存入角色库"
+                                                        Classes="secondaryAction"
+                                                        Command="{Binding SaveCharacterProfileCommand}"
+                                                        Margin="0,0,6,6"/>
+                                                <Button Content="另存为"
+                                                        Classes="secondaryAction"
+                                                        Command="{Binding SaveCharacterProfileAsCommand}"
+                                                        Margin="0,0,6,6"/>
+                                                <Button Content="重命名"
+                                                        Classes="secondaryAction"
+                                                        Command="{Binding RenameSelectedCharacterProfileCommand}"
+                                                        Margin="0,0,6,6"/>
+                                                <Button Content="复制"
+                                                        Classes="secondaryAction"
+                                                        Command="{Binding DuplicateSelectedCharacterProfileCommand}"
+                                                        Margin="0,0,6,6"/>
+                                                <Button Content="载入"
+                                                        Classes="secondaryAction"
+                                                        Command="{Binding LoadSelectedCharacterProfileCommand}"
+                                                        Margin="0,0,6,6"/>
+                                                <Button Content="删除"
+                                                        Classes="secondaryAction"
+                                                        Command="{Binding DeleteSelectedCharacterProfileCommand}"
+                                                        Margin="0,0,6,6"/>
+                                                <Button Content="刷新"
+                                                        Classes="secondaryAction"
+                                                        Command="{Binding RefreshCharacterProfileLibraryCommand}"
+                                                        Margin="0,0,6,6"/>
+                                            </WrapPanel>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1"
+                                            Spacing="14">
+                                    <Grid ColumnDefinitions="*,*"
+                                          RowDefinitions="Auto,Auto,Auto"
+                                          ColumnSpacing="10"
+                                          RowSpacing="10">
+                                        <TextBox Grid.Row="0"
+                                                 Grid.Column="0"
+                                                 Classes="formInput"
+                                                 PlaceholderText="角色名"
+                                                 Text="{Binding CharacterName}"
+                                                 MaxLength="12"/>
+                                        <TextBox Grid.Row="0"
+                                                 Grid.Column="1"
+                                                 Classes="formInput"
+                                                 PlaceholderText="头像文字"
+                                                 Text="{Binding CharacterAvatarText}"
+                                                 MaxLength="4"/>
+                                        <TextBox Grid.Row="1"
+                                                 Grid.Column="0"
+                                                 Classes="formInput"
+                                                 PlaceholderText="角色定位"
+                                                 Text="{Binding CharacterRole}"
+                                                 MaxLength="24"/>
+                                        <TextBox Grid.Row="1"
+                                                 Grid.Column="1"
+                                                 Classes="formInput"
+                                                 PlaceholderText="气质"
+                                                 Text="{Binding CharacterPersonality}"
+                                                 MaxLength="12"/>
+                                        <TextBox Grid.Row="2"
+                                                 Grid.ColumnSpan="2"
+                                                 Classes="formInput"
+                                                 PlaceholderText="口头禅"
+                                                 Text="{Binding CharacterCatchphrase}"
+                                                 MaxLength="40"/>
+                                    </Grid>
+
+                                    <Grid ColumnDefinitions="120,*,Auto"
+                                          RowDefinitions="Auto,Auto"
+                                          ColumnSpacing="10"
+                                          RowSpacing="10">
+                                        <TextBlock Text="图片目录"
+                                                   Classes="sectionTitle"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBox Grid.Column="1"
+                                                 Classes="formInput"
+                                                 Text="{Binding CharacterImageFolder}"
+                                                 MaxLength="260"/>
+                                        <Button Grid.Column="2"
+                                                Content="选择"
+                                                Classes="secondaryAction"
+                                                Command="{Binding PickCharacterImageFolderCommand}"/>
+                                        <TextBlock Grid.Row="1"
+                                                   Text="头像文件"
+                                                   Classes="sectionTitle"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBox Grid.Row="1"
+                                                 Grid.Column="1"
+                                                 Classes="formInput"
+                                                 Text="{Binding CharacterAvatarImage}"
+                                                 MaxLength="160"/>
+                                        <Button Grid.Row="1"
+                                                Grid.Column="2"
+                                                Content="选择"
+                                                Classes="secondaryAction"
+                                                Command="{Binding PickCharacterAvatarImageCommand}"/>
+                                    </Grid>
+
+                                    <StackPanel Spacing="7">
+                                        <TextBlock Text="状态图"
+                                                   Classes="sectionTitle"/>
+                                        <ItemsControl ItemsSource="{Binding CharacterStateImageItems}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:CharacterStateImageItem">
+                                                    <Grid ColumnDefinitions="120,*"
+                                                          ColumnSpacing="10"
+                                                          Margin="0,0,0,8">
+                                                        <TextBlock Text="{Binding DisplayName}"
+                                                                   Classes="captionText"
+                                                                   VerticalAlignment="Center"/>
+                                                        <TextBox Grid.Column="1"
+                                                                 Classes="formInput"
+                                                                 Text="{Binding FileName}"
+                                                                 MaxLength="160"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+
+                                    <StackPanel Spacing="7">
+                                        <TextBlock Text="预设"
+                                                   Classes="sectionTitle"/>
+                                        <WrapPanel>
+                                            <Button Content="默认"
+                                                    Command="{Binding UseCharacterPresetCommand}"
+                                                    CommandParameter="default"
+                                                    Margin="0,0,6,6"
+                                                    Padding="10,5"/>
+                                            <Button Content="开发伙伴"
+                                                    Command="{Binding UseCharacterPresetCommand}"
+                                                    CommandParameter="developer"
+                                                    Margin="0,0,6,6"
+                                                    Padding="10,5"/>
+                                            <Button Content="任务管家"
+                                                    Command="{Binding UseCharacterPresetCommand}"
+                                                    CommandParameter="operator"
+                                                    Margin="0,0,6,6"
+                                                    Padding="10,5"/>
+                                            <Button Content="阅读研究"
+                                                    Command="{Binding UseCharacterPresetCommand}"
+                                                    CommandParameter="study"
+                                                    Margin="0,0,6,6"
+                                                    Padding="10,5"/>
+                                        </WrapPanel>
+                                    </StackPanel>
+
+                                    <StackPanel Spacing="7">
+                                        <TextBlock Text="主题色"
+                                                   Classes="sectionTitle"/>
+                                        <WrapPanel>
+                                            <Button Width="28" Height="28" Margin="0,0,8,0" Background="#2563EB"
+                                                    Command="{Binding ChooseCharacterAccentColorCommand}" CommandParameter="#2563EB"/>
+                                            <Button Width="28" Height="28" Margin="0,0,8,0" Background="#0F766E"
+                                                    Command="{Binding ChooseCharacterAccentColorCommand}" CommandParameter="#0F766E"/>
+                                            <Button Width="28" Height="28" Margin="0,0,8,0" Background="#7C3AED"
+                                                    Command="{Binding ChooseCharacterAccentColorCommand}" CommandParameter="#7C3AED"/>
+                                            <Button Width="28" Height="28" Margin="0,0,8,0" Background="#C026D3"
+                                                    Command="{Binding ChooseCharacterAccentColorCommand}" CommandParameter="#C026D3"/>
+                                            <Button Width="28" Height="28" Margin="0,0,8,0" Background="#7C2D12"
+                                                    Command="{Binding ChooseCharacterAccentColorCommand}" CommandParameter="#7C2D12"/>
+                                            <Button Width="28" Height="28" Background="#DC2626"
+                                                    Command="{Binding ChooseCharacterAccentColorCommand}" CommandParameter="#DC2626"/>
+                                        </WrapPanel>
+                                    </StackPanel>
+
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Text="{Binding CharacterSaveStatus}"
+                                                   Classes="captionText"
+                                                   TextWrapping="Wrap"
+                                                   VerticalAlignment="Center"/>
+                                        <WrapPanel>
+                                            <Button Content="使用桌面人物图片"
+                                                    Classes="secondaryAction"
+                                                    Command="{Binding UseDesktopCharacterImagesCommand}"
+                                                    Margin="0,0,8,8"/>
+                                            <Button Content="导入到应用目录"
+                                                    Classes="secondaryAction"
+                                                    Command="{Binding ImportCharacterAssetsCommand}"
+                                                    Margin="0,0,8,8"/>
+                                            <Button Content="刷新预览"
+                                                    Classes="secondaryAction"
+                                                    Command="{Binding RefreshCharacterPreviewCommand}"
+                                                    Margin="0,0,8,8"/>
+                                            <Button Content="恢复默认"
+                                                    Classes="secondaryAction"
+                                                    Command="{Binding ResetCharacterCommand}"
+                                                    Margin="0,0,8,8"/>
+                                            <Button Content="保存角色"
+                                                    Classes="primaryAction"
+                                                    Background="{Binding CharacterAccentBrush}"
+                                                    Command="{Binding SaveCharacterCommand}"
+                                                    Padding="12,7"
+                                                    Margin="0,0,8,8"/>
+                                        </WrapPanel>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+        </Grid>
+    </Border>
+</Window>

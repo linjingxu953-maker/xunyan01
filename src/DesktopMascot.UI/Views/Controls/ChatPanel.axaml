@@ -1,0 +1,124 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DesktopMascot.UI.ViewModels"
+             xmlns:controls="using:DesktopMascot.UI.Views.Controls"
+             x:Class="DesktopMascot.UI.Views.Controls.ChatPanel"
+             x:DataType="vm:FloatingWindowViewModel">
+    <Border Classes="chatShell"
+            Width="390"
+            MaxHeight="520"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            Margin="0,12,12,0">
+        <Grid RowDefinitions="44,*,Auto">
+            <Border Grid.Row="0"
+                    Background="{Binding StateAccentBrush}"
+                    CornerRadius="14,14,0,0"
+                    PointerPressed="Header_PointerPressed">
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+                      Margin="14,0,10,0">
+                    <StackPanel VerticalAlignment="Center"
+                                IsHitTestVisible="False">
+                        <TextBlock Text="{Binding CharacterName}"
+                                   Foreground="{StaticResource Brush.White}"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding CharacterRole}"
+                                   Foreground="{StaticResource Brush.White.Subtle}"
+                                   FontSize="10"/>
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Classes="headerAction"
+                            Command="{Binding OpenAppearanceSettingsCommand}"
+                            Content="角色"
+                            Margin="0,0,8,0"/>
+                    <Button Grid.Column="2"
+                            Classes="headerAction"
+                            Command="{Binding OpenSettingsCommand}"
+                            Content="设置"
+                            Margin="0,0,8,0"/>
+                    <Button Grid.Column="3"
+                            Classes="headerAction"
+                            Command="{Binding CancelCurrentTaskCommand}"
+                            Content="中断"
+                            IsVisible="{Binding IsTaskActive}"
+                            IsEnabled="{Binding CanCancelTask}"
+                            Margin="0,0,8,0"/>
+                    <Button Grid.Column="4"
+                            Command="{Binding CloseChatCommand}"
+                            Content="X"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Foreground="{StaticResource Brush.White}"/>
+                </Grid>
+            </Border>
+
+            <ScrollViewer Grid.Row="1"
+                          Padding="{StaticResource Space.PanelPadding}"
+                          VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="14">
+                    <controls:TaskDetailPanel IsVisible="{Binding HasTaskDetails}"/>
+
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="对话"
+                                   Classes="sectionTitle"/>
+                        <ItemsControl ItemsSource="{Binding Messages}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <Border Background="{StaticResource Brush.Surface.Message}"
+                                            CornerRadius="8"
+                                            Padding="10"
+                                            Margin="0,0,0,6">
+                                        <TextBlock Text="{Binding}"
+                                                   TextWrapping="Wrap"
+                                                   FontSize="13"
+                                                   Foreground="{StaticResource Brush.Text.Primary}"/>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <StackPanel Spacing="8"
+                                IsVisible="{Binding HasTaskDetails}">
+                        <TextBlock Text="任务步骤"
+                                   Classes="sectionTitle"/>
+                        <ItemsControl ItemsSource="{Binding TaskTimeline}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:TaskTimelineItem">
+                                    <controls:TimelineItemView/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+
+            <Border Grid.Row="2"
+                    Padding="{StaticResource Space.InputPadding}"
+                    Background="{StaticResource Brush.Surface.Subtle}"
+                    BorderBrush="{StaticResource Brush.Border.Subtle}"
+                    BorderThickness="0,1,0,0"
+                    CornerRadius="0,0,14,14">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBox Grid.Column="0"
+                             x:Name="InputBox"
+                             Classes="formInput"
+                             PlaceholderText="输入任务或问题..."
+                             Text="{Binding InputText}"
+                             KeyDown="InputBox_KeyDown"/>
+                    <Button Grid.Column="1"
+                            Content="发送"
+                            Classes="primaryAction"
+                            Command="{Binding SendMessageCommand}"
+                            Background="{Binding StateAccentBrush}"
+                            Margin="8,0,0,0"
+                            Padding="14,7"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>

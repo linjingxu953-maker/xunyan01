@@ -1,0 +1,423 @@
+# 桌面AI交互小人 - 项目记忆
+
+本文件为项目通用记忆，供所有 agent（MiMo、Claude、Codex 等）共享访问。
+
+---
+
+## 项目基本信息
+
+- **项目名称**：桌面AI交互小人（DesktopMascot）
+- **项目位置**：`C:\Users\wgmo\Desktop\桌面交互ai小人`
+- **技术栈**：C# / Avalonia UI 12.x + .NET 8
+- **平台**：Windows 10/11
+
+---
+
+## 设计决策
+
+| 决策项 | 选择 | 理由 |
+|--------|------|------|
+| 桌面框架 | Avalonia UI | 跨平台潜力，Windows支持好 |
+| 运行时 | .NET 8 | 稳定版本，Avalonia 12.x 要求 |
+| UI模式 | MVVM | 社区工具链成熟 |
+| MVVM工具 | CommunityToolkit.Mvvm | 源码生成器，减少模板代码 |
+| 日志 | Serilog | 结构化日志，文件输出 |
+| 测试 | xUnit | .NET 生态主流 |
+| **屏幕理解** | **截图 + 视觉 LLM** | **零依赖，支持任意屏幕内容** |
+| **区域圈选** | **全屏透明遮罩** | **体验类似微信截图，快捷键触发** |
+| **视觉理解 prompt** | **三层：识别→理解→行动** | **未理解时返回用户输入意图，不瞎猜** |
+
+---
+
+## 目录结构约定
+
+```
+桌面交互ai小人/
+├── src/                          # 源代码
+│   ├── DesktopMascot.App/        # 主应用入口
+│   ├── DesktopMascot.Core/       # 核心业务逻辑（无UI依赖）
+│   ├── DesktopMascot.UI/         # Avalonia UI层
+│   └── DesktopMascot.Agent/      # Agent/AI集成层
+├── tests/                        # 测试项目
+├── docs/                         # 项目文档
+├── assets/                       # 资源文件（动画、图标）
+├── mimo/                         # MiMo agent 工作产物
+└── AGENTS.md                     # 本文件 - 通用记忆
+```
+
+---
+
+## 任务分配
+
+| 模块 | 负责 Agent | 说明 |
+|------|-----------|------|
+| UI（Views、ViewModels、AXAML） | Codex | 界面设计和交互实现 |
+| Core（状态机、任务流、测试） | MiMo | 业务逻辑和单元测试 |
+| Agent（AI集成） | MiMo | Agent 引擎和工具调用 |
+| App 桥接服务 | MiMo | IContextBridgeService 等 |
+| **屏幕理解 UI** | **Codex** | **全屏透明遮罩 + 鼠标拖拽画框** |
+| **屏幕理解 Agent** | **MiMo** | **区域截图 + 视觉 LLM 理解 + 意图识别** |
+
+## 边界规则（2026-06-12）
+
+**MiMo Code 可操作范围：**
+- `src/DesktopMascot.Agent` - 上下文/工具/路由
+- `src/DesktopMascot.Core` - 业务逻辑
+
+**Codex 操作范围：**
+- `src/DesktopMascot.UI` - 界面和 ViewModel
+
+**App 层（两者都不动）：**
+- `src/DesktopMascot.App/App.axaml.cs` - 服务注册
+- `src/DesktopMascot.App/ServiceCollectionExtensions.cs` - DI 配置
+
+**桥接服务：**
+- UI 不直接引用 Agent 的 `IContextProvider`
+- 通过 `IContextBridgeService` 获取上下文数据
+
+**依赖许可：**
+- MiMo Code: MIT 协议（可商用，需保留版权声明）
+- 详见 `THIRD_PARTY_LICENSES.md`
+
+---
+
+## 编码规范
+
+1. **命名**：PascalCase 类名，camelCase 字段，_前缀私有字段
+2. **文件组织**：一个类一个文件，按功能分文件夹
+3. **依赖方向**：App → UI → Core，Agent → Core（UI和Agent不直接依赖）
+4. **接口优先**：跨层通信必须通过接口
+
+---
+
+## 当前进度
+
+### M1: 可编译壳子 ✅ 已完成
+### M2: 状态机闭环 ✅ 已完成
+
+- [x] 修复 UI 问题（聊天面板入口、裁切、拖动干扰）
+- [x] 删除模板 Class1.cs
+- [x] TaskRouter 单元测试
+- [x] TaskEventBus 单元测试
+- [x] AgentEngineStub 单元测试
+- [x] MascotStateMachine 状态机实现
+- [x] 状态转换规则定义
+- [x] 任务取消支持
+- [x] 状态机单元测试
+- [x] 22 个测试全部通过
+
+### M4: Agent 层搭建 ✅ 已完成
+
+- [x] Agent 目录结构
+- [x] LLM 模型定义
+- [x] ILlmProvider 接口
+- [x] OpenAiProvider 实现
+- [x] ITool 接口
+- [x] ToolRegistry 工具注册表
+- [x] 内置工具（GetCurrentTime、Calculator）
+- [x] AgentOrchestrator 编排器
+- [x] Agent 单元测试（16 个）
+- [x] 38 个测试全部通过
+
+### M5: 上下文 MVP ✅ 已完成
+
+- [x] IContextProvider 接口
+- [x] WindowsContextProvider 实现
+- [x] MockContextProvider 测试用
+- [x] GetActiveWindowTool 工具
+- [x] ReadFileTool 工具
+- [x] 上下文单元测试（10 个）
+- [x] 50 个测试全部通过
+
+### M6: 权限与安全 ✅ 已完成
+
+- [x] PermissionModels 权限模型
+- [x] IPermissionManager 接口
+- [x] PermissionManager 实现（永久/会话授权）
+- [x] CommandRiskAssessor 命令风险评估
+- [x] IAuditLogStore 审计日志接口
+- [x] FileAuditLogStore 文件存储实现
+- [x] 权限单元测试（14 个）
+- [x] 67 个测试全部通过
+
+### M7: 记忆系统 ✅ 已完成
+
+- [x] MemoryModels 记忆模型
+- [x] IMemoryStore 接口
+- [x] FileMemoryStore 文件存储实现
+- [x] IMemoryConfirmationHandler 确认接口
+- [x] MemoryManager 记忆管理器
+- [x] 记忆单元测试（13 个）
+- [x] 80 个测试全部通过
+
+### M8: 插件系统 ✅ 已完成
+
+- [x] IPlugin 插件接口
+- [x] PluginMetadata 插件元数据
+- [x] PluginLoader 插件加载器
+- [x] PluginRegistry 插件注册表
+- [x] PluginBase 插件基类
+- [x] IPluginTool 插件工具接口
+- [x] QuotesPlugin 示例插件
+- [x] WeatherPlugin 示例插件
+- [x] 插件单元测试（17 个）
+- [x] 97 个测试全部通过
+
+### M9: 任务历史 ✅ 已完成
+
+- [x] TaskHistoryModels 任务历史模型
+- [x] ITaskHistoryStore 存储接口
+- [x] FileTaskHistoryStore 文件存储实现
+- [x] TaskHistoryManager 任务管理器
+- [x] 任务历史单元测试（16 个）
+- [x] 113 个测试全部通过
+
+### M10: 数据层（SQLite）✅ 已完成
+
+- [x] DatabaseContext 数据库上下文
+- [x] DatabaseMigrator 迁移管理器
+- [x] SqliteTaskHistoryStore SQLite 存储实现
+- [x] 数据库表创建（Tasks, TaskEvents, ToolCalls, Memories, AuditLogs, Settings）
+- [x] 迁移版本管理
+- [x] 数据层单元测试（5 个）
+- [x] 118 个测试全部通过
+
+### M11: 配置管理 ✅ 已完成
+
+- [x] ConfigurationModels 配置模型
+- [x] IConfigurationManager 接口
+- [x] FileConfigurationManager 文件存储实现
+- [x] ConfigurationExtensions 验证扩展
+- [x] 配置单元测试（10 个）
+- [x] 128 个测试全部通过
+
+### M12: 日志系统 ✅ 已完成
+
+- [x] LogModels 日志模型
+- [x] ILogStore 日志存储接口
+- [x] FileLogStore 文件存储实现
+- [x] ILogger 日志管理器接口
+- [x] LogManager 日志管理器实现（缓冲、自动刷新）
+- [x] 日志单元测试（9 个）
+- [x] 137 个测试全部通过
+
+### M14: 错误处理 ✅ 已完成
+
+- [x] ErrorModels 错误模型
+- [x] ErrorHandler 错误处理器
+- [x] SafeExecutor 安全执行器（重试、错误恢复）
+- [x] 错误处理单元测试（11 个）
+- [x] 154 个测试全部通过
+
+### M15: 工具注册表 ✅ 已完成
+
+- [x] ToolModels 工具模型
+- [x] ITool/IToolProvider/IToolRegistry 接口
+- [x] ToolRegistry 注册表实现
+- [x] ToolBase 工具基类
+- [x] 内置工具（时间、计算器、名言、天气）
+- [x] 工具注册表单元测试（18 个）
+- [x] 172 个测试全部通过
+
+### M16: 任务流编排 ✅ 已完成
+
+- [x] WorkflowModels 工作流模型
+- [x] IWorkflowEngine 工作流引擎接口
+- [x] WorkflowEngine 工作流引擎实现
+- [x] WorkflowBuilder 工作流构建器
+- [x] WorkflowTemplates 工作流模板
+- [x] 工作流单元测试（14 个）
+- [x] 186 个测试全部通过
+
+### M17: 任务流持久化 ✅ 已完成
+
+- [x] IWorkflowStore 工作流存储接口
+- [x] FileWorkflowStore 文件存储实现
+- [x] PersistentWorkflowEngine 支持持久化的引擎
+- [x] 检查点恢复（ResumeFromCheckpoint）
+- [x] 工作流持久化单元测试（11 个）
+- [x] 197 个测试全部通过
+
+### M18: 工具链组合 ✅ 已完成
+
+- [x] ToolChainModels 工具链模型
+- [x] IToolChainExecutor 执行器接口
+- [x] ToolChainExecutor 执行器实现（顺序/并行/条件）
+- [x] ToolChainBuilder 工具链构建器
+- [x] 条件表达式评估
+- [x] 结果传递和变量映射
+- [x] 工具链单元测试（14 个）
+- [x] 211 个测试全部通过
+
+### M19: 任务调度器 ✅ 已完成
+
+- [x] ScheduleModels 调度模型
+- [x] ITaskScheduler 调度器接口
+- [x] AppTaskScheduler 调度器实现
+- [x] 定时/间隔/Cron 调度
+- [x] 任务暂停/恢复
+- [x] 重试机制
+- [x] 调度单元测试（13 个）
+- [x] 224 个测试全部通过
+
+### M20: 缓存系统 ✅ 已完成
+
+- [x] CacheModels 缓存模型
+- [x] ICache 缓存接口
+- [x] MemoryCache 内存缓存实现
+- [x] CachedService<T> 缓存装饰器
+- [x] CacheExtensions 缓存扩展方法
+- [x] 支持绝对/滑动/文件依赖过期
+- [x] 缓存统计（命中率、大小）
+- [x] 缓存单元测试（16 个）
+- [x] 240 个测试全部通过
+
+### M31: 总结当前网页 ✅ 已完成
+
+- [x] LlmMessage 支持视觉输入（Images 字段）
+- [x] OpenAiCompatibleProvider 支持发送 base64 图片
+- [x] BrowserContextTool 返回真实数据（窗口标题+截图路径）
+- [x] AgentOrchestrator 支持 SummarizePage 专用路径
+- [x] 视觉 LLM prompt 工程
+- [x] 单元测试（10 个）
+- [x] 250 个测试全部通过
+
+### M32: 屏幕理解 🔄 Agent层完成，等UI
+
+**目标**：用户圈选屏幕任意区域 → AI 识别理解 → 帮用户解决问题
+
+**分层**：
+1. **识别层**：这是什么内容（报错、代码、表格、图标...）
+2. **理解层**：用户可能想做什么；**未理解时返回用户输入意图，不瞎猜**
+3. **行动层**：给出建议或执行操作
+
+**Agent 层（MiMo 负责）**：
+- [x] ScreenUnderstandTool — 区域截图 + 视觉 LLM 理解
+- [x] ScreenUnderstandPrompt — 三层 prompt（识别→理解→行动）
+- [x] ScreenUnderstandResult — 结构化返回模型
+- [x] AgentOrchestrator 集成 ScreenUnderstand 路径
+- [x] 单元测试
+
+**UI 层（Codex 负责）**：
+- [ ] ScreenOverlay — Avalonia 全屏透明遮罩窗口
+- [ ] 鼠标拖拽画框交互
+- [ ] 框选完成回调 → 截取区域坐标
+- [ ] ScreenSelectViewModel — 管理圈选状态
+- [ ] 快捷键 Ctrl+Shift+S 触发
+
+**快捷键**：Ctrl+Shift+S 触发屏幕理解
+
+### M33: 场景专用路径+prompt ✅ 已完成
+
+- [x] AnalyzeError 专用路径 + 报错分析 prompt
+- [x] InspectProject 专用路径 + 项目诊断 prompt
+- [x] SolveProblem 专用路径 + 题目解答 prompt（新增 TaskType）
+- [x] ListDirectoryTool — 目录树遍历工具
+- [x] ExecuteWithSpecializedPromptAsync — 共用的专用 prompt 执行器
+- [x] 单元测试（7 个）
+- [x] 261 个测试全部通过
+
+### 下一阶段
+
+- [ ] M3: 桌面体验（托盘、快捷键）- 等待 Codex 完成 UI
+- [x] M22: 服务整合层 - DI容器、启动流程、服务协调器 ✅
+- [x] M26: 状态事件流 - 完整事件结构定义 + UI 推送 ✅
+- [x] M29: 权限确认接口 - IPermissionPrompt 接口定义 ✅
+- [x] M30: 记忆确认接口 - IMemoryConfirmationPrompt 接口定义 ✅
+- [x] M25: 工具执行管道 - 权限检查→确认→执行→结果返回 ✅
+- [x] M24: TaskRouter 集成 - EnhancedTaskRouter 集成 TaskEventStream + ToolExecutionPipeline ✅
+- [x] M23: LLM Provider 接入 - OpenAiCompatibleProvider + LlmProviderFactory + IApiKeyStore + 10+ Provider 支持 ✅
+- [x] M27: WindowsContextProvider 完善 - 屏幕截图、窗口识别、剪贴板读取 ✅
+- [x] M28: 工具实现 - ScreenCaptureTool、BrowserContextTool、ClipboardTool、ToolRegistryInitializer ✅
+
+#### 等待中
+
+- [ ] M3: 桌面体验（托盘、快捷键）- 等待 Codex 完成 UI
+- [ ] M32: 屏幕理解 UI - 等待 Codex 完成全屏遮罩 + 圈选交互
+- [ ] M31+: 封测包 - 等用户验收功能后再规划
+
+---
+
+## 已知问题与注意事项
+
+1. **Avalonia 12 API 变化**：
+   - `SystemDecorations` 改为 `WindowDecorations`
+   - `AllowsTransparency` 和 `ExtendClientAreaChromeHints` 已移除
+   - 使用 `TransparencyLevelHint="AcrylicBlur"` 替代
+2. **命名冲突**：`TaskStatus` 与 `System.Threading.Tasks.TaskStatus` 冲突，已重命名为 `AppTaskStatus`
+3. **.NET SDK**：已通过 winget 安装 8.0.422
+4. **Avalonia Templates**：已安装 12.0.4
+5. **Bug 审计（2026-06-12）**：Claude 全项目审计，2 严重 + 5 中等 + 6 建议。详见 `docs/2026-06-12-项目当前问题记录.md`
+   - 🔴 严重：Timer async void 崩溃风险（TaskScheduler.cs:65）、WorkflowEngine 审批步骤自动绕过（WorkflowEngine.cs:153-158）
+   - 🟡 中等：FloatingWindowViewModel 950 行需拆分（UI/Codex 负责）、FileMemoryStore O(n) 性能、PermissionManager 未注册 DI、ResolveArguments null ref、API Key 明文
+6. **API 接入设计（2026-06-12）**：用户自行配置 API Key，支持多 Provider（含国产模型：DeepSeek、Kimi、智谱、百川、讯飞、通义、豆包、零一万物、MiniMax、阶跃星辰）
+
+---
+
+## 环境配置
+
+- **.NET SDK**：8.0.422
+- **Avalonia Templates**：12.0.4
+- **VS Code 扩展**：Avalonia for VS Code
+
+---
+
+## 项目统计
+
+| 指标 | 数值 |
+|------|------|
+| 已完成模块 | 27 个（M1-M2, M4-M20, M22-M28, M31, M32 Agent层） |
+| 单元测试 | 250 个全部通过 |
+| 代码行数 | 约 8000+ 行 |
+| 核心模块 | Core, Agent |
+| 待完成 | M3（UI）、M31+（封测包）|
+
+## 更新日志
+
+| 日期 | 更新内容 |
+|------|----------|
+| 2026-06-11 | 项目初始化，创建通用记忆文件 |
+| 2026-06-11 | M1 完成：项目骨架搭建，编译测试通过 |
+| 2026-06-11 | M2 完成：状态机闭环 |
+| 2026-06-11 | M4 完成：Agent 层搭建 |
+| 2026-06-11 | M5 完成：上下文 MVP |
+| 2026-06-11 | M6 完成：权限与安全 |
+| 2026-06-11 | M7 完成：记忆系统 |
+| 2026-06-11 | M8 完成：插件系统 |
+| 2026-06-11 | M9 完成：任务历史 |
+| 2026-06-11 | M10 完成：数据层（SQLite） |
+| 2026-06-11 | M11 完成：配置管理 |
+| 2026-06-11 | M12 完成：日志系统 |
+| 2026-06-11 | M14 完成：错误处理 |
+| 2026-06-11 | M15 完成：工具注册表 |
+| 2026-06-11 | M16 完成：任务流编排 |
+| 2026-06-11 | M17 完成：任务流持久化 |
+| 2026-06-11 | M18 完成：工具链组合 |
+| 2026-06-11 | M19 完成：任务调度器 |
+| 2026-06-11 | M20 完成：缓存系统 |
+| 2026-06-12 | MiMo 任务规划：M22-M30 功能模块，封测包等用户验收后再做 |
+| 2026-06-12 | API 接入设计：用户自行配置 Key，支持国产模型（DeepSeek、Kimi 等 10+），创建 docs/API接入设计.md |
+| 2026-06-12 | M22 完成：服务整合层（DI 容器、启动流程、服务协调器）|
+| 2026-06-12 | M26 完成：状态事件流（TaskEventType 枚举、TaskEvent 工厂方法、ITaskEventStream 接口、TaskEventStream 实现）|
+| 2026-06-12 | M29 完成：权限确认接口（IPermissionPrompt、PermissionPromptRequest/Response、DefaultPermissionPrompt、PermissionConfirmationService）|
+| 2026-06-12 | M30 完成：记忆确认接口（IMemoryConfirmationPrompt、MemoryConfirmationRequest/Response、MemoryDecision、DefaultMemoryConfirmationPrompt、MemoryConfirmationService）|
+| 2026-06-12 | M25 完成：工具执行管道（ToolExecutionPipeline - 权限检查、确认、执行、日志、事件）|
+| 2026-06-12 | M24 完成：TaskRouter 集成（EnhancedTaskRouter - 集成 TaskEventStream + ToolExecutionPipeline）|
+| 2026-06-12 | M23 完成：LLM Provider 接入（OpenAiCompatibleProvider + LlmProviderFactory + IApiKeyStore + 10+ Provider 支持）|
+| 2026-06-12 | M27 完成：WindowsContextProvider 完善（屏幕截图、窗口识别、剪贴板读取）|
+| 2026-06-12 | M28 完成：工具实现（ScreenCaptureTool、BrowserContextTool、ClipboardTool、ToolRegistryInitializer）|
+| 2026-06-12 | 创建 MiMoCodeAgent（通过 CLI 调用 MiMo Code）|
+| 2026-06-12 | 创建 IContextBridgeService（App 层桥接服务，隔离 UI 与 Agent 依赖）|
+| 2026-06-12 | 明确边界规则：MiMo 操作 Agent/Core，Codex 操作 UI，App 层不动|
+| 2026-06-12 | 创建 THIRD_PARTY_LICENSES.md（记录 MiMo Code MIT 许可证）|
+| 2026-06-12 | 创建 docs/状态事件与确认接口设计.md（M26/M29/M30 接口定义）|
+| 2026-06-14 | M31 完成：总结当前网页（视觉 LLM + SummarizePage 专用路径 + 测试）|
+| 2026-06-14 | M32 Agent层完成：ScreenUnderstandTool + 三层层级 prompt + 意图 fallback + AgentOrchestrator 路由 + 测试 |
+
+---
+
+## 设计文档
+
+- `docs/API接入设计.md` — API 接入完整设计（Provider 列表、配置流程、接口、安全存储、国产模型支持）
+- `docs/状态事件与确认接口设计.md` — 状态事件结构 + 权限/记忆确认接口定义（M26/M29/M30）
+- `docs/2026-06-12-项目当前问题记录.md` — Bug 审计报告
