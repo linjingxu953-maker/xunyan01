@@ -1,0 +1,107 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DesktopMascot.UI.ViewModels"
+             x:Class="DesktopMascot.UI.Views.Controls.ComputerUsePanel"
+             x:DataType="vm:FloatingWindowViewModel">
+    <Border Classes="inlineCard">
+        <StackPanel Spacing="10">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel>
+                    <TextBlock Text="Computer Use"
+                               Classes="sectionTitle"/>
+                    <TextBlock Text="{Binding ComputerUseStatusText}"
+                               Classes="bodyText"
+                               MaxLines="2"/>
+                </StackPanel>
+                <Border Grid.Column="1"
+                        Background="{StaticResource Brush.Info.Surface}"
+                        CornerRadius="8"
+                        Padding="7,2"
+                        VerticalAlignment="Top">
+                    <TextBlock Text="{Binding ComputerUseModeText}"
+                               Foreground="{StaticResource Brush.Info.Text}"
+                               FontSize="10"
+                               FontWeight="SemiBold"/>
+                </Border>
+            </Grid>
+
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel>
+                    <TextBlock Text="目标"
+                               Classes="sectionTitle"/>
+                    <TextBlock Text="{Binding ComputerUseTargetText}"
+                               Classes="bodyText"
+                               MaxLines="2"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            Spacing="6"
+                            VerticalAlignment="Center">
+                    <Button Content="暂停"
+                            Classes="secondaryAction"
+                            Command="{Binding PauseComputerUseCommand}"/>
+                    <Button Content="继续"
+                            Classes="secondaryAction"
+                            Command="{Binding ResumeComputerUseCommand}"/>
+                    <Button Content="接管"
+                            Classes="primaryAction"
+                            Background="{Binding StateAccentBrush}"
+                            Command="{Binding TakeOverComputerUseCommand}"
+                            Padding="10,6"/>
+                    <Button Content="停止"
+                            Classes="secondaryAction"
+                            Command="{Binding StopComputerUseCommand}"/>
+                </StackPanel>
+            </Grid>
+
+            <TextBlock Text="{Binding ComputerUseControlStatus}"
+                       Classes="captionText"
+                       TextWrapping="Wrap"/>
+
+            <TextBlock Text="暂无 Computer Use 动作"
+                       Classes="captionText"
+                       IsVisible="{Binding HasNoComputerUseActions}"/>
+
+            <ItemsControl ItemsSource="{Binding ComputerUseActions}"
+                          IsVisible="{Binding HasComputerUseActions}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ComputerUseActionItem">
+                        <Grid ColumnDefinitions="*,Auto"
+                              RowDefinitions="Auto,Auto,Auto"
+                              Margin="0,0,0,8">
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="6">
+                                <TextBlock Text="{Binding ActionName}"
+                                           Foreground="{StaticResource Brush.Text.Primary}"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"/>
+                                <Border Background="{StaticResource Brush.Success.Surface}"
+                                        CornerRadius="8"
+                                        Padding="6,1">
+                                    <TextBlock Text="{Binding StatusText}"
+                                               Foreground="{StaticResource Brush.Success.Text}"
+                                               FontSize="10"
+                                               FontWeight="SemiBold"/>
+                                </Border>
+                            </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding TimeText}"
+                                       Classes="captionText"/>
+                            <TextBlock Grid.Row="1"
+                                       Grid.ColumnSpan="2"
+                                       Text="{Binding Target}"
+                                       Classes="captionText"
+                                       Margin="0,3,0,0"/>
+                            <TextBlock Grid.Row="2"
+                                       Grid.ColumnSpan="2"
+                                       Text="{Binding Detail}"
+                                       Classes="bodyText"
+                                       Margin="0,2,0,0"
+                                       MaxLines="2"/>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </Border>
+</UserControl>

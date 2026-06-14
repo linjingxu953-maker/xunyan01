@@ -116,6 +116,7 @@ public static class ServiceCollectionExtensions
             ToolRegistryInitializer.RegisterBuiltInTools(registry, contextProvider, llmProvider);
             return registry;
         });
+        services.AddSingleton<ComputerUseOrchestrator>();
         services.AddSingleton<IAgentEngine, ConfiguredAgentEngine>();
 
         // 任务路由

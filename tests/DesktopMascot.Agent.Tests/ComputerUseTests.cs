@@ -9,10 +9,6 @@ namespace DesktopMascot.Agent.Tests;
 
 public class ComputerUseTests
 {
-    private readonly Mock<ILlmProvider> _mockLlm = new();
-    private readonly Mock<ITaskEventBus> _mockEventBus = new();
-    private readonly Mock<ILogger<ComputerUseOrchestrator>> _mockLogger = new();
-
     [Fact]
     public void ComputerUseEvent_ShouldHaveAllTypes()
     {
@@ -51,8 +47,12 @@ public class ComputerUseTests
     [Fact]
     public async Task ComputerUseOrchestrator_PauseResume_ShouldWork()
     {
+        var mockLlm = new Mock<ILlmProvider>();
+        var mockEventBus = new Mock<ITaskEventBus>();
+        var mockLogger = new Mock<ILogger<ComputerUseOrchestrator>>();
+
         var orchestrator = new ComputerUseOrchestrator(
-            _mockLlm.Object, _mockEventBus.Object, _mockLogger.Object);
+            mockLlm.Object, mockEventBus.Object, mockLogger.Object);
 
         Assert.False(orchestrator.Session.IsPaused);
 
@@ -66,8 +66,12 @@ public class ComputerUseTests
     [Fact]
     public async Task ComputerUseOrchestrator_Takeover_ShouldWork()
     {
+        var mockLlm = new Mock<ILlmProvider>();
+        var mockEventBus = new Mock<ITaskEventBus>();
+        var mockLogger = new Mock<ILogger<ComputerUseOrchestrator>>();
+
         var orchestrator = new ComputerUseOrchestrator(
-            _mockLlm.Object, _mockEventBus.Object, _mockLogger.Object);
+            mockLlm.Object, mockEventBus.Object, mockLogger.Object);
 
         Assert.False(orchestrator.Session.UserHasTakeover);
 
@@ -78,7 +82,11 @@ public class ComputerUseTests
     [Fact]
     public async Task ComputerUseOrchestrator_Execute_ShouldEmitEvents()
     {
-        _mockLlm.Setup(x => x.ChatAsync(
+        var mockLlm = new Mock<ILlmProvider>();
+        var mockEventBus = new Mock<ITaskEventBus>();
+        var mockLogger = new Mock<ILogger<ComputerUseOrchestrator>>();
+
+        mockLlm.Setup(x => x.ChatAsync(
                 It.IsAny<IEnumerable<LlmMessage>>(),
                 It.IsAny<IEnumerable<ToolDefinition>?>(),
                 It.IsAny<CancellationToken>()))
@@ -89,7 +97,7 @@ public class ComputerUseTests
             });
 
         var orchestrator = new ComputerUseOrchestrator(
-            _mockLlm.Object, _mockEventBus.Object, _mockLogger.Object);
+            mockLlm.Object, mockEventBus.Object, mockLogger.Object);
 
         var events = new List<ComputerUseEvent>();
         orchestrator.ComputerUseEventOccurred += (_, e) => events.Add(e);

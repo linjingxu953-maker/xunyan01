@@ -202,24 +202,31 @@ public class ComputerUseOrchestrator
 
     private async Task<string> CaptureScreenAsync(CancellationToken ct)
     {
-        var hwnd = GetForegroundWindow();
-        if (hwnd == IntPtr.Zero) return "";
+        try
+        {
+            var hwnd = GetForegroundWindow();
+            if (hwnd == IntPtr.Zero) return "";
 
-        GetWindowRect(hwnd, out var rect);
-        var w = rect.Right - rect.Left;
-        var h = rect.Bottom - rect.Top;
-        if (w <= 0 || h <= 0) return "";
+            GetWindowRect(hwnd, out var rect);
+            var w = rect.Right - rect.Left;
+            var h = rect.Bottom - rect.Top;
+            if (w <= 0 || h <= 0) return "";
 
-        using var bmp = new System.Drawing.Bitmap(w, h);
-        using var g = System.Drawing.Graphics.FromImage(bmp);
-        g.CopyFromScreen(rect.Left, rect.Top, 0, 0, new System.Drawing.Size(w, h));
+            using var bmp = new System.Drawing.Bitmap(w, h);
+            using var g = System.Drawing.Graphics.FromImage(bmp);
+            g.CopyFromScreen(rect.Left, rect.Top, 0, 0, new System.Drawing.Size(w, h));
 
-        var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "DesktopMascot", "screenshots", $"cu_{DateTime.UtcNow:yyyyMMdd_HHmmss}.png");
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+            var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "DesktopMascot", "screenshots", $"cu_{DateTime.UtcNow:yyyyMMdd_HHmmss}.png");
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
 
-        return path;
+            return path;
+        }
+        catch
+        {
+            return "";
+        }
     }
 
     private async Task<List<PlannedAction>> PlanActionsAsync(string userRequest, string screenshotPath, CancellationToken ct)

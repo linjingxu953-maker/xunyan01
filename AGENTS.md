@@ -400,6 +400,16 @@ AgentOrchestrator.ExecuteAsync()
 - [x] 单元测试（7 个）
 - [x] 319 个测试全部通过
 
+### M41: ComputerUseOrchestrator 集成 ✅ 已完成
+
+- [x] TaskType.ComputerUse 枚举
+- [x] AgentOrchestrator.ExecuteComputerUseAsync() 专用路径
+- [x] ConfiguredAgentEngine 集成 ComputerUseOrchestrator
+- [x] DI 注册 ComputerUseOrchestrator
+- [x] CaptureScreenAsync 异常处理（测试环境稳定性）
+- [x] 集成测试（2 个）
+- [x] 321 个测试全部通过
+
 ### 下一阶段
 
 - [ ] M3: 桌面体验（托盘、快捷键）- 等待 Codex 完成 UI
@@ -462,9 +472,9 @@ AgentOrchestrator.ExecuteAsync()
 
 | 指标 | 数值 |
 |------|------|
-| 已完成模块 | 31 个（M1-M2, M4-M20, M22-M28, M31-M40） |
-| 单元测试 | 319 个全部通过 |
-| 代码行数 | 约 12000+ 行 |
+| 已完成模块 | 32 个（M1-M2, M4-M20, M22-M28, M31-M41） |
+| 单元测试 | 321 个全部通过 |
+| 代码行数 | 约 12500+ 行 |
 | 核心模块 | Core, Agent |
 | 待完成 | M3（UI）、M32 UI、Computer Use UI、封测包 |
 
@@ -518,6 +528,7 @@ AgentOrchestrator.ExecuteAsync()
 | 2026-06-14 | M39 完成：HtmlContentExtractor + 流式响应（SSE + ExecuteStreamingAsync）|
 | 2026-06-14 | M40 完成：Computer Use Phase 2（ComputerUseTool + ComputerUseEvent + ComputerUseOrchestrator）|
 | 2026-06-14 | 架构决策：MiMo 负责 Agent/Core，Codex 负责 UI（控制面板）|
+| 2026-06-14 | M41 完成：ComputerUseOrchestrator 集成（TaskType.ComputerUse + AgentOrchestrator 路由 + DI 注册）|
 
 ---
 

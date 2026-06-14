@@ -37,6 +37,8 @@
             <ProgressBar Classes="compactProgress"
                          Value="{Binding CurrentProgress}"/>
 
+            <controls:ComputerUsePanel IsVisible="{Binding IsComputerUsePanelVisible}"/>
+
             <Border Classes="confirmationCard"
                     IsVisible="{Binding IsWaitingForUserConfirmation}">
                 <StackPanel Spacing="8">

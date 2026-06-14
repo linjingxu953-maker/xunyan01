@@ -21,6 +21,7 @@ public class AgentOrchestrator : IAgentEngine
     private readonly ITaskEventBus _eventBus;
     private readonly ILogger<AgentOrchestrator> _logger;
     private readonly MemoryIntegrationService? _memoryService;
+    private readonly ComputerUseOrchestrator? _computerUseOrchestrator;
     private readonly int _maxIterations;
 
     public AgentOrchestrator(
@@ -29,7 +30,8 @@ public class AgentOrchestrator : IAgentEngine
         ITaskEventBus eventBus,
         ILogger<AgentOrchestrator> logger,
         int maxIterations = 10,
-        MemoryIntegrationService? memoryService = null)
+        MemoryIntegrationService? memoryService = null,
+        ComputerUseOrchestrator? computerUseOrchestrator = null)
     {
         _llmProvider = llmProvider;
         _toolRegistry = toolRegistry;
@@ -37,6 +39,7 @@ public class AgentOrchestrator : IAgentEngine
         _logger = logger;
         _maxIterations = maxIterations;
         _memoryService = memoryService;
+        _computerUseOrchestrator = computerUseOrchestrator;
     }
 
     public async Task<TaskResult> ExecuteAsync(AgentTask task, CancellationToken ct = default)
@@ -81,6 +84,10 @@ public class AgentOrchestrator : IAgentEngine
         else if (taskType == TaskType.RunCommand)
         {
             result = await ExecuteWithSpecializedPromptAsync(task, GetRunCommandPrompt(), "命令执行", ct, memoryContext);
+        }
+        else if (taskType == TaskType.ComputerUse)
+        {
+            result = await ExecuteComputerUseAsync(task, ct);
         }
         else
         {
@@ -795,6 +802,50 @@ public class AgentOrchestrator : IAgentEngine
                 await _memoryService.SaveProposedMemoriesAsync(proposals, ct);
             }
         }
+    }
+
+    /// <summary>
+    /// 执行 Computer Use 任务
+    /// </summary>
+    private async Task<TaskResult> ExecuteComputerUseAsync(AgentTask task, CancellationToken ct)
+    {
+        if (_computerUseOrchestrator == null)
+        {
+            return TaskResult.Failed(task.Id, "Computer Use 编排器未初始化");
+        }
+
+        _eventBus.Publish(new TaskEvent
+        {
+            TaskId = task.Id,
+            State = MascotState.Listening,
+            Message = "Computer Use 任务开始",
+            Progress = 0
+        });
+
+        var result = await _computerUseOrchestrator.ExecuteAsync(task.Input, ct);
+
+        if (result.Success)
+        {
+            _eventBus.Publish(new TaskEvent
+            {
+                TaskId = task.Id,
+                State = MascotState.Completed,
+                Message = "Computer Use 任务完成",
+                Progress = 100
+            });
+        }
+        else
+        {
+            _eventBus.Publish(new TaskEvent
+            {
+                TaskId = task.Id,
+                State = MascotState.Error,
+                Message = result.Error ?? "Computer Use 任务失败",
+                Progress = 0
+            });
+        }
+
+        return result;
     }
 }
 

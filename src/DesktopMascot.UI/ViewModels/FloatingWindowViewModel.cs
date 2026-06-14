@@ -62,6 +62,11 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _taskResultPreview = "任务完成后会在这里显示结果。";
     [ObservableProperty] private string _taskResultStatusText = "暂无结果";
     [ObservableProperty] private string _taskActionStatus = "等待任务执行。";
+    [ObservableProperty] private bool _isComputerUsePanelVisible = false;
+    [ObservableProperty] private string _computerUseModeText = "未接入";
+    [ObservableProperty] private string _computerUseStatusText = "等待 Computer Use 事件";
+    [ObservableProperty] private string _computerUseTargetText = "暂无目标";
+    [ObservableProperty] private string _computerUseControlStatus = "等待 MiMo Computer Use 接入事件流。";
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanRetryCurrentTask))]
     private bool _canRetryTask = false;
@@ -108,12 +113,15 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     public ObservableCollection<string> Messages { get; } = new();
     public ObservableCollection<TaskTimelineItem> TaskTimeline { get; } = new();
     public ObservableCollection<TaskToolCallItem> TaskToolCalls { get; } = new();
+    public ObservableCollection<ComputerUseActionItem> ComputerUseActions { get; } = new();
 
     public bool CanSendMessage => !IsBusy && !IsWaitingForUserConfirmation && !string.IsNullOrWhiteSpace(InputText);
     public bool CanStartScreenSelection => !IsBusy && !IsWaitingForUserConfirmation;
     public bool HasNoCharacterImage => !HasCharacterImage;
     public bool HasNoTaskResult => !HasTaskResult;
     public bool HasNoToolCallRecords => !HasToolCallRecords;
+    public bool HasComputerUseActions => ComputerUseActions.Count > 0;
+    public bool HasNoComputerUseActions => !HasComputerUseActions;
     public bool CanUseTaskResultActions => HasTaskResult && !IsBusy;
     public bool CanRetryCurrentTask => CanRetryTask && !IsBusy && !IsWaitingForUserConfirmation && !string.IsNullOrWhiteSpace(_lastUserMessage);
     public bool CanResolvePendingConfirmation => IsWaitingForUserConfirmation && _pendingConfirmationTask is not null && !IsBusy;
@@ -145,6 +153,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
 
         _characterStore.ProfileChanged += OnCharacterProfileChanged;
         ApplyCharacterProfile(_characterStore.Load(), save: false);
+        ComputerUseActions.CollectionChanged += (_, _) => NotifyComputerUseActionStateChanged();
 
         // 监听任务事件
         _eventBus.TaskEventPublished += OnTaskEventPublished;
@@ -193,6 +202,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         IsWaitingForUserConfirmation = e.State is MascotState.WaitingApproval or MascotState.MemoryConfirm;
         ApplyConfirmationStateFromEvent(e, message);
         ApplyTaskResultStateFromEvent(e, message);
+        ApplyComputerUseStateFromEvent(e, message);
         RefreshCharacterImage();
         AddToolCallRecord(e);
 
@@ -394,6 +404,38 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         AddTimelineItem(MascotState.Error, "用户拒绝了操作", CurrentProgress, DateTime.UtcNow);
         AddToolCallRecord("权限确认", "已拒绝", PendingConfirmationRiskText, DateTime.UtcNow);
         Messages.Add($"{CharacterName}：已取消该操作。");
+    }
+
+    [RelayCommand]
+    private void PauseComputerUse()
+    {
+        PrimeComputerUsePanel("暂停请求", "人工控制", "已请求", "已请求暂停自动桌面操作。");
+        ComputerUseModeText = "暂停中";
+        ComputerUseControlStatus = "已请求暂停 Computer Use，等待控制管道接入。";
+    }
+
+    [RelayCommand]
+    private void ResumeComputerUse()
+    {
+        PrimeComputerUsePanel("继续请求", "人工控制", "已请求", "已请求继续自动桌面操作。");
+        ComputerUseModeText = "执行中";
+        ComputerUseControlStatus = "已请求继续 Computer Use，等待控制管道接入。";
+    }
+
+    [RelayCommand]
+    private void TakeOverComputerUse()
+    {
+        PrimeComputerUsePanel("人工接管", "当前桌面", "已请求", "已请求人工接管当前桌面操作。");
+        ComputerUseModeText = "接管中";
+        ComputerUseControlStatus = "已请求人工接管，后续会由 Computer Use 回调确认。";
+    }
+
+    [RelayCommand]
+    private void StopComputerUse()
+    {
+        PrimeComputerUsePanel("停止请求", "当前任务", "已请求", "已请求停止 Computer Use 自动操作。");
+        ComputerUseModeText = "停止中";
+        ComputerUseControlStatus = "已请求停止 Computer Use，等待控制管道接入。";
     }
 
     [RelayCommand(CanExecute = nameof(CanUseTaskResultActions))]
@@ -633,6 +675,11 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         TaskTimeline.Clear();
         TaskToolCalls.Clear();
         HasToolCallRecords = false;
+        ResetComputerUsePanel(IsComputerUseTask(task, typeText, userMessage));
+        if (IsComputerUsePanelVisible)
+        {
+            AddComputerUseActionRecord("任务接收", ResolveComputerUseTarget(task, userMessage), "已创建", userMessage, DateTime.UtcNow);
+        }
         IsChatVisible = true;
 
         OnPropertyChanged(nameof(CanRetryCurrentTask));
@@ -846,6 +893,293 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         TaskTimeline.Clear();
         TaskToolCalls.Clear();
         HasToolCallRecords = false;
+        ResetComputerUsePanel(IsComputerUseEvent(taskEvent));
+    }
+
+    private void ResetComputerUsePanel(bool isVisible)
+    {
+        ComputerUseActions.Clear();
+        IsComputerUsePanelVisible = isVisible;
+        ComputerUseModeText = isVisible ? "待执行" : "未接入";
+        ComputerUseStatusText = isVisible ? "等待动作事件" : "等待 Computer Use 事件";
+        ComputerUseTargetText = isVisible ? "当前桌面" : "暂无目标";
+        ComputerUseControlStatus = isVisible
+            ? "Computer Use 控制入口已准备。"
+            : "等待 MiMo Computer Use 接入事件流。";
+        NotifyComputerUseActionStateChanged();
+    }
+
+    private void PrimeComputerUsePanel(string actionName, string target, string statusText, string detail)
+    {
+        if (!IsComputerUsePanelVisible)
+        {
+            IsComputerUsePanelVisible = true;
+            ComputerUseStatusText = "人工控制请求";
+            ComputerUseTargetText = target;
+        }
+
+        AddComputerUseActionRecord(actionName, target, statusText, detail, DateTime.UtcNow);
+    }
+
+    private void ApplyComputerUseStateFromEvent(TaskEvent taskEvent, string message)
+    {
+        var isComputerUseEvent = IsComputerUseEvent(taskEvent);
+        if (!isComputerUseEvent && !IsComputerUsePanelVisible)
+            return;
+
+        IsComputerUsePanelVisible = true;
+        ComputerUseModeText = ResolveComputerUseModeText(taskEvent);
+        ComputerUseStatusText = CleanText(message, GetEventStepText(taskEvent), 80);
+        ComputerUseTargetText = ResolveComputerUseTarget(taskEvent, ComputerUseTargetText);
+        ComputerUseControlStatus = ResolveComputerUseControlStatus(taskEvent, message);
+
+        if (isComputerUseEvent)
+        {
+            AddComputerUseActionRecord(taskEvent, message);
+        }
+    }
+
+    private void AddComputerUseActionRecord(TaskEvent taskEvent, string message)
+    {
+        AddComputerUseActionRecord(
+            ResolveComputerUseActionName(taskEvent),
+            ResolveComputerUseTarget(taskEvent, ComputerUseTargetText),
+            ResolveComputerUseActionStatus(taskEvent),
+            ResolveComputerUseDetail(taskEvent, message),
+            taskEvent.CreatedAt);
+    }
+
+    private void AddComputerUseActionRecord(string actionName, string target, string statusText, string detail, DateTime createdAt)
+    {
+        ComputerUseActions.Add(new ComputerUseActionItem(
+            CleanText(actionName, "桌面动作", 24),
+            CleanText(target, "当前桌面", 48),
+            CleanText(statusText, "进行中", 12),
+            CleanText(detail, "等待事件详情", 120),
+            createdAt));
+
+        while (ComputerUseActions.Count > 8)
+        {
+            ComputerUseActions.RemoveAt(0);
+        }
+
+        NotifyComputerUseActionStateChanged();
+    }
+
+    private void NotifyComputerUseActionStateChanged()
+    {
+        OnPropertyChanged(nameof(HasComputerUseActions));
+        OnPropertyChanged(nameof(HasNoComputerUseActions));
+    }
+
+    private static bool IsComputerUseTask(AgentTask task, string typeText, string userMessage)
+    {
+        if (task.Type == TaskType.ScreenUnderstand)
+            return true;
+
+        if (ContainsComputerUseSignal(typeText) ||
+            ContainsComputerUseSignal(task.Title) ||
+            ContainsComputerUseSignal(task.Input) ||
+            ContainsComputerUseSignal(userMessage))
+        {
+            return true;
+        }
+
+        foreach (var parameter in task.Parameters)
+        {
+            if (ContainsComputerUseSignal(parameter.Key) || ContainsComputerUseSignal(parameter.Value?.ToString()))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsComputerUseEvent(TaskEvent taskEvent)
+    {
+        if (ContainsComputerUseSignal(taskEvent.Message))
+            return true;
+
+        if (taskEvent.Metadata is null)
+            return false;
+
+        foreach (var item in taskEvent.Metadata)
+        {
+            if (ContainsComputerUseSignal(item.Key) || ContainsComputerUseSignal(item.Value?.ToString()))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool ContainsComputerUseSignal(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        var text = value.ToLowerInvariant();
+        return text.Contains("computer use") ||
+               text.Contains("computer-use") ||
+               text.Contains("computer_use") ||
+               text.Contains("computeruse") ||
+               text.Contains("desktop action") ||
+               text.Contains("desktop_action") ||
+               text.Contains("screen action") ||
+               text.Contains("screen_action") ||
+               text.Contains("screen observe") ||
+               text.Contains("screen_observe") ||
+               text.Contains("screenobserve") ||
+               text.Contains("screen capture") ||
+               text.Contains("screencapture") ||
+               text.Contains("screenshot") ||
+               text.Contains("mouse") ||
+               text.Contains("keyboard") ||
+               text.Contains("click") ||
+               text.Contains("type_text") ||
+               text.Contains("控制电脑") ||
+               text.Contains("操作电脑") ||
+               text.Contains("桌面操作") ||
+               text.Contains("人工接管") ||
+               text.Contains("鼠标") ||
+               text.Contains("键盘") ||
+               text.Contains("点击") ||
+               text.Contains("输入文本");
+    }
+
+    private static string ResolveComputerUseModeText(TaskEvent taskEvent)
+    {
+        return taskEvent.EventType switch
+        {
+            TaskEventType.PermissionRequested => "待确认",
+            TaskEventType.PermissionDenied => "已拒绝",
+            TaskEventType.TaskCompleted => "完成",
+            TaskEventType.TaskFailed => "失败",
+            TaskEventType.TaskCancelled => "已停止",
+            TaskEventType.ToolCallStarted => "执行中",
+            TaskEventType.ToolCallCompleted => "已完成",
+            TaskEventType.ToolCallFailed => "失败",
+            _ => taskEvent.State switch
+            {
+                MascotState.WaitingApproval => "待确认",
+                MascotState.Working => "执行中",
+                MascotState.Completed => "完成",
+                MascotState.Error => "异常",
+                _ => "准备中"
+            }
+        };
+    }
+
+    private static string ResolveComputerUseActionName(TaskEvent taskEvent)
+    {
+        var action = GetFirstMetadataString(taskEvent, "computerAction", "action", "operation", "step", "toolName");
+        if (!string.IsNullOrWhiteSpace(action))
+            return action;
+
+        return taskEvent.EventType switch
+        {
+            TaskEventType.TaskStarted => "任务接收",
+            TaskEventType.ToolCallStarted => "工具执行",
+            TaskEventType.ToolCallCompleted => "工具完成",
+            TaskEventType.ToolCallFailed => "工具失败",
+            TaskEventType.PermissionRequested => "权限确认",
+            TaskEventType.TaskCompleted => "任务完成",
+            TaskEventType.TaskFailed => "任务失败",
+            TaskEventType.TaskCancelled => "任务停止",
+            _ => GetEventStepText(taskEvent)
+        };
+    }
+
+    private static string ResolveComputerUseActionStatus(TaskEvent taskEvent)
+    {
+        var status = GetFirstMetadataString(taskEvent, "status", "state");
+        if (!string.IsNullOrWhiteSpace(status))
+            return status;
+
+        return taskEvent.EventType switch
+        {
+            TaskEventType.PermissionRequested => "待确认",
+            TaskEventType.PermissionGranted => "已授权",
+            TaskEventType.PermissionDenied => "已拒绝",
+            TaskEventType.ToolCallStarted => "执行中",
+            TaskEventType.ToolCallCompleted => "已完成",
+            TaskEventType.ToolCallFailed => "失败",
+            TaskEventType.TaskCompleted => "已完成",
+            TaskEventType.TaskFailed => "失败",
+            TaskEventType.TaskCancelled => "已停止",
+            _ => "进行中"
+        };
+    }
+
+    private static string ResolveComputerUseDetail(TaskEvent taskEvent, string message)
+    {
+        var detail = GetFirstMetadataString(taskEvent, "detail", "input", "output", "reason", "result");
+        return string.IsNullOrWhiteSpace(detail) ? message : detail;
+    }
+
+    private static string ResolveComputerUseTarget(TaskEvent taskEvent, string fallback)
+    {
+        var target = GetFirstMetadataString(
+            taskEvent,
+            "target",
+            "targetName",
+            "windowTitle",
+            "window",
+            "application",
+            "app",
+            "element",
+            "url",
+            "region",
+            "coordinates");
+
+        if (!string.IsNullOrWhiteSpace(target))
+            return target;
+
+        var x = GetFirstMetadataString(taskEvent, "x", "screenX");
+        var y = GetFirstMetadataString(taskEvent, "y", "screenY");
+        if (!string.IsNullOrWhiteSpace(x) && !string.IsNullOrWhiteSpace(y))
+            return $"坐标 {x}, {y}";
+
+        return string.IsNullOrWhiteSpace(fallback) || fallback == "暂无目标"
+            ? "当前桌面"
+            : fallback;
+    }
+
+    private static string ResolveComputerUseTarget(AgentTask task, string userMessage)
+    {
+        if (task.Type == TaskType.ScreenUnderstand || task.Parameters.ContainsKey("Region"))
+            return "屏幕圈选区域";
+
+        return ExtractReadableTarget(userMessage, "当前桌面");
+    }
+
+    private static string ResolveComputerUseControlStatus(TaskEvent taskEvent, string message)
+    {
+        return taskEvent.EventType switch
+        {
+            TaskEventType.PermissionRequested => "等待权限确认弹窗处理。",
+            TaskEventType.PermissionDenied => "权限已拒绝，Computer Use 未继续执行。",
+            TaskEventType.TaskCompleted => "Computer Use 任务已完成。",
+            TaskEventType.TaskFailed => "Computer Use 任务执行失败，可交给用户接管或重试。",
+            TaskEventType.TaskCancelled => "Computer Use 任务已停止。",
+            _ => CleanText(message, "Computer Use 状态已更新。", 80)
+        };
+    }
+
+    private static string GetFirstMetadataString(TaskEvent taskEvent, params string[] keys)
+    {
+        if (taskEvent.Metadata is null)
+            return string.Empty;
+
+        foreach (var key in keys)
+        {
+            if (!taskEvent.Metadata.TryGetValue(key, out var value) || value is null)
+                continue;
+
+            var text = value.ToString();
+            if (!string.IsNullOrWhiteSpace(text))
+                return text;
+        }
+
+        return string.Empty;
     }
 
     private bool TryMarkTaskEventApplied(TaskEvent taskEvent)

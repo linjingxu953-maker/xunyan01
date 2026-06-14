@@ -22,5 +22,7 @@ public enum TaskType
     /// <summary>屏幕理解（区域圈选）</summary>
     ScreenUnderstand,
     /// <summary>题目解答</summary>
-    SolveProblem
+    SolveProblem,
+    /// <summary>计算机操作（鼠标/键盘/窗口）</summary>
+    ComputerUse
 }

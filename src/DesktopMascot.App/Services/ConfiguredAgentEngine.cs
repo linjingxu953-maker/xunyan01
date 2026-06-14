@@ -48,7 +48,14 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
         }
 
         var provider = BuildProvider(settings);
-        var orchestrator = new AgentOrchestrator(provider, _toolRegistry, _eventBus, _logger, memoryService: _memoryService);
+        var computerUseOrchestrator = new ComputerUseOrchestrator(provider, _eventBus, _logger);
+        var orchestrator = new AgentOrchestrator(
+            provider,
+            _toolRegistry,
+            _eventBus,
+            _logger,
+            memoryService: _memoryService,
+            computerUseOrchestrator: computerUseOrchestrator);
         return await orchestrator.ExecuteAsync(task, ct);
     }
 
