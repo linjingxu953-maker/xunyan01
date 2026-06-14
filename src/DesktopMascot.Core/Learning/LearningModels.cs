@@ -1,16 +1,18 @@
+using System.Collections.Concurrent;
+
 namespace DesktopMascot.Core.Learning;
 
 using DesktopMascot.Core.Summary;
 
 /// <summary>
-/// 学习引擎 - 从用户反馈和任务模式中学习
+/// 学习引擎 - 从用户反馈和任务模式中学习（线程安全）
 /// </summary>
 public class LearningEngine
 {
-    private readonly Dictionary<string, UserPreference> _preferences = new();
-    private readonly List<EvolutionRecord> _evolutionHistory = new();
-    private readonly Dictionary<string, int> _taskPatterns = new(); // taskType -> count
-    private readonly Dictionary<string, List<string>> _skillSuggestions = new();
+    private readonly ConcurrentDictionary<string, UserPreference> _preferences = new();
+    private readonly ConcurrentBag<EvolutionRecord> _evolutionHistory = new();
+    private readonly ConcurrentDictionary<string, int> _taskPatterns = new(); // taskType -> count
+    private readonly ConcurrentDictionary<string, ConcurrentBag<string>> _skillSuggestions = new();
 
     /// <summary>记录用户反馈</summary>
     public void RecordFeedback(string taskId, FeedbackType type, string content)
@@ -77,23 +79,22 @@ public class LearningEngine
             var key = parts[0].Trim();
             var value = parts[1].Trim();
 
-            if (_preferences.TryGetValue(key, out var existing))
-            {
-                existing.Value = value;
-                existing.Confidence = Math.Min(1.0f, existing.Confidence + 0.1f);
-                existing.ObservationCount++;
-                existing.LastObserved = DateTime.UtcNow;
-            }
-            else
-            {
-                _preferences[key] = new UserPreference
+            _preferences.AddOrUpdate(key,
+                _ => new UserPreference
                 {
                     Key = key,
                     Value = value,
                     Confidence = 0.5f,
                     ObservationCount = 1
-                };
-            }
+                },
+                (_, existing) =>
+                {
+                    existing.Value = value;
+                    existing.Confidence = Math.Min(1.0f, existing.Confidence + 0.1f);
+                    existing.ObservationCount++;
+                    existing.LastObserved = DateTime.UtcNow;
+                    return existing;
+                });
         }
     }
 
@@ -101,8 +102,7 @@ public class LearningEngine
     public void AnalyzeTaskPattern(string taskType, bool success)
     {
         var key = $"{taskType}_{(success ? "success" : "failure")}";
-        _taskPatterns.TryGetValue(key, out var count);
-        _taskPatterns[key] = count + 1;
+        _taskPatterns.AddOrUpdate(key, 1, (_, c) => c + 1);
 
         // 检测重复模式
         var successKey = $"{taskType}_success";
@@ -112,12 +112,10 @@ public class LearningEngine
 
         if (successCount >= 3 && failureCount == 0)
         {
-            // 连续成功，建议优化
             SuggestSkill(taskType, "此任务类型连续成功，建议优化流程");
         }
         else if (failureCount >= 2)
         {
-            // 连续失败，建议改进
             SuggestSkill(taskType, "此任务类型连续失败，建议改进策略");
         }
     }
@@ -125,11 +123,8 @@ public class LearningEngine
     /// <summary>建议技能</summary>
     private void SuggestSkill(string taskType, string reason)
     {
-        if (!_skillSuggestions.ContainsKey(taskType))
-        {
-            _skillSuggestions[taskType] = new List<string>();
-        }
-        _skillSuggestions[taskType].Add(reason);
+        var suggestions = _skillSuggestions.GetOrAdd(taskType, _ => new ConcurrentBag<string>());
+        suggestions.Add(reason);
     }
 
     /// <summary>获取用户偏好</summary>
@@ -141,19 +136,22 @@ public class LearningEngine
     /// <summary>获取所有偏好</summary>
     public IReadOnlyDictionary<string, UserPreference> GetAllPreferences()
     {
-        return _preferences;
+        // 返回快照避免并发问题
+        return new Dictionary<string, UserPreference>(_preferences);
     }
 
     /// <summary>获取进化历史</summary>
     public IReadOnlyList<EvolutionRecord> GetEvolutionHistory()
     {
-        return _evolutionHistory.AsReadOnly();
+        return _evolutionHistory.ToArray();
     }
 
     /// <summary>获取技能建议</summary>
     public IReadOnlyDictionary<string, List<string>> GetSkillSuggestions()
     {
-        return _skillSuggestions;
+        return _skillSuggestions.ToDictionary(
+            kvp => kvp.Key,
+            kvp => kvp.Value.ToList());
     }
 
     /// <summary>获取任务成功率</summary>

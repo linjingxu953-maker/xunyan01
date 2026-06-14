@@ -243,10 +243,10 @@ public static class WorkflowTemplates
         var templates = GetBuiltInTemplates();
         var lowerQuery = query.ToLowerInvariant();
 
-        return templates.FirstOrDefault(t => 
-            t.Name.Contains(lowerQuery) ||
-            t.Description.Contains(lowerQuery) ||
-            t.Tags.Any(tag => tag.Contains(lowerQuery)));
+        return templates.FirstOrDefault(t =>
+            t.Name.Contains(lowerQuery, StringComparison.OrdinalIgnoreCase) ||
+            t.Description.Contains(lowerQuery, StringComparison.OrdinalIgnoreCase) ||
+            t.Tags.Any(tag => tag.Contains(lowerQuery, StringComparison.OrdinalIgnoreCase)));
     }
 
     /// <summary>获取所有模板类别</summary>

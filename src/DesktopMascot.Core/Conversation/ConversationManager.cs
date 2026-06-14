@@ -1,18 +1,32 @@
+using System.Collections.Concurrent;
+
 namespace DesktopMascot.Core.Conversation;
 
 /// <summary>
 /// 对话管理器 - 管理对话历史、上下文、摘要
+/// 线程安全：支持 UI 线程和后台任务并发访问
 /// </summary>
 public class ConversationManager
 {
-    private readonly Dictionary<string, ConversationContext> _conversations = new();
-    private readonly Dictionary<string, List<string>> _userConversations = new(); // userId -> conversationIds
+    private readonly ConcurrentDictionary<string, ConversationContext> _conversations = new();
+    private readonly ConcurrentDictionary<string, ConcurrentBag<string>> _userConversations = new(); // userId -> conversationIds
+    private readonly object _activeIdLock = new();
     private string? _activeConversationId;
 
     /// <summary>当前活跃对话</summary>
-    public ConversationContext? ActiveConversation => 
-        _activeConversationId != null && _conversations.TryGetValue(_activeConversationId, out var ctx) 
-            ? ctx : null;
+    public ConversationContext? ActiveConversation
+    {
+        get
+        {
+            string? activeId;
+            lock (_activeIdLock)
+            {
+                activeId = _activeConversationId;
+            }
+            return activeId != null && _conversations.TryGetValue(activeId, out var ctx)
+                ? ctx : null;
+        }
+    }
 
     /// <summary>创建新对话</summary>
     public ConversationContext CreateConversation(string title = "", string? userId = null)
@@ -23,13 +37,15 @@ public class ConversationManager
         };
 
         _conversations[conversation.Id] = conversation;
-        _activeConversationId = conversation.Id;
+        lock (_activeIdLock)
+        {
+            _activeConversationId = conversation.Id;
+        }
 
         if (!string.IsNullOrEmpty(userId))
         {
-            if (!_userConversations.ContainsKey(userId))
-                _userConversations[userId] = new List<string>();
-            _userConversations[userId].Add(conversation.Id);
+            var bag = _userConversations.GetOrAdd(userId, _ => new ConcurrentBag<string>());
+            bag.Add(conversation.Id);
         }
 
         return conversation;
@@ -38,6 +54,8 @@ public class ConversationManager
     /// <summary>添加用户消息</summary>
     public ConversationMessage AddUserMessage(string content, Dictionary<string, string>? metadata = null)
     {
+        ArgumentNullException.ThrowIfNull(content);
+
         var conversation = ActiveConversation;
         if (conversation == null)
         {
@@ -59,6 +77,8 @@ public class ConversationManager
     /// <summary>添加助手消息</summary>
     public ConversationMessage AddAssistantMessage(string content, string? toolCalls = null, string? toolResults = null)
     {
+        ArgumentNullException.ThrowIfNull(content);
+
         var conversation = ActiveConversation;
         if (conversation == null)
         {
@@ -118,7 +138,10 @@ public class ConversationManager
     {
         if (_conversations.ContainsKey(conversationId))
         {
-            _activeConversationId = conversationId;
+            lock (_activeIdLock)
+            {
+                _activeConversationId = conversationId;
+            }
             return true;
         }
         return false;
@@ -139,10 +162,29 @@ public class ConversationManager
             .ToList();
     }
 
-    /// <summary>删除对话</summary>
+    /// <summary>删除对话 — 同时清理活跃引用和用户关联</summary>
     public bool DeleteConversation(string conversationId)
     {
-        return _conversations.Remove(conversationId);
+        if (!_conversations.TryRemove(conversationId, out _))
+            return false;
+
+        lock (_activeIdLock)
+        {
+            if (_activeConversationId == conversationId)
+            {
+                _activeConversationId = null;
+            }
+        }
+
+        // 清理用户关联
+        foreach (var kvp in _userConversations)
+        {
+            // ConcurrentBag 不支持 Remove，用重建方式
+            var filtered = new ConcurrentBag<string>(kvp.Value.Where(id => id != conversationId));
+            _userConversations.TryUpdate(kvp.Key, filtered, kvp.Value);
+        }
+
+        return true;
     }
 
     /// <summary>提取关键主题</summary>
@@ -152,7 +194,7 @@ public class ConversationManager
         foreach (var msg in conversation.Messages.Where(m => m.Role == "user"))
         {
             // 简单的关键词提取
-            var words = msg.Content.Split(new[] { ' ', '，', '。', '？', '！' }, 
+            var words = msg.Content.Split(new[] { ' ', '，', '。', '？', '！' },
                 StringSplitOptions.RemoveEmptyEntries);
             foreach (var word in words.Where(w => w.Length > 2))
             {

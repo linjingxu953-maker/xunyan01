@@ -14,10 +14,15 @@ public class IntentClassification
 
 /// <summary>
 /// 意图分类器 - 分析用户输入，识别意图和实体
+/// 改进版：支持否定检测，避免"不想总结"误匹配
 /// </summary>
 public static class IntentClassifier
 {
     private static readonly Dictionary<string, IntentPattern> IntentPatterns = new();
+
+    // 否定前缀模式 — 匹配 "不要/别/不用/不想/不需要/别帮我 + keyword" 的结构
+    private static readonly System.Text.RegularExpressions.Regex NegationPrefixRegex = new(
+        @"(?:不要|别|不用|不想|不需要|别帮我|不想要)\s*");
 
     static IntentClassifier()
     {
@@ -52,15 +57,29 @@ public static class IntentClassifier
 
         foreach (var kvp in IntentPatterns)
         {
-            if (lowerInput.Contains(kvp.Key))
+            var keyword = kvp.Key;
+            var matchIndex = lowerInput.IndexOf(keyword, StringComparison.Ordinal);
+            if (matchIndex < 0)
+                continue;
+
+            // 检查是否为否定模式：输入在关键词前的部分是否以否定前缀结尾
+            if (matchIndex > 0)
             {
-                if (kvp.Value.Confidence > bestConfidence)
+                var prefix = lowerInput[..matchIndex];
+                var negationMatch = NegationPrefixRegex.Match(prefix);
+                if (negationMatch.Success && negationMatch.Index + negationMatch.Length == prefix.Length)
                 {
-                    bestIntent = kvp.Value.Intent;
-                    bestConfidence = kvp.Value.Confidence;
-                    bestContext = kvp.Value.Context;
-                    bestTools = kvp.Value.Tools;
+                    // 否定 + 关键词 → 跳过此意图
+                    continue;
                 }
+            }
+
+            if (kvp.Value.Confidence > bestConfidence)
+            {
+                bestIntent = kvp.Value.Intent;
+                bestConfidence = kvp.Value.Confidence;
+                bestContext = kvp.Value.Context;
+                bestTools = kvp.Value.Tools;
             }
         }
 
@@ -118,11 +137,24 @@ public class IntentPattern
 /// </summary>
 public static class ContextAssembler
 {
-    /// <summary>组装任务上下文（基础版本，不含浏览器/剪贴板）</summary>
+    /// <summary>组装任务执行上下文（基础版本）</summary>
+    /// <param name="intent">意图分类结果</param>
+    /// <returns>包含意图、实体及所需上下文标记的字典</returns>
     public static Dictionary<string, object> AssembleBaseContext(IntentClassification intent)
     {
-        var context = new Dictionary<string, object>();
-        // 基础上下文由调用者提供
+        var context = new Dictionary<string, object>
+        {
+            ["intent"] = intent.Intent,
+            ["confidence"] = intent.Confidence,
+            ["required_context"] = intent.RequiredContext,
+            ["suggested_tools"] = intent.SuggestedTools
+        };
+
+        foreach (var (key, value) in intent.Entities)
+        {
+            context[$"entity_{key}"] = value;
+        }
+
         return context;
     }
 }

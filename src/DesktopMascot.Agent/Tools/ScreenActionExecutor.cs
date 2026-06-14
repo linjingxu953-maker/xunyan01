@@ -103,31 +103,31 @@ public class ScreenActionExecutor
         }
     }
 
-    private Task<ScreenActionResult> ExecuteClickAsync(ScreenAction action)
+    private async Task<ScreenActionResult> ExecuteClickAsync(ScreenAction action)
     {
         if (action.Parameters.TryGetValue("x", out var xStr) && int.TryParse(xStr, out var x) &&
             action.Parameters.TryGetValue("y", out var yStr) && int.TryParse(yStr, out var y))
         {
             SetCursorPos(x, y);
-            Thread.Sleep(50);
+            await Task.Delay(50);
             mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
             mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
 
-            return Task.FromResult(new ScreenActionResult
+            return new ScreenActionResult
             {
                 Success = true,
                 Output = $"已点击坐标 ({x}, {y})"
-            });
+            };
         }
 
-        return Task.FromResult(new ScreenActionResult
+        return new ScreenActionResult
         {
             Success = false,
             Error = "缺少 x 或 y 坐标"
-        });
+        };
     }
 
-    private Task<ScreenActionResult> ExecuteTypeAsync(ScreenAction action)
+    private async Task<ScreenActionResult> ExecuteTypeAsync(ScreenAction action)
     {
         if (action.Parameters.TryGetValue("text", out var text) && !string.IsNullOrEmpty(text))
         {
@@ -135,24 +135,24 @@ public class ScreenActionExecutor
             {
                 var input = new INPUT { type = INPUT_KEYBOARD, u = new INPUTUNION { ki = new KEYBDINPUT { wScan = (ushort)c, dwFlags = 0x0004 } } };
                 SendInput(1, new[] { input }, Marshal.SizeOf<INPUT>());
-                Thread.Sleep(10);
+                await Task.Delay(10);
             }
 
-            return Task.FromResult(new ScreenActionResult
+            return new ScreenActionResult
             {
                 Success = true,
                 Output = $"已输入 {text.Length} 个字符"
-            });
+            };
         }
 
-        return Task.FromResult(new ScreenActionResult
+        return new ScreenActionResult
         {
             Success = false,
             Error = "缺少 text 参数"
-        });
+        };
     }
 
-    private Task<ScreenActionResult> ExecuteHotkeyAsync(ScreenAction action)
+    private async Task<ScreenActionResult> ExecuteHotkeyAsync(ScreenAction action)
     {
         if (action.Parameters.TryGetValue("keys", out var keysStr) && !string.IsNullOrEmpty(keysStr))
         {
@@ -170,7 +170,7 @@ public class ScreenActionExecutor
             {
                 var input = new INPUT { type = INPUT_KEYBOARD, u = new INPUTUNION { ki = new KEYBDINPUT { wVk = vk, dwFlags = 0 } } };
                 SendInput(1, new[] { input }, Marshal.SizeOf<INPUT>());
-                Thread.Sleep(10);
+                await Task.Delay(10);
             }
 
             // 释放所有键（反序）
@@ -178,21 +178,21 @@ public class ScreenActionExecutor
             {
                 var input = new INPUT { type = INPUT_KEYBOARD, u = new INPUTUNION { ki = new KEYBDINPUT { wVk = vk, dwFlags = 0x0002 } } };
                 SendInput(1, new[] { input }, Marshal.SizeOf<INPUT>());
-                Thread.Sleep(10);
+                await Task.Delay(10);
             }
 
-            return Task.FromResult(new ScreenActionResult
+            return new ScreenActionResult
             {
                 Success = true,
                 Output = $"已执行快捷键: {keysStr}"
-            });
+            };
         }
 
-        return Task.FromResult(new ScreenActionResult
+        return new ScreenActionResult
         {
             Success = false,
             Error = "缺少 keys 参数"
-        });
+        };
     }
 
     private Task<ScreenActionResult> ExecuteScrollAsync(ScreenAction action)
@@ -318,7 +318,25 @@ public class ScreenActionExecutor
 
     private async Task<ScreenActionResult> RunCommandAsync(ScreenAction action)
     {
-        if (action.Parameters.TryGetValue("command", out var command) && !string.IsNullOrEmpty(command))
+        if (!action.Parameters.TryGetValue("command", out var command) || string.IsNullOrEmpty(command))
+        {
+            return new ScreenActionResult
+            {
+                Success = false,
+                Error = "缺少 command 参数"
+            };
+        }
+
+        // 默认超时 30 秒，可通过 action.Parameters["timeout_seconds"] 覆盖
+        var timeoutSeconds = action.Parameters.TryGetValue("timeout_seconds", out var tsStr)
+            && int.TryParse(tsStr, out var tsParsed) ? tsParsed : 30;
+
+        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
+        // 合并外部 CancellationToken 和超时
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+            CancellationToken.None, timeoutCts.Token);
+
+        try
         {
             var process = new Process
             {
@@ -330,27 +348,35 @@ public class ScreenActionExecutor
                     RedirectStandardError = true,
                     UseShellExecute = false,
                     CreateNoWindow = true
-                }
+                },
+                EnableRaisingEvents = true
             };
 
             process.Start();
-            var output = await process.StandardOutput.ReadToEndAsync();
-            var error = await process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
+
+            var outputTask = process.StandardOutput.ReadToEndAsync();
+            var errorTask = process.StandardError.ReadToEndAsync();
+            var exitTask = process.WaitForExitAsync(linkedCts.Token);
+
+            await exitTask;
+            var output = await outputTask;
+            var error = await errorTask;
 
             return new ScreenActionResult
             {
                 Success = process.ExitCode == 0,
-                Output = output,
+                Output = output.Length > 0 ? output : null,
                 Error = string.IsNullOrEmpty(error) ? null : error
             };
         }
-
-        return new ScreenActionResult
+        catch (OperationCanceledException)
         {
-            Success = false,
-            Error = "缺少 command 参数"
-        };
+            return new ScreenActionResult
+            {
+                Success = false,
+                Error = $"命令执行超时（{timeoutSeconds}秒）"
+            };
+        }
     }
 
     private static ushort ParseKey(string key)

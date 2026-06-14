@@ -10,20 +10,21 @@ public static class ScreenPromptBuilder
     public static string BuildPrompt(ScreenContentType contentType, string? userHint = null)
     {
         var typePrompt = GetTypeSpecificPrompt(contentType);
+        var contentTypeStr = contentType.ToString().ToLowerInvariant();
 
         var prompt = @"你是一个专业的屏幕内容分析助手。你的任务是：
 1. 识别屏幕上显示的内容
 2. 理解用户可能的意图
 3. 给出具体可执行的建议
 
-__TYPE_PROMPT__
+" + typePrompt + @"
 
 请严格按以下 JSON 格式返回：
 {
   ""identification"": ""这是什么内容"",
   ""understanding"": ""用户可能想做什么"",
   ""userIntent"": ""如果无法理解用户意图，返回用户的原始输入或空字符串"",
-  ""contentType"": ""__CONTENT_TYPE__"",
+  ""contentType"": """ + contentTypeStr + @""",
   ""extractedText"": ""提取的关键文字"",
   ""suggestions"": [""建议1"", ""建议2""],
   ""needsAction"": true,
@@ -44,10 +45,9 @@ __TYPE_PROMPT__
 1. 不要猜测，如果不确定返回 userIntent
 2. identification 要具体
 3. suggestions 要可操作
-4. riskLevel 要准确评估"
-            .Replace("__TYPE_PROMPT__", typePrompt, StringComparison.Ordinal)
-            .Replace("__CONTENT_TYPE__", contentType.ToString().ToLowerInvariant(), StringComparison.Ordinal);
+4. riskLevel 要准确评估";
 
+        // userHint 在模板替换之后拼接，避免用户输入干扰占位符
         if (!string.IsNullOrEmpty(userHint))
         {
             prompt += $"\n\n用户补充说明：{userHint}";

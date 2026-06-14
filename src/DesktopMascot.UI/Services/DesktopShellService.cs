@@ -333,23 +333,6 @@ public sealed class DesktopShellService : IDisposable
         _window.Position = GetDefaultWindowPosition(width, height);
     }
 
-    private PixelPoint GetAnchoredRestorePosition(WindowPlacementState state, double targetWidth, double targetHeight)
-    {
-        var savedPosition = new PixelPoint(state.X, state.Y);
-        var screen = FindBestScreen(savedPosition);
-        var scaling = screen is null ? 1 : GetScreenScaling(screen);
-        var savedWidth = Math.Clamp(state.Width, CollapsedWindowWidth, 1000);
-        var savedHeight = Math.Clamp(state.Height, CollapsedWindowHeight, 1000);
-        var savedPixelWidth = Math.Max(1, (int)Math.Ceiling(savedWidth * scaling));
-        var savedPixelHeight = Math.Max(1, (int)Math.Ceiling(savedHeight * scaling));
-        var targetPixelWidth = Math.Max(1, (int)Math.Ceiling(targetWidth * scaling));
-        var targetPixelHeight = Math.Max(1, (int)Math.Ceiling(targetHeight * scaling));
-
-        return new PixelPoint(
-            state.X + savedPixelWidth - targetPixelWidth,
-            state.Y + savedPixelHeight - targetPixelHeight);
-    }
-
     private void EnsureWindowOnScreen()
     {
         if (_window is null)
