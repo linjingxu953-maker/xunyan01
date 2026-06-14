@@ -35,8 +35,43 @@ public partial class FloatingWindow : Window
         }
     }
 
+    /// <summary>
+    /// 历史项点击
+    /// </summary>
+    private void HistoryItem_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is Border border && border.DataContext is ViewModels.TaskHistoryItem item)
+        {
+            if (DataContext is ViewModels.FloatingWindowViewModel vm)
+            {
+                // 加载历史对话
+                vm.MessageItems.Clear();
+                foreach (var msg in item.Messages)
+                {
+                    vm.MessageItems.Add(msg);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 输入框按键处理
+    /// </summary>
+    private void InputBox_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter || e.KeyModifiers.HasFlag(KeyModifiers.Shift))
+            return;
+
+        if (DataContext is ViewModels.FloatingWindowViewModel vm)
+        {
+            vm.SendMessageCommand.Execute(null);
+        }
+
+        e.Handled = true;
+    }
+
     public void FocusInput()
     {
-        ChatPanel.FocusInput();
+        // Focus will be handled by the ChatPanel when it becomes visible
     }
 }

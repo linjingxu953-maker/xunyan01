@@ -114,8 +114,11 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _isMascotIconVisible = true;
     [ObservableProperty] private bool _isChatDialogVisible = false;
     [ObservableProperty] private bool _isChatDialogHitTestVisible = true;
+    [ObservableProperty] private bool _isSidebarVisible = true;
 
     public ObservableCollection<string> Messages { get; } = new();
+    public ObservableCollection<MessageItem> MessageItems { get; } = new();
+    public ObservableCollection<TaskHistoryItem> TaskHistory { get; } = new();
     public ObservableCollection<TaskTimelineItem> TaskTimeline { get; } = new();
     public ObservableCollection<TaskToolCallItem> TaskToolCalls { get; } = new();
     public ObservableCollection<ComputerUseActionItem> ComputerUseActions { get; } = new();
@@ -326,6 +329,9 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
 
         var userMessage = InputText;
         InputText = string.Empty;
+
+        // 添加用户消息到列表
+        MessageItems.Add(new MessageItem { Role = "user", Content = userMessage });
         Messages.Add($"你：{userMessage}");
 
         var metadata = BuildTaskMetadata(userMessage);
@@ -606,6 +612,30 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         IsChatVisible = false;
     }
 
+    /// <summary>
+    /// 新建对话
+    /// </summary>
+    [RelayCommand]
+    private void NewChat()
+    {
+        // 保存当前对话到历史
+        if (MessageItems.Count > 0)
+        {
+            var historyItem = new TaskHistoryItem
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                Title = MessageItems.FirstOrDefault()?.Content ?? "新对话",
+                TimeText = DateTime.Now.ToString("HH:mm"),
+                Messages = new List<MessageItem>(MessageItems)
+            };
+            TaskHistory.Insert(0, historyItem);
+        }
+
+        // 清空当前对话
+        MessageItems.Clear();
+        Messages.Clear();
+    }
+
     [RelayCommand(CanExecute = nameof(CanStartScreenSelection))]
     private void StartScreenSelection()
     {
@@ -724,6 +754,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         TaskActionStatus = "任务正在执行。";
         _pendingResponseMessage = $"{CharacterName}：正在处理...";
         Messages.Add(_pendingResponseMessage);
+        MessageItems.Add(new MessageItem { Role = "assistant", Content = "正在处理..." });
 
         try
         {
@@ -739,13 +770,21 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
             TaskResultPreview = ResolveResultText(result);
             TaskActionStatus = result.Success ? "任务完成，可以复制或保存结果。" : "任务失败，可以重试。";
 
+            // 移除"正在处理"消息，添加实际响应
+            if (MessageItems.Count > 0 && MessageItems[^1].Content == "正在处理...")
+            {
+                MessageItems.RemoveAt(MessageItems.Count - 1);
+            }
+
             if (result.Success)
             {
                 Messages.Add($"{CharacterName}：{result.Content}");
+                MessageItems.Add(new MessageItem { Role = "assistant", Content = result.Content });
             }
             else
             {
                 Messages.Add($"{CharacterName}：{TaskResultPreview}");
+                MessageItems.Add(new MessageItem { Role = "assistant", Content = TaskResultPreview });
             }
         }
         finally
@@ -1876,4 +1915,31 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
             _onNext(value);
         }
     }
+}
+
+/// <summary>
+/// 消息项
+/// </summary>
+public class MessageItem
+{
+    public string Role { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public string RoleText => Role == "user" ? "你" : "小桌灵";
+    public IBrush RoleColor => Role == "user"
+        ? new SolidColorBrush(Color.Parse("#2563EB"))
+        : new SolidColorBrush(Color.Parse("#10B981"));
+    public IBrush BubbleBackground => Role == "user"
+        ? new SolidColorBrush(Color.Parse("#EFF6FF"))
+        : new SolidColorBrush(Color.Parse("#F0FDF4"));
+}
+
+/// <summary>
+/// 任务历史项
+/// </summary>
+public class TaskHistoryItem
+{
+    public string Id { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string TimeText { get; set; } = string.Empty;
+    public List<MessageItem> Messages { get; set; } = new();
 }

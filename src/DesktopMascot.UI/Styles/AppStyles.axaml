@@ -212,4 +212,108 @@
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
+
+    <!-- 侧边栏样式 -->
+    <Style Selector="Border.sidebarPanel">
+        <Setter Property="Background" Value="{StaticResource Brush.Surface.Subtle}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="0,0,1,0"/>
+    </Style>
+
+    <!-- 侧边栏标题 -->
+    <Style Selector="TextBlock.sidebarTitle">
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Secondary}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <!-- 历史项 -->
+    <Style Selector="Border.historyItem">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Margin" Value="8,2"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+
+    <Style Selector="Border.historyItem:pointerover">
+        <Setter Property="Background" Value="{StaticResource Brush.Surface.Panel}"/>
+    </Style>
+
+    <!-- 历史标题 -->
+    <Style Selector="TextBlock.historyTitle">
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Primary}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+    </Style>
+
+    <!-- 历史时间 -->
+    <Style Selector="TextBlock.historyTime">
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Muted}"/>
+        <Setter Property="FontSize" Value="10"/>
+    </Style>
+
+    <!-- 新建对话按钮 -->
+    <Style Selector="Button.newChatButton">
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="12,10"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Background" Value="{StaticResource Brush.Surface.Panel}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Secondary}"/>
+        <Setter Property="FontSize" Value="12"/>
+    </Style>
+
+    <!-- 消息气泡 -->
+    <Style Selector="Border.messageBubble">
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="MaxWidth" Value="280"/>
+    </Style>
+
+    <!-- 消息角色 -->
+    <Style Selector="TextBlock.messageRole">
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Margin" Value="0,0,0,2"/>
+    </Style>
+
+    <!-- 消息内容 -->
+    <Style Selector="TextBlock.messageContent">
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Body}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <!-- 状态条 -->
+    <Style Selector="Border.statusBar">
+        <Setter Property="Background" Value="{StaticResource Brush.Surface.Subtle}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="0,1,0,0"/>
+    </Style>
+
+    <!-- 输入区 -->
+    <Style Selector="Border.inputArea">
+        <Setter Property="Background" Value="{StaticResource Brush.Surface.Panel}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="0,1,0,0"/>
+    </Style>
+
+    <!-- 聊天输入框 -->
+    <Style Selector="TextBox.chatInput">
+        <Setter Property="CornerRadius" Value="20"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.Border.Strong}"/>
+        <Setter Property="Padding" Value="14,10"/>
+        <Setter Property="FontSize" Value="13"/>
+    </Style>
+
+    <!-- 发送按钮 -->
+    <Style Selector="Button.sendButton">
+        <Setter Property="Background" Value="{StaticResource Brush.Info.Text}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="CornerRadius" Value="20"/>
+        <Setter Property="Padding" Value="16,10"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
 </Styles>
