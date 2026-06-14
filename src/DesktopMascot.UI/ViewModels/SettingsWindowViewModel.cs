@@ -21,6 +21,34 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         ".webp"
     };
 
+    private static readonly Dictionary<string, string[]> CharacterStateMatchKeywords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Idle"] = ["idle", "default", "stand", "standing", "avatar", "站立", "空闲", "默认"],
+        ["Listening"] = ["listening", "listen", "user", "look", "聆听", "听", "看向用户"],
+        ["Understanding"] = ["understanding", "thinking", "think", "idea", "理解", "思考"],
+        ["ReadingContext"] = ["reading", "read", "context", "scan", "读取", "上下文"],
+        ["Planning"] = ["planning", "plan", "thinking", "map", "规划", "计划", "思考"],
+        ["WaitingApproval"] = ["waiting", "approval", "approve", "wait", "hand", "提醒", "举手", "等待", "确认"],
+        ["Working"] = ["working", "work", "busy", "coding", "执行", "工作", "忙碌"],
+        ["MemoryConfirm"] = ["memory", "remember", "save", "记忆", "保存"],
+        ["Reporting"] = ["reporting", "report", "pose", "summary", "汇报", "报告"],
+        ["Completed"] = ["completed", "complete", "done", "happy", "success", "完成", "开心", "成功"],
+        ["Error"] = ["error", "failed", "fail", "confused", "warning", "错误", "困惑", "失败", "异常"]
+    };
+
+    private static readonly string[] AvatarMatchKeywords =
+    [
+        "avatar",
+        "face",
+        "default",
+        "stand",
+        "standing",
+        "idle",
+        "头像",
+        "站立",
+        "默认"
+    ];
+
     private readonly IConfigurationManager _configurationManager;
     private readonly ISettingsDiagnosticsService _diagnosticsService;
     private readonly IOnboardingWindowService _onboardingWindowService;
@@ -28,6 +56,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private readonly ICharacterImageService _characterImageService;
     private readonly ICharacterAssetImportService _characterAssetImportService;
     private readonly ICharacterAssetPickerService _characterAssetPickerService;
+    private readonly IGlobalHotkeyService _hotkeyService;
     private bool _isApplyingProvider;
     private bool _isApplyingCharacterProfile;
     private AppSettings _settings = new();
@@ -50,6 +79,9 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [ObservableProperty] private bool _isMemoryEnabled = true;
     [ObservableProperty] private string _memorySettingsStatus = "M30 记忆确认接口已就绪，当前页面保存记忆开关并预留队列入口。";
     [ObservableProperty] private string _pendingMemoryDraftContent = string.Empty;
+    [ObservableProperty] private string _hotkeySettingsStatus = "快捷键状态会在应用启动后显示。";
+    [ObservableProperty] private string _chatHotkeyText = string.Empty;
+    [ObservableProperty] private string _screenSelectionHotkeyText = string.Empty;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPendingMemoryReviewSelected))]
@@ -81,6 +113,13 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [ObservableProperty] private string _characterAssetWarningText = "选择目录后可逐状态检查图片。";
     [ObservableProperty] private string _characterSaveStatus = "角色配置会自动保存在本机。";
     [ObservableProperty] private string _characterLibraryStatus = "角色库会保存多个可切换的角色档案。";
+    [ObservableProperty] private string _characterAssetSuggestionStatus = "扫描图片目录后会生成状态图匹配建议。";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCharacterAvatarImageSuggestion))]
+    private string _characterAvatarImageSuggestion = string.Empty;
+
+    [ObservableProperty] private string _characterStatePreviewStatus = "状态图会在这里批量校验。";
     [ObservableProperty] private IImage? _characterImageSource;
     [ObservableProperty] private IBrush _characterAccentBrush = BrushFrom("#2563EB");
     [ObservableProperty] private IBrush _characterBackgroundBrush = BrushFrom("#EEF6FF");
@@ -104,7 +143,8 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         IMascotCharacterStore characterStore,
         ICharacterImageService characterImageService,
         ICharacterAssetImportService characterAssetImportService,
-        ICharacterAssetPickerService characterAssetPickerService)
+        ICharacterAssetPickerService characterAssetPickerService,
+        IGlobalHotkeyService hotkeyService)
     {
         _configurationManager = configurationManager;
         _diagnosticsService = diagnosticsService;
@@ -113,6 +153,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         _characterImageService = characterImageService;
         _characterAssetImportService = characterAssetImportService;
         _characterAssetPickerService = characterAssetPickerService;
+        _hotkeyService = hotkeyService;
 
         Sections =
         [
@@ -145,8 +186,11 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         MemoryReadinessItems = [];
         MemoryStatsItems = [];
         MemoryActionItems = [];
+        HotkeyItems = [];
         PendingMemoryReviews = [];
         CharacterProfiles = [];
+        CharacterAssetSuggestions = [];
+        CharacterStatePreviewItems = [];
         CharacterStateImageItems =
         [
             new CharacterStateImageItem("Idle", "空闲 / 默认", "站立.png"),
@@ -172,6 +216,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             RefreshMemoryCards();
         };
         CharacterProfiles.CollectionChanged += (_, _) => RefreshCharacterProfileState();
+        CharacterAssetSuggestions.CollectionChanged += (_, _) => RefreshCharacterAssetSuggestionState();
 
         SelectedProvider = Providers[0];
         SelectedAutoApproveLevel = PermissionAutoApproveLevels[0];
@@ -179,9 +224,11 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         ApplyProviderDefaultsIfEmpty();
         ApplyCharacterProfile(_characterStore.Load(), save: false);
         RefreshCharacterProfiles();
+        LoadHotkeyTextFromService();
         RefreshMimoCodeCards();
         RefreshPermissionCards();
         RefreshMemoryCards();
+        RefreshHotkeyCards();
     }
 
     public ObservableCollection<SettingsSectionItem> Sections { get; }
@@ -194,9 +241,12 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     public ObservableCollection<SettingsListItem> MemoryReadinessItems { get; }
     public ObservableCollection<SettingsListItem> MemoryStatsItems { get; }
     public ObservableCollection<SettingsListItem> MemoryActionItems { get; }
+    public ObservableCollection<SettingsListItem> HotkeyItems { get; }
     public ObservableCollection<PendingMemoryReviewItem> PendingMemoryReviews { get; }
     public ObservableCollection<CharacterProfileListItem> CharacterProfiles { get; }
+    public ObservableCollection<CharacterAssetSuggestionItem> CharacterAssetSuggestions { get; }
     public ObservableCollection<CharacterStateImageItem> CharacterStateImageItems { get; }
+    public ObservableCollection<CharacterStatePreviewItem> CharacterStatePreviewItems { get; }
     public bool IsNotModelSectionSelected => !IsModelSectionSelected;
     public bool HasPendingMemoryReviews => PendingMemoryReviews.Count > 0;
     public bool HasNoPendingMemoryReviews => !HasPendingMemoryReviews;
@@ -206,6 +256,10 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     public bool HasCharacterProfiles => CharacterProfiles.Count > 0;
     public bool HasNoCharacterProfiles => !HasCharacterProfiles;
     public bool HasSelectedCharacterProfile => SelectedCharacterProfile is not null;
+    public bool HasCharacterAssetSuggestions => CharacterAssetSuggestions.Count > 0;
+    public bool HasNoCharacterAssetSuggestions => !HasCharacterAssetSuggestions;
+    public bool HasCharacterAvatarImageSuggestion => !string.IsNullOrWhiteSpace(CharacterAvatarImageSuggestion);
+    public bool HasCharacterStatePreviews => CharacterStatePreviewItems.Count > 0;
 
     public async Task LoadAsync(CancellationToken ct = default)
     {
@@ -241,9 +295,11 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             ApplyCharacterProfile(_characterStore.Load(), save: false);
             CharacterSaveStatus = "已加载本机角色外观配置。";
             RefreshCharacterProfiles();
+            LoadHotkeyTextFromService();
             RefreshMimoCodeCards();
             RefreshPermissionCards();
             RefreshMemoryCards();
+            RefreshHotkeyCards();
         }
         finally
         {
@@ -531,6 +587,43 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         MemorySettingsStatus = "记忆 UI 已接入 IMemoryConfirmationPrompt。统计、浏览和队列数据后续可从 IMemoryStore/事件流填充。";
         RefreshMemoryCards();
         RefreshPendingMemoryReviewState();
+    }
+
+    [RelayCommand]
+    private void RefreshHotkeyStatus()
+    {
+        LoadHotkeyTextFromService();
+        RefreshHotkeyCards();
+    }
+
+    [RelayCommand]
+    private void SaveHotkeySettings()
+    {
+        if (!HotkeyGesture.TryParse(ChatHotkeyText, out var chatHotkey, out var chatError))
+        {
+            HotkeySettingsStatus = $"聊天唤起快捷键无效：{chatError}";
+            return;
+        }
+
+        if (!HotkeyGesture.TryParse(ScreenSelectionHotkeyText, out var screenSelectionHotkey, out var screenSelectionError))
+        {
+            HotkeySettingsStatus = $"屏幕圈选快捷键无效：{screenSelectionError}";
+            return;
+        }
+
+        var result = _hotkeyService.UpdateHotkeys(chatHotkey, screenSelectionHotkey);
+        LoadHotkeyTextFromService();
+        RefreshHotkeyCards();
+        HotkeySettingsStatus = result.Message;
+    }
+
+    [RelayCommand]
+    private void ResetHotkeySettings()
+    {
+        var result = _hotkeyService.ResetHotkeys();
+        LoadHotkeyTextFromService();
+        RefreshHotkeyCards();
+        HotkeySettingsStatus = result.Message;
     }
 
     [RelayCommand]
@@ -826,6 +919,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         SetStateImage("Completed", "Completed：开心、完成图.png");
         SetStateImage("Error", "Error：困惑、错误图.png");
         RefreshCharacterImagePreview();
+        RefreshCharacterAssetSuggestions();
         CharacterSaveStatus = "已填入桌面人物图片目录和状态图映射，点击保存后生效。";
     }
 
@@ -858,6 +952,49 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void RefreshCharacterStatePreview()
+    {
+        RefreshCharacterImagePreview();
+        CharacterStatePreviewStatus = "已检查全部状态图。";
+    }
+
+    [RelayCommand]
+    private void ScanCharacterAssetSuggestions()
+    {
+        RefreshCharacterAssetSuggestions();
+    }
+
+    [RelayCommand]
+    private void ApplyCharacterAssetSuggestions()
+    {
+        if (CharacterAssetSuggestions.Count == 0)
+        {
+            RefreshCharacterAssetSuggestions();
+        }
+
+        var appliedCount = 0;
+        foreach (var suggestion in CharacterAssetSuggestions.Where(x => x.HasSuggestion && !x.IsAlreadyApplied))
+        {
+            SetStateImage(suggestion.StateKey, suggestion.SuggestedFileName);
+            appliedCount++;
+        }
+
+        var appliedAvatar = false;
+        if (!string.IsNullOrWhiteSpace(CharacterAvatarImageSuggestion) &&
+            !string.Equals(CharacterAvatarImage, CharacterAvatarImageSuggestion, StringComparison.OrdinalIgnoreCase))
+        {
+            CharacterAvatarImage = CharacterAvatarImageSuggestion;
+            appliedAvatar = true;
+        }
+
+        RefreshCharacterImagePreview();
+        RefreshCharacterAssetSuggestions();
+        CharacterSaveStatus = appliedCount == 0 && !appliedAvatar
+            ? "没有可应用的新图片匹配。"
+            : $"已应用 {appliedCount} 个状态图匹配{(appliedAvatar ? "，并更新头像图片" : string.Empty)}，点击保存后生效。";
+    }
+
+    [RelayCommand]
     private async Task PickCharacterImageFolder()
     {
         var folder = await _characterAssetPickerService.PickImageFolderAsync();
@@ -866,6 +1003,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
 
         CharacterImageFolder = folder;
         RefreshCharacterImagePreview();
+        RefreshCharacterAssetSuggestions();
         CharacterSaveStatus = "已选择角色图片目录，点击保存后生效。";
     }
 
@@ -1004,6 +1142,58 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             : "使用桌面小人 Provider/API Key";
     }
 
+    private void RefreshHotkeyCards()
+    {
+        HotkeyItems.Clear();
+
+        HotkeyItems.Add(new SettingsListItem(
+            "聊天唤起",
+            $"{_hotkeyService.DisplayText} / {GetHotkeyRegistrationText(_hotkeyService.IsDefaultHotkeyRegistered)}",
+            _hotkeyService.IsDefaultHotkeyRegistered
+                ? "在桌面任意位置唤起小人并打开输入面板。"
+                : "未能注册，通常是组合键被其他软件占用，或当前平台不支持全局热键。"));
+
+        HotkeyItems.Add(new SettingsListItem(
+            "屏幕圈选",
+            $"{_hotkeyService.ScreenSelectionDisplayText} / {GetHotkeyRegistrationText(_hotkeyService.IsScreenSelectionHotkeyRegistered)}",
+            _hotkeyService.IsScreenSelectionHotkeyRegistered
+                ? "在桌面任意位置进入屏幕区域圈选，并把区域交给屏幕理解任务。"
+                : "未能注册，可能与系统或截图工具热键冲突。"));
+
+        HotkeyItems.Add(new SettingsListItem(
+            "冲突提示",
+            "保存前检查",
+            "保存时会检查格式、重复组合键和 Windows 注册冲突；失败时会保留上一次可用配置。"));
+
+        HotkeySettingsStatus = GetHotkeyStatusText();
+    }
+
+    private void LoadHotkeyTextFromService()
+    {
+        ChatHotkeyText = _hotkeyService.DisplayText;
+        ScreenSelectionHotkeyText = _hotkeyService.ScreenSelectionDisplayText;
+    }
+
+    private string GetHotkeyStatusText()
+    {
+        if (_hotkeyService.IsDefaultHotkeyRegistered && _hotkeyService.IsScreenSelectionHotkeyRegistered)
+        {
+            return "快捷键已注册，可在桌面直接使用。";
+        }
+
+        if (_hotkeyService.IsDefaultHotkeyRegistered || _hotkeyService.IsScreenSelectionHotkeyRegistered)
+        {
+            return "部分快捷键未注册，请检查是否被其他软件占用。";
+        }
+
+        return "快捷键未注册，可能是非 Windows 环境、权限限制或组合键冲突。";
+    }
+
+    private static string GetHotkeyRegistrationText(bool isRegistered)
+    {
+        return isRegistered ? "已注册" : "未注册";
+    }
+
     private void RefreshPermissionCards()
     {
         PermissionReadinessItems.Clear();
@@ -1080,6 +1270,201 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         MemoryActionItems.Add(new SettingsListItem("浏览记忆", "预留", "按类型、标签和关键词查看记忆。"));
         MemoryActionItems.Add(new SettingsListItem("导入/导出", "预留", "通过 IMemoryStore 导入导出结构化记忆。"));
         MemoryActionItems.Add(new SettingsListItem("清理记忆", "预留", "删除前需要二次确认和审计记录。"));
+    }
+
+    private void RefreshCharacterAssetSuggestions()
+    {
+        CharacterAssetSuggestions.Clear();
+        CharacterAvatarImageSuggestion = string.Empty;
+
+        var folder = ResolveCharacterFolder(CharacterImageFolder);
+        if (folder is null)
+        {
+            CharacterAssetSuggestionStatus = "图片目录不可用，无法生成匹配建议。";
+            RefreshCharacterAssetSuggestionState();
+            return;
+        }
+
+        var files = new DirectoryInfo(folder)
+            .EnumerateFiles()
+            .Where(file => SupportedCharacterImageExtensions.Contains(file.Extension))
+            .OrderBy(file => file.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (files.Length == 0)
+        {
+            CharacterAssetSuggestionStatus = "图片目录里没有可用图片。";
+            RefreshCharacterAssetSuggestionState();
+            return;
+        }
+
+        CharacterAvatarImageSuggestion = CreateAvatarImageSuggestion(files);
+
+        var alreadyAvailable = 0;
+        var suggested = 0;
+        var unmatched = 0;
+        foreach (var item in CharacterStateImageItems)
+        {
+            var currentExists = ImageExists(folder, item.FileName);
+            var match = currentExists
+                ? (FileName: item.FileName, Score: 100)
+                : FindBestAssetMatch(item.StateKey, item.DisplayName, files);
+
+            var hasSuggestion = !string.IsNullOrWhiteSpace(match.FileName);
+            var isAlreadyApplied = currentExists && hasSuggestion;
+            if (isAlreadyApplied)
+            {
+                alreadyAvailable++;
+            }
+            else if (hasSuggestion)
+            {
+                suggested++;
+            }
+            else
+            {
+                unmatched++;
+            }
+
+            CharacterAssetSuggestions.Add(new CharacterAssetSuggestionItem(
+                item.StateKey,
+                item.DisplayName,
+                item.FileName,
+                match.FileName,
+                CreateSuggestionStatusText(isAlreadyApplied, hasSuggestion, match.Score),
+                CreateSuggestionReason(isAlreadyApplied, hasSuggestion, match.Score),
+                isAlreadyApplied,
+                CreateSuggestionStatusColor(isAlreadyApplied, hasSuggestion, match.Score)));
+        }
+
+        var avatarText = string.IsNullOrWhiteSpace(CharacterAvatarImageSuggestion)
+            ? "未找到头像建议"
+            : $"头像建议：{CharacterAvatarImageSuggestion}";
+        CharacterAssetSuggestionStatus =
+            $"扫描 {files.Length} 张图片：{alreadyAvailable} 个当前可用，{suggested} 个可应用建议，{unmatched} 个未匹配。{avatarText}。";
+        RefreshCharacterAssetSuggestionState();
+    }
+
+    private static string CreateAvatarImageSuggestion(IReadOnlyList<FileInfo> files)
+    {
+        var candidate = files
+            .Select(file => new
+            {
+                File = file,
+                Score = ScoreCandidate("Avatar", "头像", file.Name, AvatarMatchKeywords)
+            })
+            .Where(x => x.Score > 0)
+            .OrderByDescending(x => x.Score)
+            .ThenBy(x => x.File.Name.Length)
+            .ThenBy(x => x.File.Name, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+
+        return candidate?.File.Name ?? string.Empty;
+    }
+
+    private static (string FileName, int Score) FindBestAssetMatch(
+        string stateKey,
+        string displayName,
+        IReadOnlyList<FileInfo> files)
+    {
+        var keywords = CharacterStateMatchKeywords.TryGetValue(stateKey, out var configuredKeywords)
+            ? configuredKeywords
+            : [stateKey];
+
+        var match = files
+            .Select(file => new
+            {
+                File = file,
+                Score = ScoreCandidate(stateKey, displayName, file.Name, keywords)
+            })
+            .Where(x => x.Score > 0)
+            .OrderByDescending(x => x.Score)
+            .ThenBy(x => x.File.Name.Length)
+            .ThenBy(x => x.File.Name, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+
+        return match is null ? (string.Empty, 0) : (match.File.Name, match.Score);
+    }
+
+    private static int ScoreCandidate(
+        string stateKey,
+        string displayName,
+        string fileName,
+        IReadOnlyList<string> keywords)
+    {
+        var name = Path.GetFileNameWithoutExtension(fileName);
+        var score = 0;
+
+        if (name.Equals(stateKey, StringComparison.OrdinalIgnoreCase))
+        {
+            score += 40;
+        }
+        else if (name.Contains(stateKey, StringComparison.OrdinalIgnoreCase))
+        {
+            score += 24;
+        }
+
+        foreach (var keyword in keywords
+                     .Where(x => !string.IsNullOrWhiteSpace(x))
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (name.Equals(keyword, StringComparison.OrdinalIgnoreCase))
+            {
+                score += 22;
+            }
+            else if (name.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            {
+                score += 12;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(displayName) &&
+            name.Contains(displayName, StringComparison.OrdinalIgnoreCase))
+        {
+            score += 6;
+        }
+
+        return score;
+    }
+
+    private static string CreateSuggestionStatusText(bool isAlreadyApplied, bool hasSuggestion, int score)
+    {
+        if (isAlreadyApplied)
+            return "当前可用";
+
+        if (!hasSuggestion)
+            return "未匹配";
+
+        return score >= 20 ? "高匹配" : "可尝试";
+    }
+
+    private static string CreateSuggestionReason(bool isAlreadyApplied, bool hasSuggestion, int score)
+    {
+        if (isAlreadyApplied)
+            return "当前配置已能解析到图片。";
+
+        if (!hasSuggestion)
+            return "目录中没有明显匹配的图片。";
+
+        return score >= 20
+            ? "文件名与状态关键词高度匹配。"
+            : "文件名包含部分状态关键词。";
+    }
+
+    private static string CreateSuggestionStatusColor(bool isAlreadyApplied, bool hasSuggestion, int score)
+    {
+        if (isAlreadyApplied)
+            return "#0F766E";
+
+        if (!hasSuggestion)
+            return "#667085";
+
+        return score >= 20 ? "#175CD3" : "#B45309";
+    }
+
+    private void RefreshCharacterAssetSuggestionState()
+    {
+        OnPropertyChanged(nameof(HasCharacterAssetSuggestions));
+        OnPropertyChanged(nameof(HasNoCharacterAssetSuggestions));
     }
 
     private void RefreshCharacterProfiles(string? selectedId = null)
@@ -1244,6 +1629,85 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         HasCharacterImage = result.HasImage;
         CharacterImageStatus = result.Message;
         RefreshCharacterAssetWarnings(profile);
+        RefreshCharacterStatePreviews(profile);
+    }
+
+    private void RefreshCharacterStatePreviews(MascotCharacterProfile profile)
+    {
+        CharacterStatePreviewItems.Clear();
+
+        var availableCount = 0;
+        var fallbackCount = 0;
+        var missingCount = 0;
+
+        foreach (var item in CharacterStateImageItems)
+        {
+            if (!Enum.TryParse<MascotState>(item.StateKey, out var state))
+            {
+                var invalidResult = new CharacterImageResult();
+                CharacterStatePreviewItems.Add(new CharacterStatePreviewItem(
+                    item.StateKey,
+                    item.DisplayName,
+                    item.FileName,
+                    invalidResult,
+                    usesConfiguredImage: false));
+                missingCount++;
+                continue;
+            }
+
+            var result = _characterImageService.Resolve(profile, state);
+            var usesConfiguredImage = UsesConfiguredStateImage(item.FileName, result.FilePath);
+            CharacterStatePreviewItems.Add(new CharacterStatePreviewItem(
+                item.StateKey,
+                item.DisplayName,
+                item.FileName,
+                result,
+                usesConfiguredImage));
+
+            if (!result.HasImage)
+            {
+                missingCount++;
+            }
+            else if (usesConfiguredImage)
+            {
+                availableCount++;
+            }
+            else
+            {
+                fallbackCount++;
+            }
+        }
+
+        CharacterStatePreviewStatus =
+            $"状态图检查：{availableCount} 个可用，{fallbackCount} 个回退头像，{missingCount} 个缺失。";
+        OnPropertyChanged(nameof(HasCharacterStatePreviews));
+    }
+
+    private static bool UsesConfiguredStateImage(string configuredFileName, string? resolvedFilePath)
+    {
+        if (string.IsNullOrWhiteSpace(configuredFileName) || string.IsNullOrWhiteSpace(resolvedFilePath))
+            return false;
+
+        try
+        {
+            var configured = configuredFileName.Replace('/', Path.DirectorySeparatorChar);
+            if (Path.IsPathRooted(configured))
+            {
+                return string.Equals(
+                    Path.GetFullPath(configured),
+                    Path.GetFullPath(resolvedFilePath),
+                    StringComparison.OrdinalIgnoreCase);
+            }
+
+            return string.Equals(
+                Path.GetFileName(configured),
+                Path.GetFileName(resolvedFilePath),
+                StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private void RefreshCharacterAssetWarnings(MascotCharacterProfile profile)

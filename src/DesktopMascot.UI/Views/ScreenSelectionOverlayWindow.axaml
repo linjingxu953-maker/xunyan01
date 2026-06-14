@@ -1,0 +1,62 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DesktopMascot.UI.ViewModels"
+        x:Class="DesktopMascot.UI.Views.ScreenSelectionOverlayWindow"
+        x:DataType="vm:ScreenSelectionViewModel"
+        Title="Screen Selection"
+        WindowState="FullScreen"
+        WindowDecorations="None"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        Topmost="True"
+        CanResize="False"
+        ShowInTaskbar="False"
+        KeyDown="Window_KeyDown">
+    <Grid x:Name="SelectionSurface"
+          Background="#66000000"
+          PointerPressed="SelectionSurface_PointerPressed"
+          PointerMoved="SelectionSurface_PointerMoved"
+          PointerReleased="SelectionSurface_PointerReleased">
+        <Canvas>
+            <Border Canvas.Left="{Binding SelectionX}"
+                    Canvas.Top="{Binding SelectionY}"
+                    Width="{Binding SelectionWidth}"
+                    Height="{Binding SelectionHeight}"
+                    IsVisible="{Binding HasSelection}"
+                    BorderBrush="#60A5FA"
+                    BorderThickness="2"
+                    Background="#2260A5FA"
+                    CornerRadius="4">
+                <Border HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        Margin="8"
+                        Padding="8,4"
+                        CornerRadius="6"
+                        Background="#CC111827">
+                    <TextBlock Text="{Binding SelectionText}"
+                               Foreground="White"
+                               FontSize="12"/>
+                </Border>
+            </Border>
+        </Canvas>
+
+        <Border HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Margin="0,48,0,0"
+                Padding="14,10"
+                CornerRadius="8"
+                Background="#DD111827">
+            <StackPanel Spacing="4">
+                <TextBlock Text="{Binding SelectionText}"
+                           Foreground="White"
+                           FontSize="15"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding SelectionHint}"
+                           Foreground="#D1D5DB"
+                           FontSize="12"
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

@@ -1,5 +1,6 @@
 using DesktopMascot.Agent.Context;
 using DesktopMascot.Agent.Engines;
+using DesktopMascot.Agent.Memory;
 using DesktopMascot.Agent.Providers;
 using DesktopMascot.Agent.Tools;
 using DesktopMascot.App.Services;
@@ -60,6 +61,8 @@ public static class ServiceCollectionExtensions
             new FileMemoryStore(Path.Combine(dataDir, "memory")));
         services.AddSingleton<IMemoryConfirmationPrompt, DefaultMemoryConfirmationPrompt>();
         services.AddSingleton<MemoryConfirmationService>();
+        services.AddSingleton<MemoryManager>();
+        services.AddSingleton<MemoryIntegrationService>();
 
         // 权限
         services.AddSingleton<IPermissionManager, PermissionManager>();
@@ -123,6 +126,9 @@ public static class ServiceCollectionExtensions
 
         // 桥接服务（供 UI 层调用）
         services.AddSingleton<IContextBridgeService, ContextBridgeService>();
+
+        // 应用协调器
+        services.AddSingleton<ApplicationCoordinator>();
 
         return services;
     }

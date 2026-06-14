@@ -569,4 +569,115 @@ public class SummarizePageTests
         Assert.Contains("path", tool.ParametersSchema);
         Assert.Contains("recursive", tool.ParametersSchema);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_Chat_ShouldUseChatPrompt()
+    {
+        var mockLlm = new Mock<ILlmProvider>();
+        var registry = new ToolRegistry();
+
+        var orchestrator = new AgentOrchestrator(
+            mockLlm.Object, registry, _mockEventBus.Object, _mockLogger.Object);
+
+        var task = new AgentTask
+        {
+            Title = "用户对话",
+            Input = "什么是量子计算？",
+            Type = TaskType.Chat,
+            Parameters = new Dictionary<string, object> { ["TaskType"] = TaskType.Chat }
+        };
+
+        var capturedMessages = new List<LlmMessage>();
+        mockLlm.Setup(x => x.ChatAsync(
+                It.IsAny<IEnumerable<LlmMessage>>(),
+                It.IsAny<IEnumerable<ToolDefinition>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<LlmMessage>, IEnumerable<ToolDefinition>?, CancellationToken>(
+                (msgs, _, _) => capturedMessages.AddRange(msgs))
+            .ReturnsAsync(new LlmResponse
+            {
+                Success = true,
+                Content = "量子计算是一种利用量子力学原理进行计算的技术..."
+            });
+
+        var result = await orchestrator.ExecuteAsync(task);
+
+        Assert.True(result.Success);
+        Assert.Contains("量子", result.Content);
+        Assert.Contains("AI 助手", capturedMessages[0].Content);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WriteFile_ShouldUseWriteFilePrompt()
+    {
+        var mockLlm = new Mock<ILlmProvider>();
+        var registry = new ToolRegistry();
+
+        var orchestrator = new AgentOrchestrator(
+            mockLlm.Object, registry, _mockEventBus.Object, _mockLogger.Object);
+
+        var task = new AgentTask
+        {
+            Title = "生成文件",
+            Input = "帮我写一个 Hello World 的 Python 脚本",
+            Type = TaskType.WriteFile,
+            Parameters = new Dictionary<string, object> { ["TaskType"] = TaskType.WriteFile }
+        };
+
+        var capturedMessages = new List<LlmMessage>();
+        mockLlm.Setup(x => x.ChatAsync(
+                It.IsAny<IEnumerable<LlmMessage>>(),
+                It.IsAny<IEnumerable<ToolDefinition>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<LlmMessage>, IEnumerable<ToolDefinition>?, CancellationToken>(
+                (msgs, _, _) => capturedMessages.AddRange(msgs))
+            .ReturnsAsync(new LlmResponse
+            {
+                Success = true,
+                Content = "**文件类型**: Python 脚本\n**文件名**: hello.py\n**内容**:\n```python\nprint('Hello World')\n```"
+            });
+
+        var result = await orchestrator.ExecuteAsync(task);
+
+        Assert.True(result.Success);
+        Assert.Contains("python", result.Content.ToLower());
+        Assert.Contains("文件生成助手", capturedMessages[0].Content);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_RunCommand_ShouldUseRunCommandPrompt()
+    {
+        var mockLlm = new Mock<ILlmProvider>();
+        var registry = new ToolRegistry();
+
+        var orchestrator = new AgentOrchestrator(
+            mockLlm.Object, registry, _mockEventBus.Object, _mockLogger.Object);
+
+        var task = new AgentTask
+        {
+            Title = "执行命令",
+            Input = "怎么查看当前目录的文件？",
+            Type = TaskType.RunCommand,
+            Parameters = new Dictionary<string, object> { ["TaskType"] = TaskType.RunCommand }
+        };
+
+        var capturedMessages = new List<LlmMessage>();
+        mockLlm.Setup(x => x.ChatAsync(
+                It.IsAny<IEnumerable<LlmMessage>>(),
+                It.IsAny<IEnumerable<ToolDefinition>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<LlmMessage>, IEnumerable<ToolDefinition>?, CancellationToken>(
+                (msgs, _, _) => capturedMessages.AddRange(msgs))
+            .ReturnsAsync(new LlmResponse
+            {
+                Success = true,
+                Content = "**命令**: ls\n**作用**: 列出当前目录文件"
+            });
+
+        var result = await orchestrator.ExecuteAsync(task);
+
+        Assert.True(result.Success);
+        Assert.Contains("ls", result.Content);
+        Assert.Contains("命令执行助手", capturedMessages[0].Content);
+    }
 }

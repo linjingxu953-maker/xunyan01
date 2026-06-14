@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using DesktopMascot.UI.ViewModels;
 using DesktopMascot.UI.Views;
@@ -12,12 +13,16 @@ public sealed class DesktopShellService : IDisposable
     private readonly IWindowPlacementStore _placementStore;
     private readonly IGlobalHotkeyService _hotkeyService;
     private readonly ISettingsWindowService _settingsWindowService;
+    private readonly ScreenSelectionOverlayService _screenSelectionOverlayService = new();
     private readonly DispatcherTimer _saveTimer;
     private FloatingWindow? _window;
     private FloatingWindowViewModel? _viewModel;
     private IClassicDesktopStyleApplicationLifetime? _desktop;
     private TrayIcon? _trayIcon;
+    private NativeMenuItem? _openChatMenuItem;
+    private NativeMenuItem? _screenSelectionMenuItem;
     private bool _isExiting;
+    private bool _isSelectingScreenRegion;
 
     public DesktopShellService(
         IWindowPlacementStore placementStore,
@@ -28,6 +33,8 @@ public sealed class DesktopShellService : IDisposable
         _hotkeyService = hotkeyService;
         _settingsWindowService = settingsWindowService;
         _hotkeyService.HotkeyPressed += OnHotkeyPressed;
+        _hotkeyService.ScreenSelectionHotkeyPressed += OnScreenSelectionHotkeyPressed;
+        _hotkeyService.HotkeysChanged += OnHotkeysChanged;
 
         _saveTimer = new DispatcherTimer
         {
@@ -58,6 +65,7 @@ public sealed class DesktopShellService : IDisposable
         viewModel.ExitRequested += OnExitRequested;
         viewModel.SettingsRequested += OnSettingsRequested;
         viewModel.AppearanceSettingsRequested += OnAppearanceSettingsRequested;
+        viewModel.ScreenSelectionRequested += OnScreenSelectionRequested;
         window.PositionChanged += OnWindowPositionChanged;
         window.Resized += OnWindowResized;
         window.Closing += OnWindowClosing;
@@ -67,6 +75,8 @@ public sealed class DesktopShellService : IDisposable
     {
         _saveTimer.Stop();
         _hotkeyService.HotkeyPressed -= OnHotkeyPressed;
+        _hotkeyService.ScreenSelectionHotkeyPressed -= OnScreenSelectionHotkeyPressed;
+        _hotkeyService.HotkeysChanged -= OnHotkeysChanged;
         _hotkeyService.Dispose();
         _trayIcon?.Dispose();
 
@@ -83,6 +93,7 @@ public sealed class DesktopShellService : IDisposable
             _viewModel.ExitRequested -= OnExitRequested;
             _viewModel.SettingsRequested -= OnSettingsRequested;
             _viewModel.AppearanceSettingsRequested -= OnAppearanceSettingsRequested;
+            _viewModel.ScreenSelectionRequested -= OnScreenSelectionRequested;
         }
     }
 
@@ -99,6 +110,14 @@ public sealed class DesktopShellService : IDisposable
             Header = $"唤起输入 ({_hotkeyService.DisplayText})"
         };
         openChatItem.Click += (_, _) => ShowWindow(openChat: true);
+        _openChatMenuItem = openChatItem;
+
+        var screenSelectionItem = new NativeMenuItem
+        {
+            Header = $"圈选屏幕 ({_hotkeyService.ScreenSelectionDisplayText})"
+        };
+        screenSelectionItem.Click += (_, _) => StartScreenSelectionFromShell();
+        _screenSelectionMenuItem = screenSelectionItem;
 
         var settingsItem = new NativeMenuItem
         {
@@ -115,6 +134,7 @@ public sealed class DesktopShellService : IDisposable
         var menu = new NativeMenu();
         menu.Items.Add(showItem);
         menu.Items.Add(openChatItem);
+        menu.Items.Add(screenSelectionItem);
         menu.Items.Add(settingsItem);
         menu.Items.Add(new NativeMenuItemSeparator());
         menu.Items.Add(exitItem);
@@ -127,11 +147,49 @@ public sealed class DesktopShellService : IDisposable
             IsVisible = true
         };
         _trayIcon.Clicked += (_, _) => ToggleWindowFromTray();
+        RefreshTrayHotkeyText();
     }
 
     private void OnHotkeyPressed(object? sender, EventArgs e)
     {
         ShowWindow(openChat: true);
+    }
+
+    private void OnScreenSelectionHotkeyPressed(object? sender, EventArgs e)
+    {
+        StartScreenSelectionFromShell();
+    }
+
+    private void OnHotkeysChanged(object? sender, EventArgs e)
+    {
+        Dispatcher.UIThread.Post(RefreshTrayHotkeyText);
+    }
+
+    private void StartScreenSelectionFromShell()
+    {
+        if (_viewModel is null || _isSelectingScreenRegion || !_viewModel.CanStartScreenSelection)
+            return;
+
+        _viewModel.OpenChatPanel();
+        _viewModel.RequestScreenSelection();
+    }
+
+    private void RefreshTrayHotkeyText()
+    {
+        if (_openChatMenuItem is not null)
+        {
+            _openChatMenuItem.Header = $"唤起输入 ({_hotkeyService.DisplayText})";
+        }
+
+        if (_screenSelectionMenuItem is not null)
+        {
+            _screenSelectionMenuItem.Header = $"圈选屏幕 ({_hotkeyService.ScreenSelectionDisplayText})";
+        }
+
+        if (_trayIcon is not null)
+        {
+            _trayIcon.ToolTipText = $"DesktopMascot - {_hotkeyService.DisplayText} 唤起";
+        }
     }
 
     private void OnHideRequested(object? sender, EventArgs e)
@@ -152,6 +210,44 @@ public sealed class DesktopShellService : IDisposable
     private void OnAppearanceSettingsRequested(object? sender, EventArgs e)
     {
         _settingsWindowService.ShowSettingsWindow("appearance");
+    }
+
+    private async void OnScreenSelectionRequested(object? sender, EventArgs e)
+    {
+        if (_isSelectingScreenRegion || _viewModel is null)
+            return;
+
+        _isSelectingScreenRegion = true;
+        var shouldRestoreWindow = _window?.IsVisible == true;
+
+        try
+        {
+            if (_window is not null && _window.IsVisible)
+            {
+                SaveWindowPlacement();
+                _window.Hide();
+            }
+
+            var result = await _screenSelectionOverlayService.SelectRegionAsync(_window);
+            if (result is { HasRegion: true })
+            {
+                ShowWindow(openChat: true);
+                await _viewModel.AnalyzeSelectedScreenRegionAsync(result);
+            }
+            else
+            {
+                if (shouldRestoreWindow)
+                {
+                    ShowWindow(openChat: true);
+                }
+
+                _viewModel.CancelScreenSelection();
+            }
+        }
+        finally
+        {
+            _isSelectingScreenRegion = false;
+        }
     }
 
     private void OnWindowPositionChanged(object? sender, PixelPointEventArgs e)
@@ -206,6 +302,7 @@ public sealed class DesktopShellService : IDisposable
             _viewModel?.OpenChatPanel();
         }
 
+        EnsureWindowOnScreen();
         _window.Activate();
         _window.FocusInput();
     }
@@ -233,12 +330,22 @@ public sealed class DesktopShellService : IDisposable
             return;
 
         var state = _placementStore.Load();
-        if (state is null || !IsReasonablePosition(state))
+        var width = Math.Clamp(state?.Width ?? _window.Width, 180, 700);
+        var height = Math.Clamp(state?.Height ?? _window.Height, 240, 700);
+
+        _window.Width = width;
+        _window.Height = height;
+        _window.Position = state is not null && IsReasonablePlacement(state)
+            ? ClampWindowPosition(new PixelPoint(state.X, state.Y), width, height)
+            : GetDefaultWindowPosition(width, height);
+    }
+
+    private void EnsureWindowOnScreen()
+    {
+        if (_window is null)
             return;
 
-        _window.Position = new PixelPoint(state.X, state.Y);
-        _window.Width = Math.Clamp(state.Width, 180, 700);
-        _window.Height = Math.Clamp(state.Height, 240, 700);
+        _window.Position = ClampWindowPosition(_window.Position, _window.Width, _window.Height);
     }
 
     private void ScheduleSave()
@@ -264,10 +371,81 @@ public sealed class DesktopShellService : IDisposable
         });
     }
 
-    private static bool IsReasonablePosition(WindowPlacementState state)
+    private PixelPoint ClampWindowPosition(PixelPoint desiredPosition, double width, double height)
     {
-        return state.X is > -10000 and < 10000 &&
-               state.Y is > -10000 and < 10000 &&
+        var screen = FindBestScreen(desiredPosition);
+        if (screen is null)
+            return desiredPosition;
+
+        return ClampWindowPositionToScreen(desiredPosition, width, height, screen);
+    }
+
+    private PixelPoint GetDefaultWindowPosition(double width, double height)
+    {
+        var screen = _window?.Screens.Primary ?? _window?.Screens.All.FirstOrDefault();
+        if (screen is null)
+            return _window?.Position ?? new PixelPoint(80, 80);
+
+        var scaling = GetScreenScaling(screen);
+        var pixelWidth = Math.Max(1, (int)Math.Ceiling(width * scaling));
+        var pixelHeight = Math.Max(1, (int)Math.Ceiling(height * scaling));
+        var area = screen.WorkingArea;
+        var x = area.X + area.Width - pixelWidth - 24;
+        var y = area.Y + area.Height - pixelHeight - 32;
+
+        return ClampWindowPositionToScreen(new PixelPoint(x, y), width, height, screen);
+    }
+
+    private PixelPoint ClampWindowPositionToScreen(PixelPoint desiredPosition, double width, double height, Screen screen)
+    {
+        var area = screen.WorkingArea;
+        var scaling = GetScreenScaling(screen);
+        var pixelWidth = Math.Max(1, (int)Math.Ceiling(width * scaling));
+        var pixelHeight = Math.Max(1, (int)Math.Ceiling(height * scaling));
+        var maxX = area.X + Math.Max(0, area.Width - pixelWidth);
+        var maxY = area.Y + Math.Max(0, area.Height - pixelHeight);
+
+        return new PixelPoint(
+            ClampToRange(desiredPosition.X, area.X, maxX),
+            ClampToRange(desiredPosition.Y, area.Y, maxY));
+    }
+
+    private Screen? FindBestScreen(PixelPoint point)
+    {
+        if (_window is null)
+            return null;
+
+        var screens = _window.Screens;
+        return screens.ScreenFromPoint(point) ??
+               screens.All.OrderBy(screen => GetDistanceSquared(point, screen.WorkingArea)).FirstOrDefault();
+    }
+
+    private static double GetScreenScaling(Screen screen)
+    {
+        return screen.Scaling > 0 ? screen.Scaling : 1;
+    }
+
+    private static double GetDistanceSquared(PixelPoint point, PixelRect rect)
+    {
+        var left = rect.X;
+        var right = rect.X + rect.Width;
+        var top = rect.Y;
+        var bottom = rect.Y + rect.Height;
+        var dx = point.X < left ? left - point.X : point.X > right ? point.X - right : 0;
+        var dy = point.Y < top ? top - point.Y : point.Y > bottom ? point.Y - bottom : 0;
+
+        return (double)dx * dx + (double)dy * dy;
+    }
+
+    private static int ClampToRange(int value, int min, int max)
+    {
+        return max < min ? min : Math.Clamp(value, min, max);
+    }
+
+    private static bool IsReasonablePlacement(WindowPlacementState state)
+    {
+        return state.X is > -100000 and < 100000 &&
+               state.Y is > -100000 and < 100000 &&
                state.Width is >= 180 and <= 1000 &&
                state.Height is >= 240 and <= 1000;
     }

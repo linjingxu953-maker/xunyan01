@@ -15,6 +15,7 @@ public sealed class SettingsWindowService : ISettingsWindowService
     private readonly IMascotCharacterStore _characterStore;
     private readonly ICharacterImageService _characterImageService;
     private readonly ICharacterAssetImportService _characterAssetImportService;
+    private readonly IGlobalHotkeyService _hotkeyService;
     private SettingsWindow? _window;
 
     public SettingsWindowService(
@@ -23,7 +24,8 @@ public sealed class SettingsWindowService : ISettingsWindowService
         IOnboardingWindowService onboardingWindowService,
         IMascotCharacterStore characterStore,
         ICharacterImageService characterImageService,
-        ICharacterAssetImportService characterAssetImportService)
+        ICharacterAssetImportService characterAssetImportService,
+        IGlobalHotkeyService hotkeyService)
     {
         _configurationManager = configurationManager;
         _diagnosticsService = diagnosticsService;
@@ -31,6 +33,7 @@ public sealed class SettingsWindowService : ISettingsWindowService
         _characterStore = characterStore;
         _characterImageService = characterImageService;
         _characterAssetImportService = characterAssetImportService;
+        _hotkeyService = hotkeyService;
     }
 
     public void ShowSettingsWindow(string? sectionId = null)
@@ -57,7 +60,8 @@ public sealed class SettingsWindowService : ISettingsWindowService
             _characterStore,
             _characterImageService,
             _characterAssetImportService,
-            assetPickerService);
+            assetPickerService,
+            _hotkeyService);
         _window = window;
         _window.DataContext = viewModel;
         SelectSection(viewModel, sectionId);

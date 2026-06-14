@@ -106,16 +106,96 @@ public class OpenAiCompatibleProvider : ILlmProvider
         IEnumerable<LlmMessage> messages,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        // 简化实现：非流式返回
-        var response = await ChatAsync(messages, null, ct);
-        if (response.Success)
+        var bodyDict = BuildRequestBody(messages, null) as Dictionary<string, object>;
+        if (bodyDict == null)
         {
-            yield return response.Content;
+            yield return "[错误: 无法构建请求]";
+            yield break;
         }
-        else
+        bodyDict["stream"] = true;
+
+        var content = new StringContent(
+            JsonSerializer.Serialize(bodyDict),
+            Encoding.UTF8,
+            "application/json");
+
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{_config.BaseUrl}/chat/completions")
         {
-            yield return $"错误: {response.Error}";
+            Content = content
+        };
+
+        if (!string.IsNullOrEmpty(_config.EncryptedApiKey))
+        {
+            var apiKey = _config.GetApiKey();
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
         }
+
+        HttpResponseMessage? httpResponse = null;
+        string? error = null;
+
+        try
+        {
+            httpResponse = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+        }
+        catch (Exception ex)
+        {
+            error = $"[连接错误: {ex.Message}]";
+        }
+
+        if (error != null)
+        {
+            yield return error;
+            yield break;
+        }
+
+        if (!httpResponse!.IsSuccessStatusCode)
+        {
+            var errorContent = await httpResponse.Content.ReadAsStringAsync(ct);
+            yield return $"[API 错误: {httpResponse.StatusCode} - {errorContent}]";
+            httpResponse.Dispose();
+            yield break;
+        }
+
+        await using var stream = await httpResponse.Content.ReadAsStreamAsync(ct);
+        using var reader = new StreamReader(stream);
+
+        while (!reader.EndOfStream)
+        {
+            ct.ThrowIfCancellationRequested();
+            var line = await reader.ReadLineAsync(ct);
+            if (string.IsNullOrEmpty(line)) continue;
+            if (!line.StartsWith("data: ")) continue;
+            var data = line[6..];
+            if (data == "[DONE]") break;
+
+            if (TryParseStreamChunk(data, out var chunk))
+            {
+                yield return chunk;
+            }
+        }
+
+        httpResponse.Dispose();
+    }
+
+    private static bool TryParseStreamChunk(string data, out string chunk)
+    {
+        chunk = "";
+        try
+        {
+            var doc = JsonDocument.Parse(data);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("choices", out var choices) && choices.GetArrayLength() > 0)
+            {
+                var delta = choices[0].GetProperty("delta");
+                if (delta.TryGetProperty("content", out var contentElement))
+                {
+                    chunk = contentElement.GetString() ?? "";
+                    return !string.IsNullOrEmpty(chunk);
+                }
+            }
+        }
+        catch { }
+        return false;
     }
 
     private object BuildRequestBody(IEnumerable<LlmMessage> messages, IEnumerable<ToolDefinition>? tools)

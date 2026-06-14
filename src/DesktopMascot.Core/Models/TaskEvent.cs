@@ -162,4 +162,22 @@ public class TaskEvent
             Progress = progress
         };
     }
+
+    /// <summary>
+    /// 创建 LLM 流式块事件
+    /// </summary>
+    public static TaskEvent LlmStreamChunk(string taskId, string chunk)
+    {
+        return new TaskEvent
+        {
+            TaskId = taskId,
+            EventType = TaskEventType.LlmStreamChunk,
+            State = MascotState.Working,
+            Message = chunk,
+            Metadata = new Dictionary<string, object>
+            {
+                ["chunk"] = chunk
+            }
+        };
+    }
 }

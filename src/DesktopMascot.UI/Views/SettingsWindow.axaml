@@ -748,8 +748,85 @@
                                    FontSize="22"
                                    FontWeight="SemiBold"/>
                         <Border Classes="toolCard">
-                            <TextBlock Text="快捷键冲突提示和自定义热键会在桌面体验后续迭代中接入。"
-                                       Classes="bodyText"/>
+                            <StackPanel Spacing="14">
+                                <Grid ColumnDefinitions="*,Auto"
+                                      ColumnSpacing="12">
+                                    <StackPanel Spacing="5">
+                                        <TextBlock Text="全局快捷键状态"
+                                                   Classes="sectionTitle"/>
+                                        <TextBlock Text="{Binding HotkeySettingsStatus}"
+                                                   Classes="bodyText"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1"
+                                            Content="刷新"
+                                            Classes="secondaryAction"
+                                            Command="{Binding RefreshHotkeyStatusCommand}"
+                                            VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <Border Classes="inlineCard">
+                                    <Grid ColumnDefinitions="120,*,Auto,Auto"
+                                          RowDefinitions="Auto,Auto"
+                                          ColumnSpacing="10"
+                                          RowSpacing="10">
+                                        <TextBlock Text="聊天唤起"
+                                                   Classes="sectionTitle"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBox Grid.Column="1"
+                                                 PlaceholderText="Ctrl+Alt+Space"
+                                                 Text="{Binding ChatHotkeyText, Mode=TwoWay}"
+                                                 MaxLength="80"/>
+                                        <Button Grid.Column="2"
+                                                Grid.RowSpan="2"
+                                                Content="保存"
+                                                Classes="primaryAction"
+                                                Command="{Binding SaveHotkeySettingsCommand}"
+                                                Background="{StaticResource Brush.Info.Text}"
+                                                VerticalAlignment="Center"
+                                                Padding="14,7"/>
+                                        <Button Grid.Column="3"
+                                                Grid.RowSpan="2"
+                                                Content="恢复默认"
+                                                Classes="secondaryAction"
+                                                Command="{Binding ResetHotkeySettingsCommand}"
+                                                VerticalAlignment="Center"/>
+
+                                        <TextBlock Grid.Row="1"
+                                                   Text="屏幕圈选"
+                                                   Classes="sectionTitle"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBox Grid.Row="1"
+                                                 Grid.Column="1"
+                                                 PlaceholderText="Ctrl+Shift+S"
+                                                 Text="{Binding ScreenSelectionHotkeyText, Mode=TwoWay}"
+                                                 MaxLength="80"/>
+                                    </Grid>
+                                </Border>
+
+                                <ItemsControl ItemsSource="{Binding HotkeyItems}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:SettingsListItem">
+                                            <Border Classes="inlineCard"
+                                                    Margin="0,0,0,8">
+                                                <Grid ColumnDefinitions="*,Auto"
+                                                      RowDefinitions="Auto,Auto"
+                                                      ColumnSpacing="10">
+                                                    <TextBlock Text="{Binding Title}"
+                                                               Classes="sectionTitle"/>
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding Value}"
+                                                               Classes="captionText"/>
+                                                    <TextBlock Grid.Row="1"
+                                                               Grid.ColumnSpan="2"
+                                                               Text="{Binding Description}"
+                                                               Classes="bodyText"
+                                                               Margin="0,4,0,0"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
                         </Border>
                     </StackPanel>
 
@@ -1000,6 +1077,151 @@
                                                                  Text="{Binding FileName}"
                                                                  MaxLength="160"/>
                                                     </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+
+                                    <StackPanel Spacing="8">
+                                        <Grid ColumnDefinitions="*,Auto,Auto"
+                                              ColumnSpacing="8">
+                                            <TextBlock Text="{Binding CharacterAssetSuggestionStatus}"
+                                                       Classes="captionText"
+                                                       TextWrapping="Wrap"
+                                                       VerticalAlignment="Center"/>
+                                            <Button Grid.Column="1"
+                                                    Content="扫描匹配"
+                                                    Classes="secondaryAction"
+                                                    Command="{Binding ScanCharacterAssetSuggestionsCommand}"/>
+                                            <Button Grid.Column="2"
+                                                    Content="应用匹配"
+                                                    Classes="secondaryAction"
+                                                    Command="{Binding ApplyCharacterAssetSuggestionsCommand}"/>
+                                        </Grid>
+                                        <TextBlock Text="暂无匹配建议。"
+                                                   Classes="captionText"
+                                                   IsVisible="{Binding HasNoCharacterAssetSuggestions}"/>
+                                        <TextBlock Text="{Binding CharacterAvatarImageSuggestion, StringFormat='头像建议：{0}'}"
+                                                   Classes="captionText"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   IsVisible="{Binding HasCharacterAvatarImageSuggestion}"/>
+                                        <ItemsControl ItemsSource="{Binding CharacterAssetSuggestions}"
+                                                      IsVisible="{Binding HasCharacterAssetSuggestions}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:CharacterAssetSuggestionItem">
+                                                    <Border Width="220"
+                                                            MinHeight="86"
+                                                            Margin="0,0,8,8"
+                                                            Padding="8"
+                                                            CornerRadius="8"
+                                                            Background="{StaticResource Brush.Surface.Subtle}"
+                                                            BorderBrush="{StaticResource Brush.Border.Subtle}"
+                                                            BorderThickness="1">
+                                                        <StackPanel Spacing="4">
+                                                            <Grid ColumnDefinitions="*,Auto"
+                                                                  ColumnSpacing="8">
+                                                                <TextBlock Text="{Binding DisplayName}"
+                                                                           Classes="sectionTitle"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                <Border Grid.Column="1"
+                                                                        Padding="6,2"
+                                                                        CornerRadius="6"
+                                                                        Background="{Binding StatusBrush}">
+                                                                    <TextBlock Text="{Binding StatusText}"
+                                                                               Foreground="{StaticResource Brush.White}"
+                                                                               FontSize="10"/>
+                                                                </Border>
+                                                            </Grid>
+                                                            <TextBlock Text="{Binding SuggestedDisplay}"
+                                                                       Classes="bodyText"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Text="{Binding CurrentFileName, StringFormat='当前：{0}'}"
+                                                                       Classes="captionText"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Text="{Binding MatchReason}"
+                                                                       Classes="captionText"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+
+                                    <StackPanel Spacing="8">
+                                        <Grid ColumnDefinitions="*,Auto"
+                                              ColumnSpacing="10">
+                                            <TextBlock Text="{Binding CharacterStatePreviewStatus}"
+                                                       Classes="captionText"
+                                                       TextWrapping="Wrap"
+                                                       VerticalAlignment="Center"/>
+                                            <Button Grid.Column="1"
+                                                    Content="检查状态图"
+                                                    Classes="secondaryAction"
+                                                    Command="{Binding RefreshCharacterStatePreviewCommand}"/>
+                                        </Grid>
+                                        <ItemsControl ItemsSource="{Binding CharacterStatePreviewItems}"
+                                                      IsVisible="{Binding HasCharacterStatePreviews}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:CharacterStatePreviewItem">
+                                                    <Border Width="132"
+                                                            MinHeight="162"
+                                                            Margin="0,0,8,8"
+                                                            Padding="8"
+                                                            CornerRadius="8"
+                                                            Background="{StaticResource Brush.Surface.Subtle}"
+                                                            BorderBrush="{StaticResource Brush.Border.Subtle}"
+                                                            BorderThickness="1">
+                                                        <StackPanel Spacing="6">
+                                                            <Border Height="72"
+                                                                    CornerRadius="6"
+                                                                    Background="{StaticResource Brush.Surface.Panel}"
+                                                                    ClipToBounds="True">
+                                                                <Grid>
+                                                                    <Image Source="{Binding Image}"
+                                                                           Stretch="Uniform"
+                                                                           IsVisible="{Binding HasImage}"/>
+                                                                    <TextBlock Text="{Binding PreviewText}"
+                                                                               Foreground="{StaticResource Brush.Text.Muted}"
+                                                                               FontSize="18"
+                                                                               FontWeight="SemiBold"
+                                                                               HorizontalAlignment="Center"
+                                                                               VerticalAlignment="Center"
+                                                                               IsVisible="{Binding HasNoImage}"/>
+                                                                </Grid>
+                                                            </Border>
+                                                            <Grid ColumnDefinitions="*,Auto"
+                                                                  ColumnSpacing="6">
+                                                                <TextBlock Text="{Binding DisplayName}"
+                                                                           Classes="sectionTitle"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                <Border Grid.Column="1"
+                                                                        Padding="6,2"
+                                                                        CornerRadius="6"
+                                                                        Background="{Binding StatusBrush}">
+                                                                    <TextBlock Text="{Binding StatusText}"
+                                                                               Foreground="{StaticResource Brush.White}"
+                                                                               FontSize="10"/>
+                                                                </Border>
+                                                            </Grid>
+                                                            <TextBlock Text="{Binding ConfiguredFileName}"
+                                                                       Classes="captionText"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Text="{Binding ResolvedFileName}"
+                                                                       Classes="captionText"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                        </StackPanel>
+                                                    </Border>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>

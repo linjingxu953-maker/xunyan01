@@ -110,6 +110,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     public ObservableCollection<TaskToolCallItem> TaskToolCalls { get; } = new();
 
     public bool CanSendMessage => !IsBusy && !IsWaitingForUserConfirmation && !string.IsNullOrWhiteSpace(InputText);
+    public bool CanStartScreenSelection => !IsBusy && !IsWaitingForUserConfirmation;
     public bool HasNoCharacterImage => !HasCharacterImage;
     public bool HasNoTaskResult => !HasTaskResult;
     public bool HasNoToolCallRecords => !HasToolCallRecords;
@@ -121,6 +122,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     public event EventHandler? ExitRequested;
     public event EventHandler? SettingsRequested;
     public event EventHandler? AppearanceSettingsRequested;
+    public event EventHandler? ScreenSelectionRequested;
 
     public FloatingWindowViewModel(
         ITaskRouter taskRouter,
@@ -216,6 +218,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     partial void OnIsBusyChanged(bool value)
     {
         SendMessageCommand.NotifyCanExecuteChanged();
+        StartScreenSelectionCommand.NotifyCanExecuteChanged();
         CopyTaskResultCommand.NotifyCanExecuteChanged();
         SaveTaskResultCommand.NotifyCanExecuteChanged();
         RetryTaskCommand.NotifyCanExecuteChanged();
@@ -242,6 +245,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     partial void OnIsWaitingForUserConfirmationChanged(bool value)
     {
         SendMessageCommand.NotifyCanExecuteChanged();
+        StartScreenSelectionCommand.NotifyCanExecuteChanged();
         RetryTaskCommand.NotifyCanExecuteChanged();
         ApprovePendingTaskCommand.NotifyCanExecuteChanged();
         DenyPendingTaskCommand.NotifyCanExecuteChanged();
@@ -531,6 +535,69 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     private void OpenSettings()
     {
         SettingsRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanStartScreenSelection))]
+    private void StartScreenSelection()
+    {
+        RequestScreenSelection();
+    }
+
+    public void RequestScreenSelection()
+    {
+        if (!CanStartScreenSelection)
+            return;
+
+        StatusMessage = "拖动鼠标圈选要理解的屏幕区域。";
+        ScreenSelectionRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    public async Task AnalyzeSelectedScreenRegionAsync(ScreenSelectionResult result)
+    {
+        if (!result.HasRegion)
+            return;
+
+        var userMessage = $"请分析我圈选的屏幕区域 {result.Summary}";
+        Messages.Add($"你：{userMessage}");
+
+        var task = new AgentTask
+        {
+            Title = "屏幕区域理解",
+            Input = userMessage,
+            Type = TaskType.ScreenUnderstand,
+            RequiredPermission = PermissionLevel.L2_ScreenBrowser,
+            Parameters =
+            {
+                ["Region"] = new
+                {
+                    region = new
+                    {
+                        x = result.X,
+                        y = result.Y,
+                        width = result.Width,
+                        height = result.Height
+                    }
+                },
+                ["UserHint"] = "用户圈选的屏幕区域"
+            }
+        };
+
+        PrepareTaskSurface(task, "屏幕理解", userMessage);
+
+        if (RequiresUserConfirmation(task))
+        {
+            var confirmed = await ShowPendingConfirmationAsync(task, userMessage);
+            if (!confirmed)
+                return;
+        }
+
+        await ExecutePreparedTaskAsync(task);
+    }
+
+    public void CancelScreenSelection()
+    {
+        StatusMessage = "已取消屏幕圈选。";
+        IsChatVisible = true;
     }
 
     public void OpenChatPanel()

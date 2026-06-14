@@ -31,6 +31,17 @@ public static class ToolRegistryInitializer
         // 目录工具
         registry.Register(new ListDirectoryTool(contextProvider));
 
+        // 文件写入和命令执行工具（需权限确认）
+        registry.Register(new WriteFileTool(contextProvider));
+        registry.Register(new EditFileTool(contextProvider));
+        registry.Register(new RunCommandTool());
+
+        // 文件搜索工具
+        registry.Register(new SearchFileTool(contextProvider));
+
+        // 计算机控制工具（需权限确认）
+        registry.Register(new ComputerUseTool());
+
         // 屏幕理解工具（需要 LLM）
         if (llmProvider != null)
         {
@@ -52,7 +63,13 @@ public static class ToolRegistryInitializer
             "screen_capture",
             "browser_context",
             "clipboard",
-            "screen_understand"
+            "screen_understand",
+            "list_directory",
+            "write_file",
+            "edit_file",
+            "run_command",
+            "search_file",
+            "computer_use"
         };
     }
 }

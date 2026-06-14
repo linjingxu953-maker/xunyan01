@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DesktopMascot.Agent.Context;
+using DesktopMascot.Agent.Memory;
 using DesktopMascot.Agent.Models;
 using DesktopMascot.Agent.Providers;
 using DesktopMascot.Agent.Tools;
@@ -19,6 +20,7 @@ public class AgentOrchestrator : IAgentEngine
     private readonly ToolRegistry _toolRegistry;
     private readonly ITaskEventBus _eventBus;
     private readonly ILogger<AgentOrchestrator> _logger;
+    private readonly MemoryIntegrationService? _memoryService;
     private readonly int _maxIterations;
 
     public AgentOrchestrator(
@@ -26,48 +28,83 @@ public class AgentOrchestrator : IAgentEngine
         ToolRegistry toolRegistry,
         ITaskEventBus eventBus,
         ILogger<AgentOrchestrator> logger,
-        int maxIterations = 10)
+        int maxIterations = 10,
+        MemoryIntegrationService? memoryService = null)
     {
         _llmProvider = llmProvider;
         _toolRegistry = toolRegistry;
         _eventBus = eventBus;
         _logger = logger;
         _maxIterations = maxIterations;
+        _memoryService = memoryService;
     }
 
     public async Task<TaskResult> ExecuteAsync(AgentTask task, CancellationToken ct = default)
     {
         _logger.LogInformation("Agent 开始执行任务: {Title}", task.Title);
 
+        MemoryContext? memoryContext = null;
+        if (_memoryService != null)
+        {
+            memoryContext = await _memoryService.SearchRelevantMemoriesAsync(task, ct);
+        }
+
         var taskType = ResolveTaskType(task);
         var contextProvider = ResolveContextProvider();
 
+        TaskResult result;
+
         if (taskType == TaskType.SummarizePage && contextProvider != null)
         {
-            return await ExecuteSummarizePageAsync(task, contextProvider, ct);
+            result = await ExecuteSummarizePageAsync(task, contextProvider, ct);
         }
-
-        if (taskType == TaskType.ScreenUnderstand)
+        else if (taskType == TaskType.ScreenUnderstand)
         {
-            return await ExecuteScreenUnderstandAsync(task, ct);
+            result = await ExecuteScreenUnderstandAsync(task, ct);
         }
-
-        if (taskType == TaskType.AnalyzeError)
+        else if (taskType == TaskType.AnalyzeError)
         {
-            return await ExecuteWithSpecializedPromptAsync(task, GetAnalyzeErrorPrompt(), "报错分析", ct);
+            result = await ExecuteWithSpecializedPromptAsync(task, GetAnalyzeErrorPrompt(), "报错分析", ct, memoryContext);
         }
-
-        if (taskType == TaskType.InspectProject)
+        else if (taskType == TaskType.InspectProject)
         {
-            return await ExecuteWithSpecializedPromptAsync(task, GetInspectProjectPrompt(), "项目诊断", ct);
+            result = await ExecuteWithSpecializedPromptAsync(task, GetInspectProjectPrompt(), "项目诊断", ct, memoryContext);
         }
-
-        if (taskType == TaskType.SolveProblem)
+        else if (taskType == TaskType.SolveProblem)
         {
-            return await ExecuteWithSpecializedPromptAsync(task, GetSolveProblemPrompt(), "题目解答", ct);
+            result = await ExecuteWithSpecializedPromptAsync(task, GetSolveProblemPrompt(), "题目解答", ct, memoryContext);
+        }
+        else if (taskType == TaskType.WriteFile)
+        {
+            result = await ExecuteWithSpecializedPromptAsync(task, GetWriteFilePrompt(), "文件生成", ct, memoryContext);
+        }
+        else if (taskType == TaskType.RunCommand)
+        {
+            result = await ExecuteWithSpecializedPromptAsync(task, GetRunCommandPrompt(), "命令执行", ct, memoryContext);
+        }
+        else
+        {
+            result = await ExecuteWithSpecializedPromptAsync(task, GetChatPrompt(), "对话", ct, memoryContext);
         }
 
-        return await ExecuteGenericTaskAsync(task, ct);
+        if (_memoryService != null && result.Success)
+        {
+            var proposals = await _memoryService.ProposeMemoriesAsync(task, result, ct);
+            if (proposals.Count > 0)
+            {
+                _eventBus.Publish(new TaskEvent
+                {
+                    TaskId = task.Id,
+                    State = MascotState.MemoryConfirm,
+                    Message = $"检测到 {proposals.Count} 条可保存的记忆",
+                    Progress = 95
+                });
+
+                await _memoryService.SaveProposedMemoriesAsync(proposals, ct);
+            }
+        }
+
+        return result;
     }
 
     private async Task<TaskResult> ExecuteSummarizePageAsync(
@@ -300,6 +337,15 @@ public class AgentOrchestrator : IAgentEngine
                     Progress = Math.Min(90, iteration * 10 + 5)
                 });
 
+                if (_toolRegistry.RequiresConfirmation(toolCall.Name))
+                {
+                    _eventBus.Publish(TaskEvent.PermissionRequested(
+                        task.Id,
+                        toolCall.Name,
+                        "tool_execution",
+                        _toolRegistry.GetConfirmationMessage(toolCall.Name)));
+                }
+
                 var toolResult = await _toolRegistry.ExecuteToolAsync(toolCall, ct);
                 messages.Add(new LlmMessage
                 {
@@ -388,7 +434,7 @@ public class AgentOrchestrator : IAgentEngine
     }
 
     private async Task<TaskResult> ExecuteWithSpecializedPromptAsync(
-        AgentTask task, string systemPrompt, string taskLabel, CancellationToken ct)
+        AgentTask task, string systemPrompt, string taskLabel, CancellationToken ct, MemoryContext? memoryContext = null)
     {
         var contextProvider = ResolveContextProvider();
         string? screenshotPath = null;
@@ -421,6 +467,11 @@ public class AgentOrchestrator : IAgentEngine
         if (!string.IsNullOrEmpty(windowTitle))
         {
             userContent = $"当前窗口: {windowTitle}\n\n用户请求: {task.Input}";
+        }
+
+        if (memoryContext != null && memoryContext.HasRelevantMemories)
+        {
+            userContent += memoryContext.ToPromptContext();
         }
 
         var messages = new List<LlmMessage>
@@ -555,4 +606,200 @@ public class AgentOrchestrator : IAgentEngine
             - 代码题要给出可运行的代码
             """;
     }
+
+    private static string GetChatPrompt()
+    {
+        return """
+            你是一个友善、专业的 AI 助手。你的任务是帮助用户解决各种问题。
+
+            回答原则：
+            1. **准确**：确保信息准确，不确定时如实说明
+            2. **简洁**：回答要简洁明了，避免冗余
+            3. **有用**：给出具体可执行的建议
+            4. **友善**：保持友善耐心的态度
+
+            回答格式：
+            - 直接回答用户问题，不需要固定格式
+            - 如果问题需要步骤，用有序列表
+            - 如果是代码问题，给出代码示例
+            - 如果是概念解释，用通俗易懂的语言
+
+            注意：
+            - 如果有截图，结合截图内容回答
+            - 不确定的信息要标注
+            - 复杂问题可以分步骤回答
+            """;
+    }
+
+    private static string GetWriteFilePrompt()
+    {
+        return """
+            你是一个专业的文件生成助手。你的任务是帮助用户生成各种文件内容。
+
+            生成原则：
+            1. **完整**：生成完整的文件内容，不要省略
+            2. **规范**：遵循语言/格式的最佳实践
+            3. **可运行**：代码要能直接运行
+            4. **有注释**：关键代码添加注释
+
+            回答格式：
+            **文件类型**: [类型]
+            **文件名**: [建议文件名]
+            **内容**:
+            ```
+            [完整的文件内容]
+            ```
+
+            注意：
+            - 如果有截图，结合截图中的需求生成
+            - 代码要完整，不要用 ... 省略
+            - 如果需要多个文件，分别列出
+            - 说明文件的用途和使用方法
+            """;
+    }
+
+    private static string GetRunCommandPrompt()
+    {
+        return """
+            你是一个专业的命令执行助手。你的任务是帮助用户生成和解释各种命令。
+
+            回答原则：
+            1. **安全**：提醒用户注意命令风险
+            2. **准确**：确保命令语法正确
+            3. **解释**：说明命令的作用和参数含义
+            4. **替代**：提供更安全的替代方案
+
+            回答格式：
+            **命令**: [完整命令]
+            **作用**: [命令做什么]
+            **参数说明**:
+            - [参数1]: [含义]
+            - [参数2]: [含义]
+            **风险提示**: [如果有风险]
+            **注意事项**: [使用前需要知道的]
+
+            注意：
+            - 危险命令（rm -rf, DROP TABLE 等）要特别提醒
+            - 给出命令的可复制版本
+            - 如果有截图，结合截图中的上下文
+            """;
+    }
+
+    /// <summary>
+    /// 流式执行任务 - 实时推送 LLM 输出
+    /// </summary>
+    public async IAsyncEnumerable<string> ExecuteStreamingAsync(
+        AgentTask task, [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        _logger.LogInformation("Agent 流式执行任务: {Title}", task.Title);
+
+        MemoryContext? memoryContext = null;
+        if (_memoryService != null)
+        {
+            memoryContext = await _memoryService.SearchRelevantMemoriesAsync(task, ct);
+        }
+
+        var contextProvider = ResolveContextProvider();
+        string? screenshotPath = null;
+        string? windowTitle = null;
+
+        if (contextProvider != null)
+        {
+            _eventBus.Publish(new TaskEvent
+            {
+                TaskId = task.Id,
+                State = MascotState.ReadingContext,
+                Message = "正在读取上下文...",
+                Progress = 10
+            });
+
+            var snapshot = await contextProvider.GetActiveWindowContextAsync(ct);
+            windowTitle = snapshot.ActiveWindowTitle;
+            screenshotPath = await contextProvider.CaptureScreenshotAsync(ct: ct);
+        }
+
+        _eventBus.Publish(new TaskEvent
+        {
+            TaskId = task.Id,
+            State = MascotState.Working,
+            Message = "AI 正在思考...",
+            Progress = 40
+        });
+
+        var userContent = task.Input;
+        if (!string.IsNullOrEmpty(windowTitle))
+        {
+            userContent = $"当前窗口: {windowTitle}\n\n用户请求: {task.Input}";
+        }
+        if (memoryContext != null && memoryContext.HasRelevantMemories)
+        {
+            userContent += memoryContext.ToPromptContext();
+        }
+
+        var messages = new List<LlmMessage>
+        {
+            new() { Role = "system", Content = GetChatPrompt() },
+            new() { Role = "user", Content = userContent }
+        };
+
+        if (!string.IsNullOrEmpty(screenshotPath) && !screenshotPath.StartsWith("["))
+        {
+            try
+            {
+                var imageBytes = await File.ReadAllBytesAsync(screenshotPath, ct);
+                var base64 = Convert.ToBase64String(imageBytes);
+                messages[1].Images = new List<VisionContent>
+                {
+                    new() { Base64Data = base64, MediaType = "image/png" }
+                };
+            }
+            catch { }
+        }
+
+        var fullResponse = new System.Text.StringBuilder();
+        var iteration = 0;
+
+        await foreach (var chunk in _llmProvider.ChatStreamAsync(messages, ct))
+        {
+            ct.ThrowIfCancellationRequested();
+            fullResponse.Append(chunk);
+            iteration++;
+
+            if (iteration % 10 == 0)
+            {
+                _eventBus.Publish(TaskEvent.LlmStreamChunk(task.Id, chunk));
+            }
+
+            yield return chunk;
+        }
+
+        _eventBus.Publish(new TaskEvent
+        {
+            TaskId = task.Id,
+            State = MascotState.Completed,
+            Message = "任务完成",
+            Progress = 100
+        });
+
+        if (_memoryService != null)
+        {
+            var result = new TaskResult
+            {
+                TaskId = task.Id,
+                Success = true,
+                Content = fullResponse.ToString()
+            };
+            var proposals = await _memoryService.ProposeMemoriesAsync(task, result, ct);
+            if (proposals.Count > 0)
+            {
+                await _memoryService.SaveProposedMemoriesAsync(proposals, ct);
+            }
+        }
+    }
 }
+
+/// <summary>
+/// IAsyncEnumerable 的 EnumeratorCancellation 特性
+/// </summary>
+[AttributeUsage(AttributeTargets.Parameter)]
+internal sealed class EnumeratorCancellationAttribute : Attribute { }

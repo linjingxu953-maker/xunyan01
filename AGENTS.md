@@ -317,6 +317,89 @@
 - [x] 单元测试（7 个）
 - [x] 261 个测试全部通过
 
+### M34: Chat/WriteFile/RunCommand 专用 prompt ✅ 已完成
+
+- [x] Chat 专用 prompt — 友善专业助手，直接回答
+- [x] WriteFile 专用 prompt — 生成完整文件内容
+- [x] RunCommand 专用 prompt — 生成和解释命令
+- [x] AgentOrchestrator 路由表完整覆盖所有 TaskType
+- [x] 单元测试（3 个）
+- [x] 264 个测试全部通过
+
+### M35: 端到端集成测试 ✅ 已完成
+
+- [x] EndToEndTests — 验证 8 个场景的完整流程
+- [x] AllTaskTypes_ShouldHaveDedicatedPrompt — 验证所有 TaskType 都有专用 prompt
+- [x] 273 个测试全部通过
+
+### M36: 记忆系统集成 ✅ 已完成
+
+**目标**：模仿 Hermes 机制，让 AI 能够了解用户并自我增强进化
+
+**核心能力**：
+1. **执行前记忆检索** — 搜索用户偏好、项目信息、相关技能、历史经验，注入 prompt 上下文
+2. **执行后记忆提议** — 分析任务结果，自动提议保存用户偏好、项目信息、任务历史
+3. **Skill 自动生成** — 检测重复模式（同类任务 ≥3 次），自动生成可复用技能
+4. **用户学习** — 通过历史积累了解用户习惯和偏好
+
+**实现文件**：
+- [x] `MemoryIntegrationService.cs` — 记忆集成服务核心
+- [x] `MemoryContext` — 记忆上下文（注入 prompt）
+- [x] `MemoryProposal` — 记忆提议模型
+- [x] AgentOrchestrator 集成记忆检索+提议
+- [x] 单元测试（8 个）
+- [x] 281 个测试全部通过
+
+**架构**：
+```
+AgentOrchestrator.ExecuteAsync()
+  ├── SearchRelevantMemoriesAsync() → 注入 prompt
+  ├── ExecuteWithSpecializedPromptAsync() → 执行任务
+  └── ProposeMemoriesAsync() → 保存记忆
+```
+
+### M37: WriteFileTool + RunCommandTool + 权限确认 ✅ 已完成
+
+- [x] WriteFileTool — 文件写入工具，支持创建和覆盖
+- [x] RunCommandTool — 命令执行工具，支持超时和危险命令检测
+- [x] ITool.RequiresConfirmation — 工具确认接口
+- [x] ToolRegistry.RequiresConfirmation() — 检查确认需求
+- [x] AgentOrchestrator 集成 PermissionRequested 事件
+- [x] 单元测试（9 个）
+- [x] 294 个测试全部通过
+
+### M38: EditFileTool + SearchFileTool ✅ 已完成
+
+- [x] EditFileTool — 文件编辑工具（替换/插入/删除/追加/前置）
+- [x] SearchFileTool — 文件搜索工具（按文件名/内容/扩展名）
+- [x] 单元测试（11 个）
+- [x] 305 个测试全部通过
+
+### M39: 浏览器正文提取 + 流式响应 ✅ 已完成
+
+- [x] HtmlContentExtractor — HTML 正文提取器
+- [x] 流式响应支持 — OpenAiCompatibleProvider SSE 解析
+- [x] ExecuteStreamingAsync — AgentOrchestrator 流式执行
+- [x] LlmStreamChunk 事件 — 实时推送 LLM 输出
+- [x] 单元测试（7 个）
+- [x] 319 个测试全部通过
+
+### M40: Computer Use（Phase 2）✅ 已完成
+
+**架构决策**：
+- MiMo 负责 Agent/Core：截图、窗口识别、鼠标键盘动作、浏览器/桌面操作、动作规划、工具执行管道
+- Codex 继续只做 UI：状态展示、权限确认、用户接管/中断、操作轨迹、结果反馈
+- 模型调用走用户自己的 Provider/API Key，不内置 Key
+- 所有敏感动作必须经过权限确认体系
+
+**实现文件**：
+- [x] `ComputerUseTool.cs` — 鼠标点击/键盘输入/窗口操作工具
+- [x] `ComputerUseEvent.cs` — Computer Use 事件模型（9 种事件类型）
+- [x] `ComputerUseOrchestrator.cs` — Computer Use 编排器（规划→执行→反馈）
+- [x] UI 接口：ComputerUseStarted/ScreenObserved/ActionPlanned/ActionExecuting/ActionCompleted/WaitingUserApproval/UserTakeoverRequested/ComputerUseCompleted/ComputerUseFailed
+- [x] 单元测试（7 个）
+- [x] 319 个测试全部通过
+
 ### 下一阶段
 
 - [ ] M3: 桌面体验（托盘、快捷键）- 等待 Codex 完成 UI
@@ -332,9 +415,22 @@
 
 #### 等待中
 
-- [ ] M3: 桌面体验（托盘、快捷键）- 等待 Codex 完成 UI
 - [ ] M32: 屏幕理解 UI - 等待 Codex 完成全屏遮罩 + 圈选交互
+- [ ] Computer Use UI - 等待 Codex 完成控制面板壳子
 - [ ] M31+: 封测包 - 等用户验收功能后再规划
+
+#### 已完成
+
+- [x] WriteFileTool - 文件写入 ✅
+- [x] EditFileTool - 文件编辑 ✅
+- [x] SearchFileTool - 文件搜索 ✅
+- [x] RunCommandTool - 命令执行 ✅
+- [x] ComputerUseTool - 鼠标键盘控制 ✅
+- [x] ComputerUseOrchestrator - 动作规划执行 ✅
+- [x] 权限确认机制 - PermissionRequested 事件 ✅
+- [x] HTML 正文提取 - HtmlContentExtractor ✅
+- [x] 流式响应 - ChatStreamAsync + ExecuteStreamingAsync ✅
+- [x] 记忆系统集成 - MemoryIntegrationService ✅
 
 ---
 
@@ -366,11 +462,11 @@
 
 | 指标 | 数值 |
 |------|------|
-| 已完成模块 | 27 个（M1-M2, M4-M20, M22-M28, M31, M32 Agent层） |
-| 单元测试 | 250 个全部通过 |
-| 代码行数 | 约 8000+ 行 |
+| 已完成模块 | 31 个（M1-M2, M4-M20, M22-M28, M31-M40） |
+| 单元测试 | 319 个全部通过 |
+| 代码行数 | 约 12000+ 行 |
 | 核心模块 | Core, Agent |
-| 待完成 | M3（UI）、M31+（封测包）|
+| 待完成 | M3（UI）、M32 UI、Computer Use UI、封测包 |
 
 ## 更新日志
 
@@ -412,7 +508,16 @@
 | 2026-06-12 | 创建 THIRD_PARTY_LICENSES.md（记录 MiMo Code MIT 许可证）|
 | 2026-06-12 | 创建 docs/状态事件与确认接口设计.md（M26/M29/M30 接口定义）|
 | 2026-06-14 | M31 完成：总结当前网页（视觉 LLM + SummarizePage 专用路径 + 测试）|
-| 2026-06-14 | M32 Agent层完成：ScreenUnderstandTool + 三层层级 prompt + 意图 fallback + AgentOrchestrator 路由 + 测试 |
+| 2026-06-14 | M32 Agent层完成：ScreenUnderstandTool + 三层 prompt + 意图 fallback + AgentOrchestrator 路由 + 测试 |
+| 2026-06-14 | M33 完成：报错分析/项目诊断/题目解答专用路径+prompt + ListDirectoryTool |
+| 2026-06-14 | M34 完成：Chat/WriteFile/RunCommand 专用 prompt + 路由表完整覆盖 |
+| 2026-06-14 | M35 完成：端到端集成测试（9 个场景 + AllTaskTypes 验证）|
+| 2026-06-14 | M36 完成：记忆系统集成（MemoryIntegrationService + 上下文注入 + 记忆提议 + Skill 自动生成）|
+| 2026-06-14 | M37 完成：WriteFileTool + RunCommandTool + 权限确认机制 |
+| 2026-06-14 | M38 完成：EditFileTool + SearchFileTool |
+| 2026-06-14 | M39 完成：HtmlContentExtractor + 流式响应（SSE + ExecuteStreamingAsync）|
+| 2026-06-14 | M40 完成：Computer Use Phase 2（ComputerUseTool + ComputerUseEvent + ComputerUseOrchestrator）|
+| 2026-06-14 | 架构决策：MiMo 负责 Agent/Core，Codex 负责 UI（控制面板）|
 
 ---
 

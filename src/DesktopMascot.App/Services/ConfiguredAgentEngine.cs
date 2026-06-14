@@ -1,4 +1,5 @@
 using DesktopMascot.Agent.Engines;
+using DesktopMascot.Agent.Memory;
 using DesktopMascot.Agent.Providers;
 using DesktopMascot.Agent.Tools;
 using DesktopMascot.Core.Configuration;
@@ -18,19 +19,22 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
     private readonly ITaskEventBus _eventBus;
     private readonly ITaskEventStream _eventStream;
     private readonly ILogger<AgentOrchestrator> _logger;
+    private readonly MemoryIntegrationService? _memoryService;
 
     public ConfiguredAgentEngine(
         IConfigurationManager configurationManager,
         ToolRegistry toolRegistry,
         ITaskEventBus eventBus,
         ITaskEventStream eventStream,
-        ILogger<AgentOrchestrator> logger)
+        ILogger<AgentOrchestrator> logger,
+        MemoryIntegrationService? memoryService = null)
     {
         _configurationManager = configurationManager;
         _toolRegistry = toolRegistry;
         _eventBus = eventBus;
         _eventStream = eventStream;
         _logger = logger;
+        _memoryService = memoryService;
     }
 
     public async Task<TaskResult> ExecuteAsync(AgentTask task, CancellationToken ct = default)
@@ -44,7 +48,7 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
         }
 
         var provider = BuildProvider(settings);
-        var orchestrator = new AgentOrchestrator(provider, _toolRegistry, _eventBus, _logger);
+        var orchestrator = new AgentOrchestrator(provider, _toolRegistry, _eventBus, _logger, memoryService: _memoryService);
         return await orchestrator.ExecuteAsync(task, ct);
     }
 

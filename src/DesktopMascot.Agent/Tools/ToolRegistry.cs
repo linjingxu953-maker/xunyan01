@@ -44,6 +44,24 @@ public class ToolRegistry
     }
 
     /// <summary>
+    /// 检查工具是否需要确认
+    /// </summary>
+    public bool RequiresConfirmation(string toolName)
+    {
+        var tool = GetTool(toolName);
+        return tool?.RequiresConfirmation ?? false;
+    }
+
+    /// <summary>
+    /// 获取确认提示
+    /// </summary>
+    public string GetConfirmationMessage(string toolName)
+    {
+        var tool = GetTool(toolName);
+        return tool?.ConfirmationMessage ?? "";
+    }
+
+    /// <summary>
     /// 获取所有工具定义
     /// </summary>
     public IEnumerable<ToolDefinition> GetToolDefinitions()

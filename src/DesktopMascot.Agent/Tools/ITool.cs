@@ -23,6 +23,16 @@ public interface ITool
     string ParametersSchema { get; }
 
     /// <summary>
+    /// 是否需要用户确认（写入文件、执行命令等敏感操作）
+    /// </summary>
+    bool RequiresConfirmation => false;
+
+    /// <summary>
+    /// 确认提示信息
+    /// </summary>
+    string ConfirmationMessage => "";
+
+    /// <summary>
     /// 执行工具
     /// </summary>
     Task<ToolResult> ExecuteAsync(string arguments, CancellationToken ct = default);
