@@ -410,14 +410,17 @@ AgentOrchestrator.ExecuteAsync()
 - [x] 集成测试（2 个）
 - [x] 321 个测试全部通过
 
-### M42: 任务历史 + 取消处理 + 边界测试 ✅ 已完成
+### M42: 流式响应 + 任务历史 + 边界测试 ✅ 已完成
 
-- [x] AgentOrchestrator 自动记录任务历史（RecordTaskStartAsync/RecordTaskEndAsync）
-- [x] ConfiguredAgentEngine 传递 ITaskHistoryStore
+- [x] IAgentEngine.ExecuteStreamingAsync() 接口
+- [x] AgentOrchestrator.ExecuteStreamingAsync() 实现
+- [x] ConfiguredAgentEngine 流式转发
+- [x] MiMoCodeAgent 流式支持
+- [x] AgentEngineStub 流式实现
+- [x] AgentOrchestrator 自动记录任务历史
 - [x] OperationCanceledException 处理
-- [x] 边界测试：空输入、长输入、LLM失败、并发任务、取消、特殊字符、Unicode
-- [x] 单元测试（7 个）
-- [x] 328 个测试全部通过
+- [x] 边界测试 + 流式测试（10 个）
+- [x] 331 个测试全部通过
 
 ### 下一阶段
 
@@ -482,8 +485,8 @@ AgentOrchestrator.ExecuteAsync()
 | 指标 | 数值 |
 |------|------|
 | 已完成模块 | 33 个（M1-M2, M4-M20, M22-M28, M31-M42） |
-| 单元测试 | 328 个全部通过 |
-| 代码行数 | 约 13000+ 行 |
+| 单元测试 | 331 个全部通过 |
+| 代码行数 | 约 13500+ 行 |
 | 核心模块 | Core, Agent |
 | 待完成 | M3（UI）、M32 UI、Computer Use UI、封测包 |
 

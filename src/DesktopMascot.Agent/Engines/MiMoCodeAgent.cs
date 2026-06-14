@@ -62,13 +62,11 @@ public class MiMoCodeAgent : IAgentEngine
 
         try
         {
-            // 构建命令参数
             var arguments = BuildArguments(task);
 
             _eventStream?.Publish(TaskEvent.ProgressUpdated(
                 task.Id, 20, $"执行命令: mimo {arguments}"));
 
-            // 启动 MiMo Code 进程
             var output = await RunMiMoCodeAsync(arguments, ct);
 
             _eventStream?.Publish(TaskEvent.ProgressUpdated(
@@ -89,6 +87,39 @@ public class MiMoCodeAgent : IAgentEngine
         {
             return TaskResult.Failed(task.Id, $"MiMo Code 执行失败: {ex.Message}");
         }
+    }
+
+    public async IAsyncEnumerable<string> ExecuteStreamingAsync(AgentTask task, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+    {
+        _eventStream?.Publish(TaskEvent.ProgressUpdated(
+            task.Id, 10, "正在启动 MiMo Code（流式）..."));
+
+        var arguments = BuildArguments(task) + " --stream";
+
+        var process = new Process
+        {
+            StartInfo = BuildProcessStartInfo(arguments)
+        };
+
+        ApplyModelEnvironment(process.StartInfo);
+        process.Start();
+
+        using var reader = process.StandardOutput;
+        while (!reader.EndOfStream)
+        {
+            ct.ThrowIfCancellationRequested();
+            var line = await reader.ReadLineAsync(ct);
+            if (!string.IsNullOrEmpty(line))
+            {
+                _eventStream?.Publish(TaskEvent.LlmStreamChunk(task.Id, line));
+                yield return line;
+            }
+        }
+
+        await process.WaitForExitAsync(ct);
+
+        _eventStream?.Publish(TaskEvent.ProgressUpdated(
+            task.Id, 90, "MiMo Code 流式执行完成"));
     }
 
     private string BuildArguments(AgentTask task)

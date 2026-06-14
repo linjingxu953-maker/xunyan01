@@ -53,7 +53,36 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
 
         var provider = BuildProvider(settings);
         var computerUseOrchestrator = new ComputerUseOrchestrator(provider, _eventBus, _logger);
-        var orchestrator = new AgentOrchestrator(
+        var orchestrator = CreateOrchestrator(provider);
+        return await orchestrator.ExecuteAsync(task, ct);
+    }
+
+    public async IAsyncEnumerable<string> ExecuteStreamingAsync(AgentTask task, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var settings = await _configurationManager.GetAppSettingsAsync(ct);
+
+        if (settings.MimoCodeEnabled)
+        {
+            var mimoAgent = new MiMoCodeAgent(BuildMimoCodeConfig(settings), _eventStream);
+            await foreach (var chunk in mimoAgent.ExecuteStreamingAsync(task, ct))
+            {
+                yield return chunk;
+            }
+            yield break;
+        }
+
+        var provider = BuildProvider(settings);
+        var orchestrator = CreateOrchestrator(provider);
+        await foreach (var chunk in orchestrator.ExecuteStreamingAsync(task, ct))
+        {
+            yield return chunk;
+        }
+    }
+
+    private AgentOrchestrator CreateOrchestrator(ILlmProvider provider)
+    {
+        var computerUseOrchestrator = new ComputerUseOrchestrator(provider, _eventBus, _logger);
+        return new AgentOrchestrator(
             provider,
             _toolRegistry,
             _eventBus,
@@ -61,7 +90,6 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
             memoryService: _memoryService,
             computerUseOrchestrator: computerUseOrchestrator,
             historyStore: _historyStore);
-        return await orchestrator.ExecuteAsync(task, ct);
     }
 
     private static ILlmProvider BuildProvider(AppSettings settings)

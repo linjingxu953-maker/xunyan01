@@ -7,5 +7,9 @@ namespace DesktopMascot.Core.Interfaces;
 /// </summary>
 public interface IAgentEngine
 {
+    /// <summary>执行任务</summary>
     Task<TaskResult> ExecuteAsync(AgentTask task, CancellationToken ct = default);
+
+    /// <summary>流式执行任务</summary>
+    IAsyncEnumerable<string> ExecuteStreamingAsync(AgentTask task, CancellationToken ct = default);
 }

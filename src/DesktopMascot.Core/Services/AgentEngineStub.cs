@@ -30,4 +30,15 @@ public class AgentEngineStub : IAgentEngine
             Content = response
         };
     }
+
+    public async IAsyncEnumerable<string> ExecuteStreamingAsync(AgentTask task, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var chunks = new[] { "收到你的消息：\"", task.Input, "\"。这是流式响应。" };
+        foreach (var chunk in chunks)
+        {
+            ct.ThrowIfCancellationRequested();
+            await Task.Delay(50, ct);
+            yield return chunk;
+        }
+    }
 }
