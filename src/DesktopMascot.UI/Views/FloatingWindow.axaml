@@ -4,10 +4,10 @@
         x:Class="DesktopMascot.UI.Views.FloatingWindow"
         x:DataType="vm:FloatingWindowViewModel"
         Title="DesktopMascot"
-        Width="116"
-        Height="132"
-        MinWidth="116"
-        MinHeight="132"
+        Width="132"
+        Height="152"
+        MinWidth="132"
+        MinHeight="152"
         MaxWidth="640"
         MaxHeight="560"
         WindowStartupLocation="Manual"
@@ -30,14 +30,14 @@
                 PointerPressed="MascotIcon_PointerPressed"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Bottom"
-                Margin="0,0,8,8">
+                Margin="0,0,4,4">
             <Grid>
                 <Border x:Name="MascotHalo"
                         Classes="mascotHalo"/>
                 <Border Classes="mascotPortrait">
                     <Image Source="{Binding CharacterImageSource}"
                            Stretch="Uniform"
-                           Margin="5"/>
+                           Margin="0"/>
                 </Border>
                 <TextBlock Text="{Binding CharacterAvatarText}"
                            HorizontalAlignment="Center"
@@ -149,8 +149,9 @@
                         </Grid>
                     </Border>
 
-                    <Grid Grid.Column="1"
-                          RowDefinitions="*,Auto,Auto">
+                    <Grid Grid.Column="1">
+                    <Grid RowDefinitions="*,Auto,Auto"
+                          IsVisible="{Binding IsChatPageVisible}">
                         <Border Grid.Row="0"
                                 Classes="messageList">
                             <Grid>
@@ -239,6 +240,93 @@
                                         Margin="10,0,0,0"/>
                             </Grid>
                         </Border>
+                    </Grid>
+
+                    <Grid RowDefinitions="Auto,*"
+                          IsVisible="{Binding IsSettingsPageVisible}">
+                        <Border Grid.Row="0"
+                                Classes="inlineSettingsHeader">
+                            <Grid ColumnDefinitions="*,Auto"
+                                  Margin="18,14">
+                                <StackPanel Spacing="3">
+                                    <TextBlock Text="{Binding InlineSettingsTitle}"
+                                               Classes="inlineSettingsTitle"/>
+                                    <TextBlock Text="{Binding InlineSettingsDescription}"
+                                               Classes="inlineSettingsSubtitle"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Button Grid.Column="1"
+                                        Content="返回对话"
+                                        Classes="inlineSettingsBackButton"
+                                        Command="{Binding BackToChatCommand}"
+                                        VerticalAlignment="Top"/>
+                            </Grid>
+                        </Border>
+
+                        <Grid Grid.Row="1"
+                              ColumnDefinitions="142,*">
+                            <Border Grid.Column="0"
+                                    Classes="inlineSettingsNav">
+                                <StackPanel Margin="12,14"
+                                            Spacing="7">
+                                    <Button Content="模型"
+                                            Classes="inlineSettingsNavButton"
+                                            Command="{Binding SelectInlineSettingsSectionCommand}"
+                                            CommandParameter="model"/>
+                                    <Button Content="Mimo Code"
+                                            Classes="inlineSettingsNavButton"
+                                            Command="{Binding SelectInlineSettingsSectionCommand}"
+                                            CommandParameter="mimoCode"/>
+                                    <Button Content="权限"
+                                            Classes="inlineSettingsNavButton"
+                                            Command="{Binding SelectInlineSettingsSectionCommand}"
+                                            CommandParameter="permission"/>
+                                    <Button Content="记忆"
+                                            Classes="inlineSettingsNavButton"
+                                            Command="{Binding SelectInlineSettingsSectionCommand}"
+                                            CommandParameter="memory"/>
+                                    <Button Content="快捷键"
+                                            Classes="inlineSettingsNavButton"
+                                            Command="{Binding SelectInlineSettingsSectionCommand}"
+                                            CommandParameter="hotkey"/>
+                                    <Button Content="角色外观"
+                                            Classes="inlineSettingsNavButton"
+                                            Command="{Binding SelectInlineSettingsSectionCommand}"
+                                            CommandParameter="appearance"/>
+                                    <Button Content="日志/数据"
+                                            Classes="inlineSettingsNavButton"
+                                            Command="{Binding SelectInlineSettingsSectionCommand}"
+                                            CommandParameter="data"/>
+                                </StackPanel>
+                            </Border>
+
+                            <ScrollViewer Grid.Column="1"
+                                          VerticalScrollBarVisibility="Auto">
+                                <StackPanel Margin="18"
+                                            Spacing="14">
+                                    <Border Classes="inlineSettingsCard">
+                                        <StackPanel Spacing="8">
+                                            <TextBlock Text="{Binding InlineSettingsTitle}"
+                                                       Classes="inlineSettingsCardTitle"/>
+                                            <TextBlock Text="{Binding InlineSettingsStatus}"
+                                                       Classes="inlineSettingsBody"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Classes="inlineSettingsCard">
+                                        <StackPanel Spacing="8">
+                                            <TextBlock Text="当前阶段"
+                                                       Classes="inlineSettingsCardTitle"/>
+                                            <TextBlock Text="设置中心已并入主对话框，后续把现有设置窗口中的表单逐项迁移到这里，点击设置不会再弹出独立窗口。"
+                                                       Classes="inlineSettingsBody"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Grid>
+                    </Grid>
                     </Grid>
                 </Grid>
             </Grid>

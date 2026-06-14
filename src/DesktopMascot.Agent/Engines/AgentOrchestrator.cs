@@ -355,6 +355,7 @@ public class AgentOrchestrator : IAgentEngine
 
         while (iteration < _maxIterations)
         {
+            ct.ThrowIfCancellationRequested();
             iteration++;
             _logger.LogDebug("Agent 迭代 {Iteration}", iteration);
 

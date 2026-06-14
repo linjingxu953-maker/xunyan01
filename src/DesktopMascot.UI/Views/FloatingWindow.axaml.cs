@@ -1,3 +1,4 @@
+using System.Collections.Specialized;
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
@@ -11,8 +12,8 @@ namespace DesktopMascot.UI.Views;
 
 public partial class FloatingWindow : Window
 {
-    private const double CollapsedWidth = 116;
-    private const double CollapsedHeight = 132;
+    private const double CollapsedWidth = 132;
+    private const double CollapsedHeight = 152;
     private const double ExpandedWidth = 640;
     private const double ExpandedHeight = 560;
 
@@ -42,6 +43,7 @@ public partial class FloatingWindow : Window
         if (_viewModel is not null)
         {
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            _viewModel.MessageItems.CollectionChanged -= OnMessageItemsCollectionChanged;
         }
 
         _viewModel = DataContext as FloatingWindowViewModel;
@@ -49,6 +51,7 @@ public partial class FloatingWindow : Window
         if (_viewModel is not null)
         {
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+            _viewModel.MessageItems.CollectionChanged += OnMessageItemsCollectionChanged;
             ApplyWindowMode(_viewModel.IsChatDialogVisible);
         }
     }
@@ -58,7 +61,23 @@ public partial class FloatingWindow : Window
         if (e.PropertyName == nameof(FloatingWindowViewModel.IsChatDialogVisible))
         {
             ApplyWindowMode(IsExpanded);
+
+            if (IsExpanded)
+            {
+                Dispatcher.UIThread.Post(FocusInput, DispatcherPriority.Background);
+                QueueScrollMessagesToEnd();
+            }
         }
+    }
+
+    private void OnMessageItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        QueueScrollMessagesToEnd();
+    }
+
+    private void QueueScrollMessagesToEnd()
+    {
+        Dispatcher.UIThread.Post(() => MessageScrollViewer?.ScrollToEnd(), DispatcherPriority.Background);
     }
 
     private void ApplyWindowMode(bool expanded)

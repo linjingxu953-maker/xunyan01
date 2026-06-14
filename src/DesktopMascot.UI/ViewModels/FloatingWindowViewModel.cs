@@ -90,7 +90,9 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty] private IBrush _mascotBackgroundBrush = BrushFrom("#EEF6FF");
     [ObservableProperty] private bool _isChatVisible = false;
     [ObservableProperty] private bool _isCharacterPanelVisible = false;
-    [ObservableProperty] private string _inputText = string.Empty;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanSendMessage))]
+    private string _inputText = string.Empty;
     [ObservableProperty] private string _characterName = "小桌灵";
     [ObservableProperty] private string _characterRole = "桌面工作助手";
     [ObservableProperty] private string _characterAvatarText = "灵";
@@ -122,6 +124,11 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _isChatDialogVisible = false;
     [ObservableProperty] private bool _isChatDialogHitTestVisible = true;
     [ObservableProperty] private bool _isSidebarVisible = true;
+    [ObservableProperty] private bool _isChatPageVisible = true;
+    [ObservableProperty] private bool _isSettingsPageVisible = false;
+    [ObservableProperty] private string _inlineSettingsTitle = "设置";
+    [ObservableProperty] private string _inlineSettingsDescription = "模型、权限、记忆、快捷键、数据目录和角色外观都在这里管理。";
+    [ObservableProperty] private string _inlineSettingsStatus = "选择左侧设置项查看当前配置入口。";
 
     public ObservableCollection<string> Messages { get; } = new();
     public ObservableCollection<MessageItem> MessageItems { get; } = new();
@@ -151,8 +158,6 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
 
     public event EventHandler? HideRequested;
     public event EventHandler? ExitRequested;
-    public event EventHandler? SettingsRequested;
-    public event EventHandler? AppearanceSettingsRequested;
     public event EventHandler? ScreenSelectionRequested;
 
     public FloatingWindowViewModel(
@@ -252,6 +257,8 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
 
     partial void OnIsBusyChanged(bool value)
     {
+        OnPropertyChanged(nameof(CanSendMessage));
+        OnPropertyChanged(nameof(CanStartScreenSelection));
         SendMessageCommand.NotifyCanExecuteChanged();
         StartScreenSelectionCommand.NotifyCanExecuteChanged();
         CopyTaskResultCommand.NotifyCanExecuteChanged();
@@ -279,6 +286,9 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
 
     partial void OnIsWaitingForUserConfirmationChanged(bool value)
     {
+        OnPropertyChanged(nameof(CanSendMessage));
+        OnPropertyChanged(nameof(CanStartScreenSelection));
+        OnPropertyChanged(nameof(CanResolvePendingConfirmation));
         SendMessageCommand.NotifyCanExecuteChanged();
         StartScreenSelectionCommand.NotifyCanExecuteChanged();
         RetryTaskCommand.NotifyCanExecuteChanged();
@@ -332,7 +342,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     private void OpenAppearanceSettings()
     {
         IsCharacterPanelVisible = false;
-        AppearanceSettingsRequested?.Invoke(this, EventArgs.Empty);
+        OpenSettingsPanel("appearance");
     }
 
     private void OnCharacterProfileChanged(object? sender, EventArgs e)
@@ -610,7 +620,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void OpenSettings()
     {
-        SettingsRequested?.Invoke(this, EventArgs.Empty);
+        OpenSettingsPanel();
     }
 
     /// <summary>
@@ -622,6 +632,8 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         IsMascotIconVisible = false;
         IsChatDialogVisible = true;
         IsChatVisible = true;
+        IsChatPageVisible = true;
+        IsSettingsPageVisible = false;
     }
 
     /// <summary>
@@ -633,6 +645,21 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         IsChatDialogVisible = false;
         IsMascotIconVisible = true;
         IsChatVisible = false;
+        IsChatPageVisible = true;
+        IsSettingsPageVisible = false;
+    }
+
+    [RelayCommand]
+    private void BackToChat()
+    {
+        IsSettingsPageVisible = false;
+        IsChatPageVisible = true;
+    }
+
+    [RelayCommand]
+    private void SelectInlineSettingsSection(string? section)
+    {
+        ApplyInlineSettingsSection(section);
     }
 
     /// <summary>
@@ -641,6 +668,8 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void NewChat()
     {
+        BackToChat();
+
         // 保存当前对话到历史
         if (MessageItems.Count > 0)
         {
@@ -725,6 +754,37 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     public void OpenChatPanel()
     {
         ExpandDialog();
+    }
+
+    public void CollapseChatPanel()
+    {
+        CollapseDialog();
+    }
+
+    public void OpenSettingsPanel(string? section = null)
+    {
+        IsMascotIconVisible = false;
+        IsChatDialogVisible = true;
+        IsChatVisible = true;
+        IsChatPageVisible = false;
+        IsSettingsPageVisible = true;
+        ApplyInlineSettingsSection(section);
+    }
+
+    private void ApplyInlineSettingsSection(string? section)
+    {
+        var key = string.IsNullOrWhiteSpace(section) ? "overview" : section;
+        (InlineSettingsTitle, InlineSettingsDescription, InlineSettingsStatus) = key switch
+        {
+            "model" => ("模型设置", "配置 Provider、API Key、Base URL 和默认模型。", "后续会把现有模型表单迁到这个内嵌页。"),
+            "mimoCode" => ("Mimo Code", "接入本机 Mimo Code，模型调用仍使用用户自己的 API 配置。", "保留 CLI 路径、工作目录和连接检测入口。"),
+            "permission" => ("权限", "查看文件写入、命令执行和高风险工具的确认策略。", "权限确认仍走当前独立确认弹窗体系。"),
+            "memory" => ("记忆", "管理待确认记忆、已保存记忆和自动学习策略。", "记忆确认仍走当前 M30 回调入口。"),
+            "hotkey" => ("快捷键", "配置唤起输入和屏幕圈选快捷键。", "快捷键保存会继续做冲突检测和失败回滚。"),
+            "data" => ("日志/数据", "查看本机配置、日志、缓存和数据目录。", "数据目录入口后续接入打开文件夹和清理操作。"),
+            "appearance" => ("角色外观", "管理人物图片、状态图映射、角色名、颜色和预设。", "角色图片仍优先导入到本机稳定资源目录。"),
+            _ => ("设置", "模型、权限、记忆、快捷键、数据目录和角色外观都在这里管理。", "选择左侧设置项查看当前配置入口。")
+        };
     }
 
     private bool CanCancelCurrentTask() => CanCancelTask;

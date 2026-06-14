@@ -173,20 +173,20 @@
     </Style>
 
     <Style Selector="Border.mascotIcon">
-        <Setter Property="Width" Value="100"/>
-        <Setter Property="Height" Value="116"/>
+        <Setter Property="Width" Value="124"/>
+        <Setter Property="Height" Value="144"/>
         <Setter Property="Cursor" Value="Hand"/>
     </Style>
 
     <Style Selector="Border.mascotHalo">
-        <Setter Property="Width" Value="94"/>
-        <Setter Property="Height" Value="94"/>
-        <Setter Property="CornerRadius" Value="47"/>
-        <Setter Property="Background" Value="#662563EB"/>
-        <Setter Property="BoxShadow" Value="0 10 34 0 #552563EB"/>
+        <Setter Property="Width" Value="116"/>
+        <Setter Property="Height" Value="116"/>
+        <Setter Property="CornerRadius" Value="58"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BoxShadow" Value="0 12 34 0 #182563EB"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Bottom"/>
-        <Setter Property="Margin" Value="0,0,0,8"/>
+        <Setter Property="Margin" Value="0,0,0,4"/>
     </Style>
 
     <Style Selector="Border.mascotIcon.busy Border.mascotHalo">
@@ -205,14 +205,12 @@
     </Style>
 
     <Style Selector="Border.mascotPortrait">
-        <Setter Property="Width" Value="88"/>
-        <Setter Property="Height" Value="104"/>
-        <Setter Property="CornerRadius" Value="22"/>
-        <Setter Property="Background" Value="#F8FFFFFF"/>
-        <Setter Property="BorderBrush" Value="#90FFFFFF"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="BoxShadow" Value="0 14 30 0 #4A000000"/>
-        <Setter Property="ClipToBounds" Value="True"/>
+        <Setter Property="Width" Value="118"/>
+        <Setter Property="Height" Value="136"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BoxShadow" Value="0 14 28 0 #26000000"/>
+        <Setter Property="ClipToBounds" Value="False"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
@@ -230,15 +228,15 @@
         <Setter Property="Width" Value="620"/>
         <Setter Property="Height" Value="540"/>
         <Setter Property="CornerRadius" Value="18"/>
-        <Setter Property="Background" Value="#E90B0D12"/>
-        <Setter Property="BorderBrush" Value="#30FFFFFF"/>
+        <Setter Property="Background" Value="#A80B0D12"/>
+        <Setter Property="BorderBrush" Value="#38FFFFFF"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="BoxShadow" Value="0 22 58 0 #70000000"/>
+        <Setter Property="BoxShadow" Value="0 22 58 0 #5C000000"/>
         <Setter Property="ClipToBounds" Value="True"/>
     </Style>
 
     <Style Selector="Border.dialogTitleBar">
-        <Setter Property="Background" Value="#EA11151F"/>
+        <Setter Property="Background" Value="#B811151F"/>
         <Setter Property="BorderBrush" Value="#16FFFFFF"/>
         <Setter Property="BorderThickness" Value="0,0,0,1"/>
     </Style>
@@ -272,7 +270,7 @@
     </Style>
 
     <Style Selector="Border.sidebarPanel">
-        <Setter Property="Background" Value="#D30F1117"/>
+        <Setter Property="Background" Value="#920F1117"/>
         <Setter Property="BorderBrush" Value="#16FFFFFF"/>
         <Setter Property="BorderThickness" Value="0,0,1,0"/>
     </Style>
@@ -328,7 +326,7 @@
     </Style>
 
     <Style Selector="Border.messageList">
-        <Setter Property="Background" Value="#F40B0D12"/>
+        <Setter Property="Background" Value="#760B0D12"/>
     </Style>
 
     <Style Selector="TextBlock.emptyChatTitle">
@@ -361,7 +359,7 @@
     </Style>
 
     <Style Selector="Border.statusBar">
-        <Setter Property="Background" Value="#EA11151F"/>
+        <Setter Property="Background" Value="#A811151F"/>
         <Setter Property="BorderBrush" Value="#16FFFFFF"/>
         <Setter Property="BorderThickness" Value="0,1,0,0"/>
     </Style>
@@ -373,7 +371,7 @@
     </Style>
 
     <Style Selector="Border.inputArea">
-        <Setter Property="Background" Value="#F011151F"/>
+        <Setter Property="Background" Value="#B011151F"/>
         <Setter Property="BorderBrush" Value="#16FFFFFF"/>
         <Setter Property="BorderThickness" Value="0,1,0,0"/>
     </Style>
@@ -399,5 +397,74 @@
 
     <Style Selector="Button.sendButton:pointerover">
         <Setter Property="Background" Value="#1D4ED8"/>
+    </Style>
+
+    <Style Selector="Border.inlineSettingsHeader">
+        <Setter Property="Background" Value="#8E11151F"/>
+        <Setter Property="BorderBrush" Value="#16FFFFFF"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+    </Style>
+
+    <Style Selector="TextBlock.inlineSettingsTitle">
+        <Setter Property="Foreground" Value="#F8FAFC"/>
+        <Setter Property="FontSize" Value="17"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="TextBlock.inlineSettingsSubtitle">
+        <Setter Property="Foreground" Value="#A7B2C3"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="LineHeight" Value="17"/>
+    </Style>
+
+    <Style Selector="Button.inlineSettingsBackButton">
+        <Setter Property="Padding" Value="12,7"/>
+        <Setter Property="CornerRadius" Value="9"/>
+        <Setter Property="Background" Value="#18FFFFFF"/>
+        <Setter Property="BorderBrush" Value="#24FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="#F8FAFC"/>
+        <Setter Property="FontSize" Value="12"/>
+    </Style>
+
+    <Style Selector="Border.inlineSettingsNav">
+        <Setter Property="Background" Value="#780F1117"/>
+        <Setter Property="BorderBrush" Value="#16FFFFFF"/>
+        <Setter Property="BorderThickness" Value="0,0,1,0"/>
+    </Style>
+
+    <Style Selector="Button.inlineSettingsNavButton">
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="Padding" Value="11,8"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="#CBD5E1"/>
+        <Setter Property="FontSize" Value="12"/>
+    </Style>
+
+    <Style Selector="Button.inlineSettingsNavButton:pointerover">
+        <Setter Property="Background" Value="#16FFFFFF"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+
+    <Style Selector="Border.inlineSettingsCard">
+        <Setter Property="Background" Value="#18FFFFFF"/>
+        <Setter Property="BorderBrush" Value="#22FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Padding" Value="14"/>
+    </Style>
+
+    <Style Selector="TextBlock.inlineSettingsCardTitle">
+        <Setter Property="Foreground" Value="#F8FAFC"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="TextBlock.inlineSettingsBody">
+        <Setter Property="Foreground" Value="#CBD5E1"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="LineHeight" Value="19"/>
     </Style>
 </Styles>

@@ -10,9 +10,11 @@ namespace DesktopMascot.UI.Services;
 
 public sealed class DesktopShellService : IDisposable
 {
+    private const double CollapsedWindowWidth = 132;
+    private const double CollapsedWindowHeight = 152;
+
     private readonly IWindowPlacementStore _placementStore;
     private readonly IGlobalHotkeyService _hotkeyService;
-    private readonly ISettingsWindowService _settingsWindowService;
     private readonly ScreenSelectionOverlayService _screenSelectionOverlayService = new();
     private readonly DispatcherTimer _saveTimer;
     private FloatingWindow? _window;
@@ -26,12 +28,10 @@ public sealed class DesktopShellService : IDisposable
 
     public DesktopShellService(
         IWindowPlacementStore placementStore,
-        IGlobalHotkeyService hotkeyService,
-        ISettingsWindowService settingsWindowService)
+        IGlobalHotkeyService hotkeyService)
     {
         _placementStore = placementStore;
         _hotkeyService = hotkeyService;
-        _settingsWindowService = settingsWindowService;
         _hotkeyService.HotkeyPressed += OnHotkeyPressed;
         _hotkeyService.ScreenSelectionHotkeyPressed += OnScreenSelectionHotkeyPressed;
         _hotkeyService.HotkeysChanged += OnHotkeysChanged;
@@ -57,14 +57,13 @@ public sealed class DesktopShellService : IDisposable
         _viewModel = viewModel;
 
         desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        viewModel.CollapseChatPanel();
         RestoreWindowPlacement();
         CreateTrayIcon();
         _hotkeyService.RegisterDefaultHotkey();
 
         viewModel.HideRequested += OnHideRequested;
         viewModel.ExitRequested += OnExitRequested;
-        viewModel.SettingsRequested += OnSettingsRequested;
-        viewModel.AppearanceSettingsRequested += OnAppearanceSettingsRequested;
         viewModel.ScreenSelectionRequested += OnScreenSelectionRequested;
         window.PositionChanged += OnWindowPositionChanged;
         window.Resized += OnWindowResized;
@@ -91,8 +90,6 @@ public sealed class DesktopShellService : IDisposable
         {
             _viewModel.HideRequested -= OnHideRequested;
             _viewModel.ExitRequested -= OnExitRequested;
-            _viewModel.SettingsRequested -= OnSettingsRequested;
-            _viewModel.AppearanceSettingsRequested -= OnAppearanceSettingsRequested;
             _viewModel.ScreenSelectionRequested -= OnScreenSelectionRequested;
         }
     }
@@ -123,7 +120,7 @@ public sealed class DesktopShellService : IDisposable
         {
             Header = "设置"
         };
-        settingsItem.Click += (_, _) => _settingsWindowService.ShowSettingsWindow();
+        settingsItem.Click += (_, _) => ShowSettingsFromShell();
 
         var exitItem = new NativeMenuItem
         {
@@ -202,14 +199,12 @@ public sealed class DesktopShellService : IDisposable
         ExitApplication();
     }
 
-    private void OnSettingsRequested(object? sender, EventArgs e)
+    private void ShowSettingsFromShell(string? section = null)
     {
-        _settingsWindowService.ShowSettingsWindow();
-    }
-
-    private void OnAppearanceSettingsRequested(object? sender, EventArgs e)
-    {
-        _settingsWindowService.ShowSettingsWindow("appearance");
+        ShowWindow(openChat: false);
+        _viewModel?.OpenSettingsPanel(section);
+        EnsureWindowOnScreen();
+        _window?.Activate();
     }
 
     private async void OnScreenSelectionRequested(object? sender, EventArgs e)
@@ -330,14 +325,31 @@ public sealed class DesktopShellService : IDisposable
             return;
 
         var state = _placementStore.Load();
-        var width = Math.Clamp(state?.Width ?? _window.Width, 116, 700);
-        var height = Math.Clamp(state?.Height ?? _window.Height, 132, 700);
+        var width = CollapsedWindowWidth;
+        var height = CollapsedWindowHeight;
 
         _window.Width = width;
         _window.Height = height;
         _window.Position = state is not null && IsReasonablePlacement(state)
-            ? ClampWindowPosition(new PixelPoint(state.X, state.Y), width, height)
+            ? ClampWindowPosition(GetAnchoredRestorePosition(state, width, height), width, height)
             : GetDefaultWindowPosition(width, height);
+    }
+
+    private PixelPoint GetAnchoredRestorePosition(WindowPlacementState state, double targetWidth, double targetHeight)
+    {
+        var savedPosition = new PixelPoint(state.X, state.Y);
+        var screen = FindBestScreen(savedPosition);
+        var scaling = screen is null ? 1 : GetScreenScaling(screen);
+        var savedWidth = Math.Clamp(state.Width, CollapsedWindowWidth, 1000);
+        var savedHeight = Math.Clamp(state.Height, CollapsedWindowHeight, 1000);
+        var savedPixelWidth = Math.Max(1, (int)Math.Ceiling(savedWidth * scaling));
+        var savedPixelHeight = Math.Max(1, (int)Math.Ceiling(savedHeight * scaling));
+        var targetPixelWidth = Math.Max(1, (int)Math.Ceiling(targetWidth * scaling));
+        var targetPixelHeight = Math.Max(1, (int)Math.Ceiling(targetHeight * scaling));
+
+        return new PixelPoint(
+            state.X + savedPixelWidth - targetPixelWidth,
+            state.Y + savedPixelHeight - targetPixelHeight);
     }
 
     private void EnsureWindowOnScreen()
@@ -362,12 +374,32 @@ public sealed class DesktopShellService : IDisposable
         if (_window is null)
             return;
 
+        var position = _window.Position;
+        var width = _window.Width;
+        var height = _window.Height;
+
+        if (_viewModel?.IsChatDialogVisible == true)
+        {
+            position = GetAnchoredRestorePosition(
+                new WindowPlacementState
+                {
+                    X = _window.Position.X,
+                    Y = _window.Position.Y,
+                    Width = _window.Width,
+                    Height = _window.Height
+                },
+                CollapsedWindowWidth,
+                CollapsedWindowHeight);
+            width = CollapsedWindowWidth;
+            height = CollapsedWindowHeight;
+        }
+
         _placementStore.Save(new WindowPlacementState
         {
-            X = _window.Position.X,
-            Y = _window.Position.Y,
-            Width = _window.Width,
-            Height = _window.Height
+            X = position.X,
+            Y = position.Y,
+            Width = width,
+            Height = height
         });
     }
 
@@ -446,7 +478,7 @@ public sealed class DesktopShellService : IDisposable
     {
         return state.X is > -100000 and < 100000 &&
                state.Y is > -100000 and < 100000 &&
-               state.Width is >= 116 and <= 1000 &&
-               state.Height is >= 132 and <= 1000;
+               state.Width is >= CollapsedWindowWidth and <= 1000 &&
+               state.Height is >= CollapsedWindowHeight and <= 1000;
     }
 }

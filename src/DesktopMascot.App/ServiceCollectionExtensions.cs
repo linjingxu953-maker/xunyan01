@@ -127,6 +127,8 @@ public static class ServiceCollectionExtensions
 
         // 桥接服务（供 UI 层调用）
         services.AddSingleton<IContextBridgeService, ContextBridgeService>();
+        services.AddSingleton<IEventStreamBridge, EventStreamBridge>();
+        services.AddSingleton<ISettingsService, SettingsService>();
 
         // 应用协调器
         services.AddSingleton<ApplicationCoordinator>();
