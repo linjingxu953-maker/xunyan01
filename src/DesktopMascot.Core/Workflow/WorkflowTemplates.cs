@@ -1,0 +1,162 @@
+using DesktopMascot.Core.Workflow;
+
+namespace DesktopMascot.Core.Workflow;
+
+/// <summary>
+/// 工作流模板
+/// </summary>
+public class WorkflowTemplate
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Category { get; set; } = string.Empty;
+    public List<WorkflowStep> Steps { get; set; } = new();
+    public string[] RequiredTools { get; set; } = Array.Empty<string>();
+    public string[] Tags { get; set; } = Array.Empty<string>();
+}
+
+/// <summary>
+/// 工作流模板管理器
+/// </summary>
+public static class WorkflowTemplates
+{
+    /// <summary>获取所有内置模板</summary>
+    public static List<WorkflowTemplate> GetBuiltInTemplates()
+    {
+        return new List<WorkflowTemplate>
+        {
+            CreateCodeReviewTemplate(),
+            CreateFileOrganizationTemplate(),
+            CreateDataAnalysisTemplate(),
+            CreateDocumentationTemplate(),
+            CreateBugFixTemplate()
+        };
+    }
+
+    /// <summary>代码审查模板</summary>
+    private static WorkflowTemplate CreateCodeReviewTemplate()
+    {
+        return new WorkflowTemplate
+        {
+            Id = "code_review",
+            Name = "代码审查",
+            Description = "审查代码质量，检查潜在问题",
+            Category = "开发",
+            RequiredTools = new[] { "read_file", "list_directory" },
+            Tags = new[] { "代码", "审查", "质量" },
+            Steps = new List<WorkflowStep>
+            {
+                new() { Name = "读取代码文件", ToolName = "read_file", Order = 1 },
+                new() { Name = "分析代码质量", ToolName = "analyze_code", Order = 2 },
+                new() { Name = "生成审查报告", ToolName = "generate_report", Order = 3 }
+            }
+        };
+    }
+
+    /// <summary>文件整理模板</summary>
+    private static WorkflowTemplate CreateFileOrganizationTemplate()
+    {
+        return new WorkflowTemplate
+        {
+            Id = "file_organization",
+            Name = "文件整理",
+            Description = "整理文件目录，移动、重命名、归档",
+            Category = "效率",
+            RequiredTools = new[] { "list_directory", "write_file" },
+            Tags = new[] { "文件", "整理", "归档" },
+            Steps = new List<WorkflowStep>
+            {
+                new() { Name = "扫描目录", ToolName = "list_directory", Order = 1 },
+                new() { Name = "分析文件结构", ToolName = "analyze_files", Order = 2 },
+                new() { Name = "生成整理方案", ToolName = "generate_plan", Order = 3, RequiresApproval = true },
+                new() { Name = "执行整理", ToolName = "execute_plan", Order = 4, RequiresApproval = true }
+            }
+        };
+    }
+
+    /// <summary>数据分析模板</summary>
+    private static WorkflowTemplate CreateDataAnalysisTemplate()
+    {
+        return new WorkflowTemplate
+        {
+            Id = "data_analysis",
+            Name = "数据分析",
+            Description = "分析数据文件，生成统计报告",
+            Category = "分析",
+            RequiredTools = new[] { "read_file", "write_file" },
+            Tags = new[] { "数据", "分析", "统计" },
+            Steps = new List<WorkflowStep>
+            {
+                new() { Name = "读取数据", ToolName = "read_file", Order = 1 },
+                new() { Name = "数据清洗", ToolName = "clean_data", Order = 2 },
+                new() { Name = "统计分析", ToolName = "analyze_data", Order = 3 },
+                new() { Name = "生成报告", ToolName = "generate_report", Order = 4 }
+            }
+        };
+    }
+
+    /// <summary>文档生成模板</summary>
+    private static WorkflowTemplate CreateDocumentationTemplate()
+    {
+        return new WorkflowTemplate
+        {
+            Id = "documentation",
+            Name = "文档生成",
+            Description = "为代码生成文档和说明",
+            Category = "文档",
+            RequiredTools = new[] { "read_file", "list_directory", "write_file" },
+            Tags = new[] { "文档", "说明", "注释" },
+            Steps = new List<WorkflowStep>
+            {
+                new() { Name = "扫描项目结构", ToolName = "list_directory", Order = 1 },
+                new() { Name = "读取源代码", ToolName = "read_file", Order = 2 },
+                new() { Name = "分析代码结构", ToolName = "analyze_code", Order = 3 },
+                new() { Name = "生成文档", ToolName = "generate_documentation", Order = 4 }
+            }
+        };
+    }
+
+    /// <summary>Bug修复模板</summary>
+    private static WorkflowTemplate CreateBugFixTemplate()
+    {
+        return new WorkflowTemplate
+        {
+            Id = "bug_fix",
+            Name = "Bug修复",
+            Description = "分析和修复代码Bug",
+            Category = "开发",
+            RequiredTools = new[] { "read_file", "write_file" },
+            Tags = new[] { "Bug", "修复", "调试" },
+            Steps = new List<WorkflowStep>
+            {
+                new() { Name = "读取错误信息", ToolName = "read_file", Order = 1 },
+                new() { Name = "定位问题代码", ToolName = "find_code", Order = 2 },
+                new() { Name = "分析原因", ToolName = "analyze_bug", Order = 3 },
+                new() { Name = "生成修复方案", ToolName = "generate_fix", Order = 4, RequiresApproval = true },
+                new() { Name = "应用修复", ToolName = "apply_fix", Order = 5, RequiresApproval = true }
+            }
+        };
+    }
+
+    /// <summary>根据关键词查找模板</summary>
+    public static WorkflowTemplate? FindTemplate(string query)
+    {
+        var templates = GetBuiltInTemplates();
+        var lowerQuery = query.ToLowerInvariant();
+
+        return templates.FirstOrDefault(t => 
+            t.Name.Contains(lowerQuery) ||
+            t.Description.Contains(lowerQuery) ||
+            t.Tags.Any(tag => tag.Contains(lowerQuery)));
+    }
+
+    /// <summary>获取所有模板类别</summary>
+    public static List<string> GetCategories()
+    {
+        return GetBuiltInTemplates()
+            .Select(t => t.Category)
+            .Distinct()
+            .ToList();
+    }
+}

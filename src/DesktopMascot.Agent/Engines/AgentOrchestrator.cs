@@ -4,10 +4,13 @@ using DesktopMascot.Agent.Memory;
 using DesktopMascot.Agent.Models;
 using DesktopMascot.Agent.Providers;
 using DesktopMascot.Agent.Tools;
+using DesktopMascot.Core.Conversation;
 using DesktopMascot.Core.Enums;
 using DesktopMascot.Core.Interfaces;
+using DesktopMascot.Core.Learning;
 using DesktopMascot.Core.Models;
 using DesktopMascot.Core.Storage;
+using DesktopMascot.Core.Summary;
 using Microsoft.Extensions.Logging;
 
 namespace DesktopMascot.Agent.Engines;
@@ -24,6 +27,8 @@ public class AgentOrchestrator : IAgentEngine
     private readonly MemoryIntegrationService? _memoryService;
     private readonly ComputerUseOrchestrator? _computerUseOrchestrator;
     private readonly ITaskHistoryStore? _historyStore;
+    private readonly ConversationManager _conversationManager;
+    private readonly LearningEngine _learningEngine;
     private readonly int _maxIterations;
 
     public AgentOrchestrator(
@@ -34,7 +39,9 @@ public class AgentOrchestrator : IAgentEngine
         int maxIterations = 10,
         MemoryIntegrationService? memoryService = null,
         ComputerUseOrchestrator? computerUseOrchestrator = null,
-        ITaskHistoryStore? historyStore = null)
+        ITaskHistoryStore? historyStore = null,
+        ConversationManager? conversationManager = null,
+        LearningEngine? learningEngine = null)
     {
         _llmProvider = llmProvider;
         _toolRegistry = toolRegistry;
@@ -44,11 +51,20 @@ public class AgentOrchestrator : IAgentEngine
         _memoryService = memoryService;
         _computerUseOrchestrator = computerUseOrchestrator;
         _historyStore = historyStore;
+        _conversationManager = conversationManager ?? new ConversationManager();
+        _learningEngine = learningEngine ?? new LearningEngine();
     }
 
     public async Task<TaskResult> ExecuteAsync(AgentTask task, CancellationToken ct = default)
     {
         _logger.LogInformation("Agent 开始执行任务: {Title}", task.Title);
+
+        // 添加用户消息到对话上下文
+        _conversationManager.AddUserMessage(task.Input, new Dictionary<string, string>
+        {
+            ["taskType"] = task.Type.ToString(),
+            ["taskId"] = task.Id
+        });
 
         var historyRecord = await RecordTaskStartAsync(task, ct);
 
@@ -101,6 +117,12 @@ public class AgentOrchestrator : IAgentEngine
             {
                 result = await ExecuteWithSpecializedPromptAsync(task, GetChatPrompt(), "对话", ct, memoryContext);
             }
+
+            // 添加助手响应到对话上下文
+            _conversationManager.AddAssistantMessage(result.Content);
+
+            // 分析任务模式（自我进化）
+            _learningEngine.AnalyzeTaskPattern(taskType.ToString(), result.Success);
 
             await RecordTaskEndAsync(historyRecord, result, ct);
 
@@ -905,6 +927,24 @@ public class AgentOrchestrator : IAgentEngine
         }
 
         return result;
+    }
+
+    /// <summary>获取对话管理器</summary>
+    public ConversationManager GetConversationManager() => _conversationManager;
+
+    /// <summary>获取学习引擎</summary>
+    public LearningEngine GetLearningEngine() => _learningEngine;
+
+    /// <summary>记录用户反馈</summary>
+    public void RecordFeedback(string taskId, FeedbackType type, string content)
+    {
+        _learningEngine.RecordFeedback(taskId, type, content);
+    }
+
+    /// <summary>获取进化报告</summary>
+    public EvolutionReport GetEvolutionReport()
+    {
+        return _learningEngine.GenerateReport();
     }
 }
 

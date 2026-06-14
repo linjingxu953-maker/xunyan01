@@ -60,9 +60,9 @@ public class WorkflowBuilder
 }
 
 /// <summary>
-/// 工作流模板
+/// 工作流模板（简单版）
 /// </summary>
-public static class WorkflowTemplates
+public static class SimpleWorkflowTemplates
 {
     /// <summary>
     /// 创建网页总结工作流
