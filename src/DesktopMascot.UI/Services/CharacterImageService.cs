@@ -5,6 +5,21 @@ namespace DesktopMascot.UI.Services;
 
 public sealed class CharacterImageService : ICharacterImageService
 {
+    private static readonly IReadOnlyDictionary<MascotState, string[]> StateImageAliases = new Dictionary<MascotState, string[]>
+    {
+        [MascotState.Idle] = ["idle.png", "avatar.png", "pose.png", "站立.png"],
+        [MascotState.Listening] = ["listening.png", "Listening：看向用户.png", "Listening:看向用户.png"],
+        [MascotState.Understanding] = ["thinking.png", "understanding.png", "Understanding：思考图.png", "Understanding:思考图.png"],
+        [MascotState.ReadingContext] = ["reading.png", "understanding.png", "Understanding：思考图.png", "Understanding:思考图.png"],
+        [MascotState.Planning] = ["planning.png", "thinking.png", "Understanding：思考图.png", "Understanding:思考图.png"],
+        [MascotState.WaitingApproval] = ["waiting.png", "WaitingApproval：提醒、举手图.png", "WaitingApproval:提醒、举手图.png"],
+        [MascotState.Working] = ["working.png", "Working：忙碌图.png", "Working:忙碌图.png"],
+        [MascotState.MemoryConfirm] = ["memory.png", "WaitingApproval：提醒、举手图.png", "WaitingApproval:提醒、举手图.png"],
+        [MascotState.Reporting] = ["reporting.png", "working.png", "Working：忙碌图.png", "Working:忙碌图.png"],
+        [MascotState.Completed] = ["completed.png", "Completed：开心、完成图.png", "Completed:开心、完成图.png"],
+        [MascotState.Error] = ["error.png", "Error：困惑、错误图.png", "Error:困惑、错误图.png"]
+    };
+
     private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".png",
@@ -29,7 +44,9 @@ public sealed class CharacterImageService : ICharacterImageService
 
         var stateFile = ResolveStateFile(profile, state);
         var imagePath = ResolveImagePath(folder, stateFile)
-            ?? ResolveImagePath(folder, profile.AvatarImage);
+            ?? ResolveAliasImagePath(folder, state)
+            ?? ResolveImagePath(folder, profile.AvatarImage)
+            ?? ResolveAliasImagePath(folder, MascotState.Idle);
 
         if (imagePath is null)
         {
@@ -107,6 +124,28 @@ public sealed class CharacterImageService : ICharacterImageService
         return SupportedExtensions.Contains(Path.GetExtension(candidate))
             ? candidate
             : null;
+    }
+
+    private static string? ResolveAliasImagePath(string folder, MascotState state)
+    {
+        if (!StateImageAliases.TryGetValue(state, out var aliases))
+            return null;
+
+        foreach (var alias in aliases)
+        {
+            var resolved = ResolveImagePath(folder, alias);
+            if (resolved is not null)
+                return resolved;
+        }
+
+        var prefix = state.ToString();
+        return Directory.EnumerateFiles(folder)
+            .Where(file => SupportedExtensions.Contains(Path.GetExtension(file)))
+            .FirstOrDefault(file =>
+            {
+                var name = Path.GetFileNameWithoutExtension(file);
+                return name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+            });
     }
 
     private static IEnumerable<string> EnumerateCandidateRoots()

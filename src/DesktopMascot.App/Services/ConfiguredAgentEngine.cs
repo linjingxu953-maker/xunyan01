@@ -3,8 +3,12 @@ using DesktopMascot.Agent.Memory;
 using DesktopMascot.Agent.Providers;
 using DesktopMascot.Agent.Tools;
 using DesktopMascot.Core.Configuration;
+using DesktopMascot.Core.Conversation;
+using DesktopMascot.Core.ErrorHandling;
 using DesktopMascot.Core.Interfaces;
+using DesktopMascot.Core.Learning;
 using DesktopMascot.Core.Models;
+using DesktopMascot.Core.Security;
 using DesktopMascot.Core.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -23,6 +27,10 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
     private readonly ILogger<AgentOrchestrator> _logger;
     private readonly MemoryIntegrationService? _memoryService;
     private readonly ITaskHistoryStore? _historyStore;
+    private readonly ConversationManager? _conversationManager;
+    private readonly LearningEngine? _learningEngine;
+    private readonly IAuditLogStore? _auditLogStore;
+    private readonly ErrorHandler? _errorHandler;
 
     public ConfiguredAgentEngine(
         IConfigurationManager configurationManager,
@@ -31,7 +39,11 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
         ITaskEventStream eventStream,
         ILogger<AgentOrchestrator> logger,
         MemoryIntegrationService? memoryService = null,
-        ITaskHistoryStore? historyStore = null)
+        ITaskHistoryStore? historyStore = null,
+        ConversationManager? conversationManager = null,
+        LearningEngine? learningEngine = null,
+        IAuditLogStore? auditLogStore = null,
+        ErrorHandler? errorHandler = null)
     {
         _configurationManager = configurationManager;
         _toolRegistry = toolRegistry;
@@ -40,6 +52,65 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
         _logger = logger;
         _memoryService = memoryService;
         _historyStore = historyStore;
+        _conversationManager = conversationManager;
+        _learningEngine = learningEngine;
+        _auditLogStore = auditLogStore;
+        _errorHandler = errorHandler;
+    }
+
+    public async Task<TaskResult> ExecuteAsync(AgentTask task, CancellationToken ct = default)
+    {
+        var settings = await _configurationManager.GetAppSettingsAsync(ct);
+
+        if (settings.MimoCodeEnabled)
+        {
+            var mimoAgent = new MiMoCodeAgent(BuildMimoCodeConfig(settings), _eventStream);
+            return await mimoAgent.ExecuteAsync(task, ct);
+        }
+
+        var provider = BuildProvider(settings);
+        var orchestrator = CreateOrchestrator(provider);
+        return await orchestrator.ExecuteAsync(task, ct);
+    }
+
+    public async IAsyncEnumerable<string> ExecuteStreamingAsync(AgentTask task, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var settings = await _configurationManager.GetAppSettingsAsync(ct);
+
+        if (settings.MimoCodeEnabled)
+        {
+            var mimoAgent = new MiMoCodeAgent(BuildMimoCodeConfig(settings), _eventStream);
+            await foreach (var chunk in mimoAgent.ExecuteStreamingAsync(task, ct))
+            {
+                yield return chunk;
+            }
+            yield break;
+        }
+
+        var provider = BuildProvider(settings);
+        var orchestrator = CreateOrchestrator(provider);
+        await foreach (var chunk in orchestrator.ExecuteStreamingAsync(task, ct))
+        {
+            yield return chunk;
+        }
+    }
+
+    private AgentOrchestrator CreateOrchestrator(ILlmProvider provider)
+    {
+        var computerUseLogger = new Logger<ComputerUseOrchestrator>(NullLoggerFactory.Instance);
+        var computerUseOrchestrator = new ComputerUseOrchestrator(provider, _eventBus, computerUseLogger);
+        return new AgentOrchestrator(
+            provider,
+            _toolRegistry,
+            _eventBus,
+            _logger,
+            memoryService: _memoryService,
+            computerUseOrchestrator: computerUseOrchestrator,
+            historyStore: _historyStore,
+            conversationManager: _conversationManager,
+            learningEngine: _learningEngine,
+            auditLogStore: _auditLogStore,
+            errorHandler: _errorHandler);
     }
 
     public async Task<TaskResult> ExecuteAsync(AgentTask task, CancellationToken ct = default)

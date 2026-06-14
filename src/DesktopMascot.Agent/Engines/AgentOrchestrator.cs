@@ -6,9 +6,11 @@ using DesktopMascot.Agent.Providers;
 using DesktopMascot.Agent.Tools;
 using DesktopMascot.Core.Conversation;
 using DesktopMascot.Core.Enums;
+using DesktopMascot.Core.ErrorHandling;
 using DesktopMascot.Core.Interfaces;
 using DesktopMascot.Core.Learning;
 using DesktopMascot.Core.Models;
+using DesktopMascot.Core.Security;
 using DesktopMascot.Core.Storage;
 using DesktopMascot.Core.Summary;
 using Microsoft.Extensions.Logging;
@@ -27,6 +29,8 @@ public class AgentOrchestrator : IAgentEngine
     private readonly MemoryIntegrationService? _memoryService;
     private readonly ComputerUseOrchestrator? _computerUseOrchestrator;
     private readonly ITaskHistoryStore? _historyStore;
+    private readonly IAuditLogStore? _auditLogStore;
+    private readonly ErrorHandler? _errorHandler;
     private readonly ConversationManager _conversationManager;
     private readonly LearningEngine _learningEngine;
     private readonly int _maxIterations;
@@ -41,7 +45,9 @@ public class AgentOrchestrator : IAgentEngine
         ComputerUseOrchestrator? computerUseOrchestrator = null,
         ITaskHistoryStore? historyStore = null,
         ConversationManager? conversationManager = null,
-        LearningEngine? learningEngine = null)
+        LearningEngine? learningEngine = null,
+        IAuditLogStore? auditLogStore = null,
+        ErrorHandler? errorHandler = null)
     {
         _llmProvider = llmProvider;
         _toolRegistry = toolRegistry;
@@ -53,11 +59,16 @@ public class AgentOrchestrator : IAgentEngine
         _historyStore = historyStore;
         _conversationManager = conversationManager ?? new ConversationManager();
         _learningEngine = learningEngine ?? new LearningEngine();
+        _auditLogStore = auditLogStore;
+        _errorHandler = errorHandler;
     }
 
     public async Task<TaskResult> ExecuteAsync(AgentTask task, CancellationToken ct = default)
     {
         _logger.LogInformation("Agent 开始执行任务: {Title}", task.Title);
+
+        // 记录审计日志
+        await LogAuditAsync(task.Id, "任务开始", $"用户请求: {task.Input}");
 
         // 添加用户消息到对话上下文
         _conversationManager.AddUserMessage(task.Input, new Dictionary<string, string>
@@ -81,48 +92,61 @@ public class AgentOrchestrator : IAgentEngine
 
             TaskResult result;
 
-            if (taskType == TaskType.SummarizePage && contextProvider != null)
+            // 使用 SafeExecutor 包装执行，支持重试和错误恢复
+            var retryPolicy = taskType == TaskType.Chat ? RetryPolicy.NoRetry : RetryPolicy.Default;
+
+            var operationResult = await SafeExecutor.ExecuteAsync<TaskResult>(async (innerCt) =>
             {
-                result = await ExecuteSummarizePageAsync(task, contextProvider, ct);
-            }
-            else if (taskType == TaskType.ScreenUnderstand)
-            {
-                result = await ExecuteScreenUnderstandAsync(task, ct);
-            }
-            else if (taskType == TaskType.AnalyzeError)
-            {
-                result = await ExecuteWithSpecializedPromptAsync(task, GetAnalyzeErrorPrompt(), "报错分析", ct, memoryContext);
-            }
-            else if (taskType == TaskType.InspectProject)
-            {
-                result = await ExecuteWithSpecializedPromptAsync(task, GetInspectProjectPrompt(), "项目诊断", ct, memoryContext);
-            }
-            else if (taskType == TaskType.SolveProblem)
-            {
-                result = await ExecuteWithSpecializedPromptAsync(task, GetSolveProblemPrompt(), "题目解答", ct, memoryContext);
-            }
-            else if (taskType == TaskType.WriteFile)
-            {
-                result = await ExecuteWithSpecializedPromptAsync(task, GetWriteFilePrompt(), "文件生成", ct, memoryContext);
-            }
-            else if (taskType == TaskType.RunCommand)
-            {
-                result = await ExecuteWithSpecializedPromptAsync(task, GetRunCommandPrompt(), "命令执行", ct, memoryContext);
-            }
-            else if (taskType == TaskType.ComputerUse)
-            {
-                result = await ExecuteComputerUseAsync(task, ct);
-            }
-            else
-            {
-                result = await ExecuteWithSpecializedPromptAsync(task, GetChatPrompt(), "对话", ct, memoryContext);
-            }
+                if (taskType == TaskType.SummarizePage && contextProvider != null)
+                {
+                    return await ExecuteSummarizePageAsync(task, contextProvider, innerCt);
+                }
+                else if (taskType == TaskType.ScreenUnderstand)
+                {
+                    return await ExecuteScreenUnderstandAsync(task, innerCt);
+                }
+                else if (taskType == TaskType.AnalyzeError)
+                {
+                    return await ExecuteWithSpecializedPromptAsync(task, GetAnalyzeErrorPrompt(), "报错分析", innerCt, memoryContext);
+                }
+                else if (taskType == TaskType.InspectProject)
+                {
+                    return await ExecuteWithSpecializedPromptAsync(task, GetInspectProjectPrompt(), "项目诊断", innerCt, memoryContext);
+                }
+                else if (taskType == TaskType.SolveProblem)
+                {
+                    return await ExecuteWithSpecializedPromptAsync(task, GetSolveProblemPrompt(), "题目解答", innerCt, memoryContext);
+                }
+                else if (taskType == TaskType.WriteFile)
+                {
+                    return await ExecuteWithSpecializedPromptAsync(task, GetWriteFilePrompt(), "文件生成", innerCt, memoryContext);
+                }
+                else if (taskType == TaskType.RunCommand)
+                {
+                    return await ExecuteWithSpecializedPromptAsync(task, GetRunCommandPrompt(), "命令执行", innerCt, memoryContext);
+                }
+                else if (taskType == TaskType.ComputerUse)
+                {
+                    return await ExecuteComputerUseAsync(task, innerCt);
+                }
+                else
+                {
+                    return await ExecuteWithSpecializedPromptAsync(task, GetChatPrompt(), "对话", innerCt, memoryContext);
+                }
+            }, retryPolicy, _errorHandler, ct);
+
+            result = operationResult.Success
+                ? operationResult.Value!
+                : TaskResult.Failed(task.Id, operationResult.ErrorMessage ?? "执行失败");
 
             // 添加助手响应到对话上下文
             _conversationManager.AddAssistantMessage(result.Content);
 
             // 分析任务模式（自我进化）
             _learningEngine.AnalyzeTaskPattern(taskType.ToString(), result.Success);
+
+            // 记录审计日志
+            await LogAuditAsync(task.Id, "任务完成", result.Success ? "成功" : $"失败: {result.Error}");
 
             await RecordTaskEndAsync(historyRecord, result, ct);
 
@@ -459,6 +483,26 @@ public class AgentOrchestrator : IAgentEngine
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "记录任务结束失败");
+        }
+    }
+
+    private async Task LogAuditAsync(string taskId, string operation, string details)
+    {
+        if (_auditLogStore == null) return;
+
+        try
+        {
+            await _auditLogStore.SaveAsync(new AuditLogEntry
+            {
+                TaskId = taskId,
+                Operation = operation,
+                Details = details,
+                Timestamp = DateTime.UtcNow
+            }, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "记录审计日志失败");
         }
     }
 

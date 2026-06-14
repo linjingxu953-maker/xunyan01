@@ -1,18 +1,150 @@
+using System.ComponentModel;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Media;
+using Avalonia.Platform;
+using Avalonia.Threading;
+using DesktopMascot.UI.ViewModels;
 
 namespace DesktopMascot.UI.Views;
 
 public partial class FloatingWindow : Window
 {
+    private const double CollapsedWidth = 116;
+    private const double CollapsedHeight = 132;
+    private const double ExpandedWidth = 640;
+    private const double ExpandedHeight = 560;
+
+    private readonly DispatcherTimer _animationTimer;
+    private readonly DateTime _animationStart = DateTime.UtcNow;
+    private FloatingWindowViewModel? _viewModel;
+
     public FloatingWindow()
     {
         InitializeComponent();
+
+        DataContextChanged += OnDataContextChanged;
+        Opened += (_, _) => ApplyWindowMode(IsExpanded);
+
+        _animationTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(33)
+        };
+        _animationTimer.Tick += (_, _) => UpdateMascotAnimation();
+        _animationTimer.Start();
     }
 
-    /// <summary>
-    /// 标题栏拖动
-    /// </summary>
+    private bool IsExpanded => _viewModel?.IsChatDialogVisible == true;
+
+    private void OnDataContextChanged(object? sender, EventArgs e)
+    {
+        if (_viewModel is not null)
+        {
+            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        }
+
+        _viewModel = DataContext as FloatingWindowViewModel;
+
+        if (_viewModel is not null)
+        {
+            _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+            ApplyWindowMode(_viewModel.IsChatDialogVisible);
+        }
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(FloatingWindowViewModel.IsChatDialogVisible))
+        {
+            ApplyWindowMode(IsExpanded);
+        }
+    }
+
+    private void ApplyWindowMode(bool expanded)
+    {
+        var targetWidth = expanded ? ExpandedWidth : CollapsedWidth;
+        var targetHeight = expanded ? ExpandedHeight : CollapsedHeight;
+        var anchorRight = Position.X + ToPixelWidth(Math.Max(Width, 1));
+        var anchorBottom = Position.Y + ToPixelHeight(Math.Max(Height, 1));
+
+        Width = targetWidth;
+        Height = targetHeight;
+        MinWidth = targetWidth;
+        MinHeight = targetHeight;
+        MaxWidth = targetWidth;
+        MaxHeight = targetHeight;
+
+        if (!IsVisible)
+            return;
+
+        Position = ClampToCurrentScreen(
+            new PixelPoint(
+                anchorRight - ToPixelWidth(targetWidth),
+                anchorBottom - ToPixelHeight(targetHeight)),
+            targetWidth,
+            targetHeight);
+    }
+
+    private PixelPoint ClampToCurrentScreen(PixelPoint desiredPosition, double width, double height)
+    {
+        var screen = Screens.ScreenFromWindow(this) ??
+                     Screens.ScreenFromPoint(desiredPosition) ??
+                     Screens.Primary ??
+                     Screens.All.FirstOrDefault();
+
+        if (screen is null)
+            return desiredPosition;
+
+        var area = screen.WorkingArea;
+        var pixelWidth = Math.Max(1, (int)Math.Ceiling(width * GetScaling(screen)));
+        var pixelHeight = Math.Max(1, (int)Math.Ceiling(height * GetScaling(screen)));
+        var maxX = area.X + Math.Max(0, area.Width - pixelWidth);
+        var maxY = area.Y + Math.Max(0, area.Height - pixelHeight);
+
+        return new PixelPoint(
+            Math.Clamp(desiredPosition.X, area.X, maxX),
+            Math.Clamp(desiredPosition.Y, area.Y, maxY));
+    }
+
+    private int ToPixelWidth(double width) => (int)Math.Ceiling(width * GetCurrentScaling());
+
+    private int ToPixelHeight(double height) => (int)Math.Ceiling(height * GetCurrentScaling());
+
+    private double GetCurrentScaling()
+    {
+        var screen = Screens.ScreenFromWindow(this) ?? Screens.Primary ?? Screens.All.FirstOrDefault();
+        return screen is null ? RenderScaling : GetScaling(screen);
+    }
+
+    private static double GetScaling(Screen screen) => screen.Scaling > 0 ? screen.Scaling : 1;
+
+    private void UpdateMascotAnimation()
+    {
+        if (_viewModel is null || !MascotHost.IsVisible)
+            return;
+
+        var seconds = (DateTime.UtcNow - _animationStart).TotalSeconds;
+        var speed = _viewModel.IsMascotBusy ? 5.2 : _viewModel.IsMascotWaiting ? 4.0 : 2.4;
+        var wave = Math.Sin(seconds * speed);
+        var secondary = Math.Sin(seconds * speed * 0.5);
+        var lift = _viewModel.IsMascotBusy ? -4.0 : _viewModel.IsMascotWaiting ? -2.4 : -1.8;
+        var shake = _viewModel.IsMascotError ? Math.Sin(seconds * 18) * 2.5 : 0;
+        var scale = 1 + wave * (_viewModel.IsMascotBusy ? 0.025 : 0.012);
+
+        var transforms = new TransformGroup();
+        transforms.Children.Add(new ScaleTransform(scale, 1 + secondary * 0.01));
+        transforms.Children.Add(new TranslateTransform(shake, wave * lift));
+        MascotHost.RenderTransformOrigin = new RelativePoint(0.5, 0.78, RelativeUnit.Relative);
+        MascotHost.RenderTransform = transforms;
+
+        MascotHalo.Opacity = _viewModel.IsMascotBusy
+            ? 0.42 + Math.Abs(wave) * 0.28
+            : _viewModel.IsMascotWaiting
+                ? 0.36 + Math.Abs(wave) * 0.22
+                : 0.24 + Math.Abs(wave) * 0.12;
+    }
+
     private void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
@@ -21,57 +153,37 @@ public partial class FloatingWindow : Window
         }
     }
 
-    /// <summary>
-    /// 角色图标点击 - 展开对话框
-    /// </summary>
     private void MascotIcon_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-        {
-            if (DataContext is ViewModels.FloatingWindowViewModel vm)
-            {
-                vm.ExpandDialogCommand.Execute(null);
-            }
-        }
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            return;
+
+        _viewModel?.ExpandDialogCommand.Execute(null);
     }
 
-    /// <summary>
-    /// 历史项点击
-    /// </summary>
     private void HistoryItem_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (sender is Border border && border.DataContext is ViewModels.TaskHistoryItem item)
+        if (sender is not Border { DataContext: TaskHistoryItem item } || _viewModel is null)
+            return;
+
+        _viewModel.MessageItems.Clear();
+        foreach (var message in item.Messages)
         {
-            if (DataContext is ViewModels.FloatingWindowViewModel vm)
-            {
-                // 加载历史对话
-                vm.MessageItems.Clear();
-                foreach (var msg in item.Messages)
-                {
-                    vm.MessageItems.Add(msg);
-                }
-            }
+            _viewModel.MessageItems.Add(message);
         }
     }
 
-    /// <summary>
-    /// 输入框按键处理
-    /// </summary>
     private void InputBox_KeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key != Key.Enter || e.KeyModifiers.HasFlag(KeyModifiers.Shift))
             return;
 
-        if (DataContext is ViewModels.FloatingWindowViewModel vm)
-        {
-            vm.SendMessageCommand.Execute(null);
-        }
-
+        _viewModel?.SendMessageCommand.Execute(null);
         e.Handled = true;
     }
 
     public void FocusInput()
     {
-        // Focus will be handled by the ChatPanel when it becomes visible
+        InputBox?.Focus();
     }
 }

@@ -26,11 +26,76 @@ public static class WorkflowTemplates
     {
         return new List<WorkflowTemplate>
         {
+            CreateSummarizePageTemplate(),
+            CreateAnalyzeErrorTemplate(),
+            CreateInspectProjectTemplate(),
             CreateCodeReviewTemplate(),
             CreateFileOrganizationTemplate(),
             CreateDataAnalysisTemplate(),
             CreateDocumentationTemplate(),
             CreateBugFixTemplate()
+        };
+    }
+
+    /// <summary>网页总结模板</summary>
+    private static WorkflowTemplate CreateSummarizePageTemplate()
+    {
+        return new WorkflowTemplate
+        {
+            Id = "summarize_page",
+            Name = "总结网页",
+            Description = "读取当前浏览器页面并生成摘要",
+            Category = "效率",
+            RequiredTools = new[] { "browser_context", "screen_capture" },
+            Tags = new[] { "总结", "网页", "摘要", "summarize" },
+            Steps = new List<WorkflowStep>
+            {
+                new() { Name = "获取浏览器上下文", ToolName = "browser_context", Order = 1 },
+                new() { Name = "截取屏幕", ToolName = "screen_capture", Order = 2 },
+                new() { Name = "分析并总结", ToolName = "analyze_content", Order = 3 }
+            }
+        };
+    }
+
+    /// <summary>报错分析模板</summary>
+    private static WorkflowTemplate CreateAnalyzeErrorTemplate()
+    {
+        return new WorkflowTemplate
+        {
+            Id = "analyze_error",
+            Name = "分析报错",
+            Description = "分析当前屏幕或剪贴板中的错误信息",
+            Category = "开发",
+            RequiredTools = new[] { "screen_capture", "clipboard" },
+            Tags = new[] { "报错", "错误", "调试", "error" },
+            Steps = new List<WorkflowStep>
+            {
+                new() { Name = "截取错误屏幕", ToolName = "screen_capture", Order = 1 },
+                new() { Name = "读取错误信息", ToolName = "clipboard", Order = 2 },
+                new() { Name = "分析错误原因", ToolName = "analyze_error", Order = 3 },
+                new() { Name = "生成修复建议", ToolName = "generate_fix", Order = 4 }
+            }
+        };
+    }
+
+    /// <summary>项目诊断模板</summary>
+    private static WorkflowTemplate CreateInspectProjectTemplate()
+    {
+        return new WorkflowTemplate
+        {
+            Id = "inspect_project",
+            Name = "项目诊断",
+            Description = "分析项目结构，给出诊断和改进建议",
+            Category = "开发",
+            RequiredTools = new[] { "list_directory", "read_file" },
+            Tags = new[] { "项目", "诊断", "分析", "project" },
+            Steps = new List<WorkflowStep>
+            {
+                new() { Name = "扫描项目结构", ToolName = "list_directory", Order = 1, ArgumentsTemplate = """{"recursive": true}""" },
+                new() { Name = "读取配置文件", ToolName = "read_file", Order = 2 },
+                new() { Name = "分析项目健康度", ToolName = "analyze_project", Order = 3 },
+                new() { Name = "生成诊断报告", ToolName = "generate_report", Order = 4 }
+            }
         };
     }
 

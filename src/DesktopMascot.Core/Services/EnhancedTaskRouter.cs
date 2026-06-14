@@ -41,34 +41,34 @@ public class EnhancedTaskRouter : ITaskRouter
             // 发布任务开始事件
             _eventStream.Publish(TaskEvent.TaskStarted(task.Id, $"开始处理任务: {task.Title}"));
 
-            // 状态转换: Idle -> Listening
+            // 意图分类
             _stateMachine.TryTransition(MascotState.Listening, "正在接收任务...");
+            var intent = IntentClassifier.Classify(task.Input);
 
-            // 状态转换: Listening -> Understanding
+            _eventStream.Publish(TaskEvent.ProgressUpdated(task.Id, 10, 
+                $"识别意图: {intent.Intent} (置信度: {intent.Confidence:P0})"));
+
+            // 组装上下文
             _stateMachine.TryTransition(MascotState.Understanding, "理解用户意图...");
-            _eventStream.Publish(TaskEvent.ProgressUpdated(task.Id, 10, "理解用户意图..."));
+            _eventStream.Publish(TaskEvent.ProgressUpdated(task.Id, 20, "组装执行上下文..."));
 
-            // 状态转换: Understanding -> Working
+            // 执行任务
             _stateMachine.TryTransition(MascotState.Working, "正在执行任务...");
             _eventStream.Publish(TaskEvent.ProgressUpdated(task.Id, 30, "开始执行任务..."));
 
-            // 执行任务
             var result = await _agent.ExecuteAsync(task, linkedCts.Token);
 
             if (result.Success)
             {
-                // 状态转换: Working -> Completed
                 _stateMachine.TryTransition(MascotState.Completed, "任务完成");
                 _eventStream.Publish(TaskEvent.TaskCompleted(task.Id, "任务执行成功"));
             }
             else
             {
-                // 状态转换: Working -> Error
                 _stateMachine.TryTransition(MascotState.Error, result.Error ?? "任务失败");
                 _eventStream.Publish(TaskEvent.TaskFailed(task.Id, result.Error ?? "任务失败"));
             }
 
-            // 延迟后回到 Idle
             await Task.Delay(500, linkedCts.Token);
             _stateMachine.TryTransition(MascotState.Idle, "空闲");
 
@@ -76,7 +76,6 @@ public class EnhancedTaskRouter : ITaskRouter
         }
         catch (OperationCanceledException)
         {
-            // 任务被取消
             _stateMachine.TryTransition(MascotState.Error, "任务已取消");
             _eventStream.Publish(TaskEvent.TaskFailed(task.Id, "任务已取消"));
             await Task.Delay(500);
@@ -86,7 +85,6 @@ public class EnhancedTaskRouter : ITaskRouter
         }
         catch (Exception ex)
         {
-            // 异常处理
             _stateMachine.TryTransition(MascotState.Error, $"执行异常: {ex.Message}");
             _eventStream.Publish(TaskEvent.TaskFailed(task.Id, ex.Message));
             await Task.Delay(500);

@@ -330,8 +330,8 @@ public sealed class DesktopShellService : IDisposable
             return;
 
         var state = _placementStore.Load();
-        var width = Math.Clamp(state?.Width ?? _window.Width, 180, 700);
-        var height = Math.Clamp(state?.Height ?? _window.Height, 240, 700);
+        var width = Math.Clamp(state?.Width ?? _window.Width, 116, 700);
+        var height = Math.Clamp(state?.Height ?? _window.Height, 132, 700);
 
         _window.Width = width;
         _window.Height = height;
@@ -446,7 +446,7 @@ public sealed class DesktopShellService : IDisposable
     {
         return state.X is > -100000 and < 100000 &&
                state.Y is > -100000 and < 100000 &&
-               state.Width is >= 180 and <= 1000 &&
-               state.Height is >= 240 and <= 1000;
+               state.Width is >= 116 and <= 1000 &&
+               state.Height is >= 132 and <= 1000;
     }
 }

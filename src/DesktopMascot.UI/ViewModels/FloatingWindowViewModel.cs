@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Avalonia;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -36,7 +37,12 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     private Dictionary<string, string> _characterStateImages = new();
     private bool _isApplyingCharacterProfile;
 
-    [ObservableProperty] private MascotState _currentState = MascotState.Idle;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMascotBusy))]
+    [NotifyPropertyChangedFor(nameof(IsMascotWaiting))]
+    [NotifyPropertyChangedFor(nameof(IsMascotError))]
+    [NotifyPropertyChangedFor(nameof(IsMascotCompleted))]
+    private MascotState _currentState = MascotState.Idle;
     [ObservableProperty] private string _currentStateText = "空闲";
     [ObservableProperty] private string _statusMessage = "点击小人开始";
     [ObservableProperty] private string _stateHint = "待命";
@@ -46,6 +52,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanUseTaskResultActions))]
     [NotifyPropertyChangedFor(nameof(CanRetryCurrentTask))]
+    [NotifyPropertyChangedFor(nameof(IsMascotBusy))]
     private bool _isBusy = false;
     [ObservableProperty] private bool _hasTaskDetails = false;
     [ObservableProperty] private bool _canCancelTask = false;
@@ -130,9 +137,17 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     public bool HasNoToolCallRecords => !HasToolCallRecords;
     public bool HasComputerUseActions => ComputerUseActions.Count > 0;
     public bool HasNoComputerUseActions => !HasComputerUseActions;
+    public bool HasMessages => MessageItems.Count > 0;
+    public bool HasNoMessages => !HasMessages;
+    public bool HasTaskHistory => TaskHistory.Count > 0;
+    public bool HasNoTaskHistory => !HasTaskHistory;
     public bool CanUseTaskResultActions => HasTaskResult && !IsBusy;
     public bool CanRetryCurrentTask => CanRetryTask && !IsBusy && !IsWaitingForUserConfirmation && !string.IsNullOrWhiteSpace(_lastUserMessage);
     public bool CanResolvePendingConfirmation => IsWaitingForUserConfirmation && _pendingConfirmationTask is not null && !IsBusy;
+    public bool IsMascotBusy => IsBusy || CurrentState is MascotState.Understanding or MascotState.ReadingContext or MascotState.Planning or MascotState.Working or MascotState.Reporting;
+    public bool IsMascotWaiting => CurrentState is MascotState.WaitingApproval or MascotState.MemoryConfirm;
+    public bool IsMascotError => CurrentState == MascotState.Error;
+    public bool IsMascotCompleted => CurrentState == MascotState.Completed;
 
     public event EventHandler? HideRequested;
     public event EventHandler? ExitRequested;
@@ -162,6 +177,8 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         _characterStore.ProfileChanged += OnCharacterProfileChanged;
         ApplyCharacterProfile(_characterStore.Load(), save: false);
         ComputerUseActions.CollectionChanged += (_, _) => NotifyComputerUseActionStateChanged();
+        MessageItems.CollectionChanged += (_, _) => NotifyMessageStateChanged();
+        TaskHistory.CollectionChanged += (_, _) => NotifyTaskHistoryStateChanged();
 
         // 监听任务事件
         _eventBus.TaskEventPublished += OnTaskEventPublished;
@@ -288,13 +305,19 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ToggleChat()
     {
-        IsChatVisible = !IsChatVisible;
+        if (IsChatDialogVisible)
+        {
+            CollapseDialog();
+            return;
+        }
+
+        ExpandDialog();
     }
 
     [RelayCommand]
     private void CloseChat()
     {
-        IsChatVisible = false;
+        CollapseDialog();
         IsCharacterPanelVisible = false;
     }
 
@@ -701,7 +724,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
 
     public void OpenChatPanel()
     {
-        IsChatVisible = true;
+        ExpandDialog();
     }
 
     private bool CanCancelCurrentTask() => CanCancelTask;
@@ -1036,6 +1059,18 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     {
         OnPropertyChanged(nameof(HasComputerUseActions));
         OnPropertyChanged(nameof(HasNoComputerUseActions));
+    }
+
+    private void NotifyMessageStateChanged()
+    {
+        OnPropertyChanged(nameof(HasMessages));
+        OnPropertyChanged(nameof(HasNoMessages));
+    }
+
+    private void NotifyTaskHistoryStateChanged()
+    {
+        OnPropertyChanged(nameof(HasTaskHistory));
+        OnPropertyChanged(nameof(HasNoTaskHistory));
     }
 
     private static bool IsComputerUseTask(AgentTask task, string typeText, string userMessage)
@@ -1925,12 +1960,19 @@ public class MessageItem
     public string Role { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
     public string RoleText => Role == "user" ? "你" : "小桌灵";
+    public HorizontalAlignment BubbleAlignment => Role == "user" ? HorizontalAlignment.Right : HorizontalAlignment.Left;
+    public CornerRadius BubbleCornerRadius => Role == "user"
+        ? new CornerRadius(14, 14, 4, 14)
+        : new CornerRadius(14, 14, 14, 4);
     public IBrush RoleColor => Role == "user"
-        ? new SolidColorBrush(Color.Parse("#2563EB"))
-        : new SolidColorBrush(Color.Parse("#10B981"));
+        ? new SolidColorBrush(Color.Parse("#93C5FD"))
+        : new SolidColorBrush(Color.Parse("#CBD5E1"));
     public IBrush BubbleBackground => Role == "user"
-        ? new SolidColorBrush(Color.Parse("#EFF6FF"))
-        : new SolidColorBrush(Color.Parse("#F0FDF4"));
+        ? new SolidColorBrush(Color.Parse("#2563EB"))
+        : new SolidColorBrush(Color.Parse("#F8FAFC"));
+    public IBrush ContentBrush => Role == "user"
+        ? new SolidColorBrush(Color.Parse("#FFFFFF"))
+        : new SolidColorBrush(Color.Parse("#111827"));
 }
 
 /// <summary>
