@@ -113,57 +113,6 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
             errorHandler: _errorHandler);
     }
 
-    public async Task<TaskResult> ExecuteAsync(AgentTask task, CancellationToken ct = default)
-    {
-        var settings = await _configurationManager.GetAppSettingsAsync(ct);
-
-        if (settings.MimoCodeEnabled)
-        {
-            var mimoAgent = new MiMoCodeAgent(BuildMimoCodeConfig(settings), _eventStream);
-            return await mimoAgent.ExecuteAsync(task, ct);
-        }
-
-        var provider = BuildProvider(settings);
-        var orchestrator = CreateOrchestrator(provider);
-        return await orchestrator.ExecuteAsync(task, ct);
-    }
-
-    public async IAsyncEnumerable<string> ExecuteStreamingAsync(AgentTask task, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
-    {
-        var settings = await _configurationManager.GetAppSettingsAsync(ct);
-
-        if (settings.MimoCodeEnabled)
-        {
-            var mimoAgent = new MiMoCodeAgent(BuildMimoCodeConfig(settings), _eventStream);
-            await foreach (var chunk in mimoAgent.ExecuteStreamingAsync(task, ct))
-            {
-                yield return chunk;
-            }
-            yield break;
-        }
-
-        var provider = BuildProvider(settings);
-        var orchestrator = CreateOrchestrator(provider);
-        await foreach (var chunk in orchestrator.ExecuteStreamingAsync(task, ct))
-        {
-            yield return chunk;
-        }
-    }
-
-    private AgentOrchestrator CreateOrchestrator(ILlmProvider provider)
-    {
-        var computerUseLogger = new Logger<ComputerUseOrchestrator>(Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
-        var computerUseOrchestrator = new ComputerUseOrchestrator(provider, _eventBus, computerUseLogger);
-        return new AgentOrchestrator(
-            provider,
-            _toolRegistry,
-            _eventBus,
-            _logger,
-            memoryService: _memoryService,
-            computerUseOrchestrator: computerUseOrchestrator,
-            historyStore: _historyStore);
-    }
-
     private static ILlmProvider BuildProvider(AppSettings settings)
     {
         var config = new LlmProviderConfig

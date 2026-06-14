@@ -204,6 +204,39 @@ public static class WorkflowTemplates
         };
     }
 
+    /// <summary>创建网页总结工作流</summary>
+    public static WorkflowDefinition SummarizePage(string pageTitle)
+    {
+        return new WorkflowBuilder("网页总结")
+            .WithDescription($"总结网页: {pageTitle}")
+            .AddStep("获取当前时间", "get_current_time")
+            .AddStep("获取浏览器内容", "browser_context")
+            .AddStep("分析并总结", "analyze_content")
+            .Build();
+    }
+
+    /// <summary>创建报错分析工作流</summary>
+    public static WorkflowDefinition AnalyzeError(string errorMessage)
+    {
+        return new WorkflowBuilder("报错分析")
+            .WithDescription($"分析报错: {errorMessage}")
+            .AddStep("截取错误屏幕", "screen_capture")
+            .AddStep("读取错误信息", "clipboard")
+            .AddStep("分析错误原因", "analyze_error")
+            .Build();
+    }
+
+    /// <summary>创建多步骤任务工作流</summary>
+    public static WorkflowDefinition MultiStepTask(string taskName)
+    {
+        return new WorkflowBuilder(taskName)
+            .WithDescription($"执行多步骤任务: {taskName}")
+            .AddStep("步骤1: 获取时间", "get_current_time")
+            .AddStep("步骤2: 计算", "calculator", """{"expression": "1 + 1"}""")
+            .AddStep("步骤3: 获取名言", "get_random_quote")
+            .Build();
+    }
+
     /// <summary>根据关键词查找模板</summary>
     public static WorkflowTemplate? FindTemplate(string query)
     {
