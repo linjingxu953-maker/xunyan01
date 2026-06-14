@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -82,13 +83,17 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [ObservableProperty] private string _hotkeySettingsStatus = "快捷键状态会在应用启动后显示。";
     [ObservableProperty] private string _chatHotkeyText = string.Empty;
     [ObservableProperty] private string _screenSelectionHotkeyText = string.Empty;
+    [ObservableProperty] private string _dataSettingsStatus = "本机数据目录用于配置、日志、记忆、任务历史和角色资源。";
+    [ObservableProperty] private string _dataStorageSummary = "正在等待刷新。";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPendingMemoryReviewSelected))]
     [NotifyPropertyChangedFor(nameof(HasNoPendingMemoryReviewSelected))]
     private PendingMemoryReviewItem? _selectedPendingMemoryReview;
 
-    [ObservableProperty] private bool _isBusy;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsNotBusy))]
+    private bool _isBusy;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNotModelSectionSelected))]
@@ -187,6 +192,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         MemoryStatsItems = [];
         MemoryActionItems = [];
         HotkeyItems = [];
+        DataDirectoryItems = [];
         PendingMemoryReviews = [];
         CharacterProfiles = [];
         CharacterAssetSuggestions = [];
@@ -229,6 +235,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         RefreshPermissionCards();
         RefreshMemoryCards();
         RefreshHotkeyCards();
+        RefreshDataDirectoryItems();
     }
 
     public ObservableCollection<SettingsSectionItem> Sections { get; }
@@ -242,6 +249,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     public ObservableCollection<SettingsListItem> MemoryStatsItems { get; }
     public ObservableCollection<SettingsListItem> MemoryActionItems { get; }
     public ObservableCollection<SettingsListItem> HotkeyItems { get; }
+    public ObservableCollection<DataDirectoryItem> DataDirectoryItems { get; }
     public ObservableCollection<PendingMemoryReviewItem> PendingMemoryReviews { get; }
     public ObservableCollection<CharacterProfileListItem> CharacterProfiles { get; }
     public ObservableCollection<CharacterAssetSuggestionItem> CharacterAssetSuggestions { get; }
@@ -260,6 +268,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     public bool HasNoCharacterAssetSuggestions => !HasCharacterAssetSuggestions;
     public bool HasCharacterAvatarImageSuggestion => !string.IsNullOrWhiteSpace(CharacterAvatarImageSuggestion);
     public bool HasCharacterStatePreviews => CharacterStatePreviewItems.Count > 0;
+    public bool IsNotBusy => !IsBusy;
 
     public async Task LoadAsync(CancellationToken ct = default)
     {
@@ -300,6 +309,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             RefreshPermissionCards();
             RefreshMemoryCards();
             RefreshHotkeyCards();
+            RefreshDataDirectoryItems();
         }
         finally
         {
@@ -624,6 +634,60 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         LoadHotkeyTextFromService();
         RefreshHotkeyCards();
         HotkeySettingsStatus = result.Message;
+    }
+
+    [RelayCommand]
+    private void RefreshDataDirectories()
+    {
+        RefreshDataDirectoryItems();
+        DataSettingsStatus = "已刷新本机数据目录状态。";
+    }
+
+    [RelayCommand]
+    private void OpenDataRootDirectory()
+    {
+        OpenDirectory(GetCoreDataRoot(), "核心数据根目录");
+    }
+
+    [RelayCommand]
+    private void ClearDataCache()
+    {
+        var cacheDirectory = GetCacheDirectory();
+        Directory.CreateDirectory(cacheDirectory);
+
+        var removedFiles = 0;
+        var removedDirectories = 0;
+        foreach (var file in Directory.EnumerateFiles(cacheDirectory, "*", SearchOption.AllDirectories).ToArray())
+        {
+            try
+            {
+                File.Delete(file);
+                removedFiles++;
+            }
+            catch
+            {
+                // Cache cleanup is best effort; locked files can be cleared later.
+            }
+        }
+
+        foreach (var directory in Directory
+                     .EnumerateDirectories(cacheDirectory, "*", SearchOption.AllDirectories)
+                     .OrderByDescending(path => path.Length)
+                     .ToArray())
+        {
+            try
+            {
+                Directory.Delete(directory, recursive: false);
+                removedDirectories++;
+            }
+            catch
+            {
+                // Non-empty or locked directories are left in place.
+            }
+        }
+
+        RefreshDataDirectoryItems();
+        DataSettingsStatus = $"已清理缓存目录：删除 {removedFiles} 个文件、{removedDirectories} 个空目录。";
     }
 
     [RelayCommand]
@@ -1192,6 +1256,178 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private static string GetHotkeyRegistrationText(bool isRegistered)
     {
         return isRegistered ? "已注册" : "未注册";
+    }
+
+    private void RefreshDataDirectoryItems()
+    {
+        DataDirectoryItems.Clear();
+
+        var coreRoot = GetCoreDataRoot();
+        var uiRoot = GetUiDataRoot();
+        var localRoot = GetLocalDataRoot();
+
+        var directories = new[]
+        {
+            CreateDataDirectoryItem(
+                "核心数据",
+                coreRoot,
+                "App/Core/Agent 层配置、日志、记忆和任务历史的根目录。"),
+            CreateDataDirectoryItem(
+                "模型与权限配置",
+                Path.Combine(coreRoot, "config"),
+                "保存 Provider、API Key、权限策略和用户偏好。"),
+            CreateDataDirectoryItem(
+                "日志与审计",
+                Path.Combine(coreRoot, "logs"),
+                "应用日志和权限审计日志默认写入这里。"),
+            CreateDataDirectoryItem(
+                "任务历史",
+                Path.Combine(coreRoot, "db"),
+                "任务历史、工具调用记录等持久化数据。"),
+            CreateDataDirectoryItem(
+                "记忆数据",
+                Path.Combine(coreRoot, "memory"),
+                "长期记忆和记忆确认后的本地存储。"),
+            CreateDataDirectoryItem(
+                "UI 配置",
+                Path.Combine(uiRoot, "config"),
+                "窗口位置、快捷键和角色档案等 UI 层配置。"),
+            CreateDataDirectoryItem(
+                "角色资源",
+                Path.Combine(uiRoot, "assets", "characters"),
+                "导入后的稳定角色图片资源目录。"),
+            CreateDataDirectoryItem(
+                "任务结果",
+                Path.Combine(localRoot, "TaskResults"),
+                "复制/保存任务结果时生成的 Markdown 文件。"),
+            CreateDataDirectoryItem(
+                "本地缓存",
+                GetCacheDirectory(),
+                "可清理的临时缓存目录；不会删除配置、记忆或日志。")
+        };
+
+        foreach (var item in directories)
+        {
+            DataDirectoryItems.Add(item);
+        }
+
+        var totalBytes = directories.Sum(item => TryGetDirectorySize(item.Path));
+        DataStorageSummary = $"已跟踪 {directories.Length} 个目录，合计约 {FormatBytes(totalBytes)}。";
+        DataSettingsStatus = "数据页已加载。清理操作只会处理本地缓存目录。";
+    }
+
+    private DataDirectoryItem CreateDataDirectoryItem(string title, string path, string description)
+    {
+        Directory.CreateDirectory(path);
+        return new DataDirectoryItem(
+            title,
+            path,
+            description,
+            GetDirectoryStatus(path),
+            item => OpenDirectory(item.Path, item.Title));
+    }
+
+    private void OpenDirectory(string path, string label)
+    {
+        try
+        {
+            Directory.CreateDirectory(path);
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = path,
+                UseShellExecute = true
+            });
+            DataSettingsStatus = $"已打开{label}：{path}";
+        }
+        catch (Exception ex)
+        {
+            DataSettingsStatus = $"打开{label}失败：{ex.Message}";
+        }
+    }
+
+    private static string GetDirectoryStatus(string path)
+    {
+        if (!Directory.Exists(path))
+            return "目录不存在";
+
+        try
+        {
+            var fileCount = Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories).Count();
+            var size = TryGetDirectorySize(path);
+            return $"{fileCount} 个文件 / {FormatBytes(size)}";
+        }
+        catch
+        {
+            return "目录可用，统计受限";
+        }
+    }
+
+    private static long TryGetDirectorySize(string path)
+    {
+        try
+        {
+            if (!Directory.Exists(path))
+                return 0;
+
+            return Directory
+                .EnumerateFiles(path, "*", SearchOption.AllDirectories)
+                .Sum(file =>
+                {
+                    try
+                    {
+                        return new FileInfo(file).Length;
+                    }
+                    catch
+                    {
+                        return 0;
+                    }
+                });
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB"];
+        var value = Math.Max(0, bytes);
+        var unitIndex = 0;
+        var display = (double)value;
+        while (display >= 1024 && unitIndex < units.Length - 1)
+        {
+            display /= 1024;
+            unitIndex++;
+        }
+
+        return unitIndex == 0
+            ? $"{value} {units[unitIndex]}"
+            : $"{display:0.##} {units[unitIndex]}";
+    }
+
+    private static string GetCoreDataRoot() => Path.Combine(GetRoamingAppDataRoot(), "DesktopMascot");
+
+    private static string GetUiDataRoot() => Path.Combine(GetRoamingAppDataRoot(), "DesktopAIMascot");
+
+    private static string GetLocalDataRoot() => Path.Combine(GetLocalAppDataRoot(), "DesktopMascot");
+
+    private static string GetCacheDirectory() => Path.Combine(GetLocalDataRoot(), "Cache");
+
+    private static string GetRoamingAppDataRoot()
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        return string.IsNullOrWhiteSpace(appData)
+            ? Environment.CurrentDirectory
+            : appData;
+    }
+
+    private static string GetLocalAppDataRoot()
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return string.IsNullOrWhiteSpace(localAppData)
+            ? GetRoamingAppDataRoot()
+            : localAppData;
     }
 
     private void RefreshPermissionCards()

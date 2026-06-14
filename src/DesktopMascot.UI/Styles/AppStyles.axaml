@@ -173,15 +173,15 @@
     </Style>
 
     <Style Selector="Border.mascotIcon">
-        <Setter Property="Width" Value="124"/>
-        <Setter Property="Height" Value="144"/>
+        <Setter Property="Width" Value="172"/>
+        <Setter Property="Height" Value="232"/>
         <Setter Property="Cursor" Value="Hand"/>
     </Style>
 
     <Style Selector="Border.mascotHalo">
-        <Setter Property="Width" Value="116"/>
-        <Setter Property="Height" Value="116"/>
-        <Setter Property="CornerRadius" Value="58"/>
+        <Setter Property="Width" Value="158"/>
+        <Setter Property="Height" Value="158"/>
+        <Setter Property="CornerRadius" Value="79"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BoxShadow" Value="0 12 34 0 #182563EB"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
@@ -205,8 +205,8 @@
     </Style>
 
     <Style Selector="Border.mascotPortrait">
-        <Setter Property="Width" Value="118"/>
-        <Setter Property="Height" Value="136"/>
+        <Setter Property="Width" Value="164"/>
+        <Setter Property="Height" Value="224"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="BoxShadow" Value="0 14 28 0 #26000000"/>
@@ -454,6 +454,20 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="10"/>
         <Setter Property="Padding" Value="14"/>
+    </Style>
+
+    <Style Selector="Border.inlineSettingsBusyOverlay">
+        <Setter Property="Background" Value="#9A05070B"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="ZIndex" Value="10"/>
+    </Style>
+
+    <Style Selector="Border.dataDirectoryRow">
+        <Setter Property="Background" Value="#10FFFFFF"/>
+        <Setter Property="BorderBrush" Value="#18FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="10"/>
     </Style>
 
     <Style Selector="TextBlock.inlineSettingsCardTitle">

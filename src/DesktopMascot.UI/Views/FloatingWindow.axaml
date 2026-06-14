@@ -4,10 +4,10 @@
         x:Class="DesktopMascot.UI.Views.FloatingWindow"
         x:DataType="vm:FloatingWindowViewModel"
         Title="DesktopMascot"
-        Width="132"
-        Height="152"
-        MinWidth="132"
-        MinHeight="152"
+        Width="180"
+        Height="240"
+        MinWidth="180"
+        MinHeight="240"
         MaxWidth="640"
         MaxHeight="560"
         WindowStartupLocation="Manual"
@@ -37,6 +37,8 @@
                 <Border Classes="mascotPortrait">
                     <Image Source="{Binding CharacterImageSource}"
                            Stretch="Uniform"
+                           UseLayoutRounding="True"
+                           RenderOptions.BitmapInterpolationMode="HighQuality"
                            Margin="0"/>
                 </Border>
                 <TextBlock Text="{Binding CharacterAvatarText}"
@@ -300,31 +302,449 @@
                                 </StackPanel>
                             </Border>
 
-                            <ScrollViewer Grid.Column="1"
-                                          VerticalScrollBarVisibility="Auto">
+                            <Grid Grid.Column="1">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                          IsEnabled="{Binding InlineSettings.IsNotBusy}">
                                 <StackPanel Margin="18"
                                             Spacing="14">
+                                    <StackPanel Spacing="12"
+                                                IsVisible="{Binding InlineSettings.IsModelSectionSelected}">
+                                        <Border Classes="inlineSettingsCard">
+                                            <StackPanel Spacing="10">
+                                                <ComboBox ItemsSource="{Binding InlineSettings.Providers}"
+                                                          SelectedItem="{Binding InlineSettings.SelectedProvider}"
+                                                          MinWidth="260"/>
+                                                <TextBox Text="{Binding InlineSettings.ApiKey}"
+                                                         PasswordChar="*"
+                                                         PlaceholderText="API Key"/>
+                                                <TextBox Text="{Binding InlineSettings.ApiEndpoint}"
+                                                         PlaceholderText="Base URL"/>
+                                                <TextBox Text="{Binding InlineSettings.ModelName}"
+                                                         PlaceholderText="模型名"/>
+                                                <TextBlock Text="{Binding InlineSettings.ModelSettingsStatus}"
+                                                           Classes="inlineSettingsBody"
+                                                           TextWrapping="Wrap"/>
+                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                                                    <TextBlock Text="模型配置保存到本机，应用不内置 API Key。"
+                                                               Classes="inlineSettingsBody"
+                                                               VerticalAlignment="Center"
+                                                               TextWrapping="Wrap"/>
+                                                    <Button Grid.Column="1"
+                                                            Content="填入默认"
+                                                            Classes="inlineSettingsBackButton"
+                                                            Command="{Binding InlineSettings.UseProviderDefaultsCommand}"
+                                                            Margin="8,0,0,0"/>
+                                                    <Button Grid.Column="2"
+                                                            Content="测试连接"
+                                                            Classes="inlineSettingsBackButton"
+                                                            Command="{Binding InlineSettings.TestConnectionCommand}"
+                                                            Margin="8,0,0,0"/>
+                                                    <Button Grid.Column="3"
+                                                            Content="保存"
+                                                            Classes="sendButton"
+                                                            Command="{Binding InlineSettings.SaveModelSettingsCommand}"
+                                                            Margin="8,0,0,0"/>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <StackPanel Spacing="12"
+                                                IsVisible="{Binding InlineSettings.IsMimoCodeSectionSelected}">
+                                        <Border Classes="inlineSettingsCard">
+                                            <StackPanel Spacing="10">
+                                                <CheckBox Content="启用 Mimo Code connector"
+                                                          IsChecked="{Binding InlineSettings.IsMimoCodeEnabled}"/>
+                                                <TextBox Text="{Binding InlineSettings.MimoCodeExecutablePath}"
+                                                         PlaceholderText="可执行路径，例如 mimo"/>
+                                                <TextBox Text="{Binding InlineSettings.MimoCodeWorkspacePath}"
+                                                         PlaceholderText="工作目录，留空使用当前项目目录"/>
+                                                <TextBlock Text="{Binding InlineSettings.MimoCodeStatus}"
+                                                           Classes="inlineSettingsBody"
+                                                           TextWrapping="Wrap"/>
+                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+                                                    <TextBlock Text="模型调用仍使用用户自己的 API 配置。"
+                                                               Classes="inlineSettingsBody"
+                                                               VerticalAlignment="Center"
+                                                               TextWrapping="Wrap"/>
+                                                    <Button Grid.Column="1"
+                                                            Content="App Provider"
+                                                            Classes="inlineSettingsBackButton"
+                                                            Command="{Binding InlineSettings.UseAppProviderForMimoCodeCommand}"
+                                                            Margin="8,0,0,0"/>
+                                                    <Button Grid.Column="2"
+                                                            Content="本机配置"
+                                                            Classes="inlineSettingsBackButton"
+                                                            Command="{Binding InlineSettings.UseMimoLocalConfigCommand}"
+                                                            Margin="8,0,0,0"/>
+                                                    <Button Grid.Column="3"
+                                                            Content="检测"
+                                                            Classes="inlineSettingsBackButton"
+                                                            Command="{Binding InlineSettings.TestMimoCodeConnectionCommand}"
+                                                            Margin="8,0,0,0"/>
+                                                    <Button Grid.Column="4"
+                                                            Content="保存"
+                                                            Classes="sendButton"
+                                                            Command="{Binding InlineSettings.SaveMimoCodeSettingsCommand}"
+                                                            Margin="8,0,0,0"/>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <StackPanel Spacing="12"
+                                                IsVisible="{Binding InlineSettings.IsPermissionSectionSelected}">
+                                        <Border Classes="inlineSettingsCard">
+                                            <StackPanel Spacing="10">
+                                                <ComboBox ItemsSource="{Binding InlineSettings.PermissionAutoApproveLevels}"
+                                                          SelectedItem="{Binding InlineSettings.SelectedAutoApproveLevel}"
+                                                          MinWidth="260"/>
+                                                <TextBox Text="{Binding InlineSettings.AuditLogRetentionDays}"
+                                                         PlaceholderText="审计保留天数"/>
+                                                <TextBlock Text="{Binding InlineSettings.PermissionSettingsStatus}"
+                                                           Classes="inlineSettingsBody"
+                                                           TextWrapping="Wrap"/>
+                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+                                                    <TextBlock Text="M29 权限确认入口已接入，策略保存到本机。"
+                                                               Classes="inlineSettingsBody"
+                                                               TextWrapping="Wrap"
+                                                               VerticalAlignment="Center"/>
+                                                    <Button Grid.Column="1"
+                                                            Content="刷新"
+                                                            Classes="inlineSettingsBackButton"
+                                                            Command="{Binding InlineSettings.RefreshPermissionStatusCommand}"
+                                                            Margin="8,0,0,0"/>
+                                                    <Button Grid.Column="2"
+                                                            Content="永久授权"
+                                                            Classes="inlineSettingsBackButton"
+                                                            Command="{Binding InlineSettings.ManagePermanentPermissionsCommand}"
+                                                            Margin="8,0,0,0"/>
+                                                    <Button Grid.Column="3"
+                                                            Content="审计日志"
+                                                            Classes="inlineSettingsBackButton"
+                                                            Command="{Binding InlineSettings.OpenPermissionAuditCommand}"
+                                                            Margin="8,0,0,0"/>
+                                                    <Button Grid.Column="4"
+                                                            Content="保存"
+                                                            Classes="sendButton"
+                                                            Command="{Binding InlineSettings.SavePermissionSettingsCommand}"
+                                                            Margin="8,0,0,0"/>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <StackPanel Spacing="12"
+                                                IsVisible="{Binding InlineSettings.IsMemorySectionSelected}">
+                                        <Border Classes="inlineSettingsCard">
+                                            <StackPanel Spacing="10">
+                                                <CheckBox Content="启用记忆"
+                                                          IsChecked="{Binding InlineSettings.IsMemoryEnabled}"/>
+                                                <TextBlock Text="{Binding InlineSettings.MemorySettingsStatus}"
+                                                           Classes="inlineSettingsBody"
+                                                           TextWrapping="Wrap"/>
+                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto">
+                                                    <TextBlock Text="M30 记忆确认接口已接入，操作会给出状态反馈。"
+                                                               Classes="inlineSettingsBody"
+                                                               TextWrapping="Wrap"
+                                                               VerticalAlignment="Center"/>
+                                                    <Button Grid.Column="1"
+                                                            Content="刷新"
+                                                            Classes="inlineSettingsBackButton"
+                                                            Command="{Binding InlineSettings.RefreshMemoryStatusCommand}"
+                                                            Margin="8,0,0,0"/>
+                                                    <Button Grid.Column="2"
+                                                            Content="浏览"
+                                                            Classes="inlineSettingsBackButton"
+                                                            Command="{Binding InlineSettings.OpenMemoryBrowserCommand}"
+                                                            Margin="8,0,0,0"/>
+                                                    <Button Grid.Column="3"
+                                                            Content="导出"
+                                                            Classes="inlineSettingsBackButton"
+                                                            Command="{Binding InlineSettings.ExportMemoryCommand}"
+                                                            Margin="8,0,0,0"/>
+                                                    <Button Grid.Column="4"
+                                                            Content="导入"
+                                                            Classes="inlineSettingsBackButton"
+                                                            Command="{Binding InlineSettings.ImportMemoryCommand}"
+                                                            Margin="8,0,0,0"/>
+                                                    <Button Grid.Column="5"
+                                                            Content="保存"
+                                                            Classes="sendButton"
+                                                            Command="{Binding InlineSettings.SaveMemorySettingsCommand}"
+                                                            Margin="8,0,0,0"/>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <StackPanel Spacing="12"
+                                                IsVisible="{Binding InlineSettings.IsHotkeySectionSelected}">
+                                        <Border Classes="inlineSettingsCard">
+                                            <StackPanel Spacing="10">
+                                                <TextBox Text="{Binding InlineSettings.ChatHotkeyText}"
+                                                         PlaceholderText="聊天唤起快捷键，例如 Ctrl+Alt+Space"/>
+                                                <TextBox Text="{Binding InlineSettings.ScreenSelectionHotkeyText}"
+                                                         PlaceholderText="屏幕圈选快捷键，例如 Ctrl+Shift+S"/>
+                                                <TextBlock Text="{Binding InlineSettings.HotkeySettingsStatus}"
+                                                           Classes="inlineSettingsBody"
+                                                           TextWrapping="Wrap"/>
+                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                                                    <TextBlock Text="保存时会检测格式、冲突和注册结果。"
+                                                               Classes="inlineSettingsBody"
+                                                               TextWrapping="Wrap"
+                                                               VerticalAlignment="Center"/>
+                                                    <Button Grid.Column="1"
+                                                            Content="刷新"
+                                                            Classes="inlineSettingsBackButton"
+                                                            Command="{Binding InlineSettings.RefreshHotkeyStatusCommand}"
+                                                            Margin="8,0,0,0"/>
+                                                    <Button Grid.Column="2"
+                                                            Content="恢复默认"
+                                                            Classes="inlineSettingsBackButton"
+                                                            Command="{Binding InlineSettings.ResetHotkeySettingsCommand}"
+                                                            Margin="8,0,0,0"/>
+                                                    <Button Grid.Column="3"
+                                                            Content="保存"
+                                                            Classes="sendButton"
+                                                            Command="{Binding InlineSettings.SaveHotkeySettingsCommand}"
+                                                            Margin="8,0,0,0"/>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <StackPanel Spacing="12"
+                                                IsVisible="{Binding InlineSettings.IsAppearanceSectionSelected}">
+                                        <Border Classes="inlineSettingsCard">
+                                            <Grid ColumnDefinitions="150,*"
+                                                  ColumnSpacing="14">
+                                                <Border Width="134"
+                                                        Height="188"
+                                                        Background="Transparent"
+                                                        ClipToBounds="False">
+                                                    <Grid>
+                                                        <Image Source="{Binding InlineSettings.CharacterImageSource}"
+                                                               Stretch="Uniform"
+                                                               UseLayoutRounding="True"
+                                                               RenderOptions.BitmapInterpolationMode="HighQuality"
+                                                               IsVisible="{Binding InlineSettings.HasCharacterImage}"/>
+                                                        <TextBlock Text="{Binding InlineSettings.CharacterAvatarText}"
+                                                                   Foreground="{Binding InlineSettings.CharacterAccentBrush}"
+                                                                   FontSize="30"
+                                                                   FontWeight="Bold"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   IsVisible="{Binding InlineSettings.HasNoCharacterImage}"/>
+                                                    </Grid>
+                                                </Border>
+                                                <StackPanel Grid.Column="1"
+                                                            Spacing="9">
+                                                    <Grid ColumnDefinitions="*,*"
+                                                          RowDefinitions="Auto,Auto,Auto"
+                                                          ColumnSpacing="8"
+                                                          RowSpacing="8">
+                                                        <TextBox Text="{Binding InlineSettings.CharacterName}"
+                                                                 PlaceholderText="角色名"/>
+                                                        <TextBox Grid.Column="1"
+                                                                 Text="{Binding InlineSettings.CharacterAvatarText}"
+                                                                 PlaceholderText="头像文字"/>
+                                                        <TextBox Grid.Row="1"
+                                                                 Text="{Binding InlineSettings.CharacterRole}"
+                                                                 PlaceholderText="角色定位"/>
+                                                        <TextBox Grid.Row="1"
+                                                                 Grid.Column="1"
+                                                                 Text="{Binding InlineSettings.CharacterPersonality}"
+                                                                 PlaceholderText="气质"/>
+                                                        <TextBox Grid.Row="2"
+                                                                 Grid.ColumnSpan="2"
+                                                                 Text="{Binding InlineSettings.CharacterCatchphrase}"
+                                                                 PlaceholderText="口头禅"/>
+                                                    </Grid>
+                                                    <Grid ColumnDefinitions="*,Auto"
+                                                          RowDefinitions="Auto,Auto"
+                                                          ColumnSpacing="8"
+                                                          RowSpacing="8">
+                                                        <TextBox Text="{Binding InlineSettings.CharacterImageFolder}"
+                                                                 PlaceholderText="角色图片目录"
+                                                                 MaxLength="260"/>
+                                                        <Button Grid.Column="1"
+                                                                Content="选择目录"
+                                                                Classes="inlineSettingsBackButton"
+                                                                Command="{Binding InlineSettings.PickCharacterImageFolderCommand}"/>
+                                                        <TextBox Grid.Row="1"
+                                                                 Text="{Binding InlineSettings.CharacterAvatarImage}"
+                                                                 PlaceholderText="头像图片文件名"
+                                                                 MaxLength="160"/>
+                                                        <Button Grid.Row="1"
+                                                                Grid.Column="1"
+                                                                Content="选择头像"
+                                                                Classes="inlineSettingsBackButton"
+                                                                Command="{Binding InlineSettings.PickCharacterAvatarImageCommand}"/>
+                                                    </Grid>
+                                                    <Grid ColumnDefinitions="*,Auto"
+                                                          ColumnSpacing="8">
+                                                        <ComboBox ItemsSource="{Binding InlineSettings.CharacterStateImageItems}"
+                                                                  SelectedItem="{Binding InlineSettings.SelectedCharacterStateImage}"
+                                                                  MinWidth="180"/>
+                                                        <Button Grid.Column="1"
+                                                                Content="选择状态图"
+                                                                Classes="inlineSettingsBackButton"
+                                                                Command="{Binding InlineSettings.PickSelectedStateImageCommand}"/>
+                                                    </Grid>
+                                                    <TextBlock Text="{Binding InlineSettings.CharacterSaveStatus}"
+                                                               Classes="inlineSettingsBody"
+                                                               TextWrapping="Wrap"/>
+                                                    <TextBlock Text="{Binding InlineSettings.CharacterImageStatus}"
+                                                               Classes="inlineSettingsBody"
+                                                               TextWrapping="Wrap"/>
+                                                    <TextBlock Text="{Binding InlineSettings.CharacterAssetSuggestionStatus}"
+                                                               Classes="inlineSettingsBody"
+                                                               TextWrapping="Wrap"/>
+                                                    <ItemsControl ItemsSource="{Binding InlineSettings.CharacterStateImageItems}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:CharacterStateImageItem">
+                                                                <Grid ColumnDefinitions="96,*"
+                                                                      ColumnSpacing="8"
+                                                                      Margin="0,0,0,6">
+                                                                    <TextBlock Text="{Binding DisplayName}"
+                                                                               Classes="inlineSettingsBody"
+                                                                               VerticalAlignment="Center"
+                                                                               TextTrimming="CharacterEllipsis"/>
+                                                                    <TextBox Grid.Column="1"
+                                                                             Text="{Binding FileName}"
+                                                                             PlaceholderText="状态图片文件名"
+                                                                             MaxLength="160"/>
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                    <WrapPanel>
+                                                        <Button Content="桌面图片"
+                                                                Classes="inlineSettingsBackButton"
+                                                                Command="{Binding InlineSettings.UseDesktopCharacterImagesCommand}"
+                                                                Margin="0,0,8,8"/>
+                                                        <Button Content="刷新预览"
+                                                                Classes="inlineSettingsBackButton"
+                                                                Command="{Binding InlineSettings.RefreshCharacterPreviewCommand}"
+                                                                Margin="0,0,8,8"/>
+                                                        <Button Content="扫描匹配"
+                                                                Classes="inlineSettingsBackButton"
+                                                                Command="{Binding InlineSettings.ScanCharacterAssetSuggestionsCommand}"
+                                                                Margin="0,0,8,8"/>
+                                                        <Button Content="应用匹配"
+                                                                Classes="inlineSettingsBackButton"
+                                                                Command="{Binding InlineSettings.ApplyCharacterAssetSuggestionsCommand}"
+                                                                Margin="0,0,8,8"/>
+                                                        <Button Content="导入资源"
+                                                                Classes="inlineSettingsBackButton"
+                                                                Command="{Binding InlineSettings.ImportCharacterAssetsCommand}"
+                                                                Margin="0,0,8,8"/>
+                                                        <Button Content="保存"
+                                                                Classes="sendButton"
+                                                                Command="{Binding InlineSettings.SaveCharacterCommand}"
+                                                                Margin="0,0,8,8"/>
+                                                        <Button Content="恢复默认"
+                                                                Classes="inlineSettingsBackButton"
+                                                                Command="{Binding InlineSettings.ResetCharacterCommand}"
+                                                                Margin="0,0,8,8"/>
+                                                    </WrapPanel>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <StackPanel Spacing="12"
+                                                IsVisible="{Binding InlineSettings.IsDataSectionSelected}">
+                                        <Border Classes="inlineSettingsCard">
+                                            <StackPanel Spacing="8">
+                                                <TextBlock Text="日志/数据"
+                                                           Classes="inlineSettingsCardTitle"/>
+                                                <TextBlock Text="{Binding InlineSettings.DataStorageSummary}"
+                                                           Classes="inlineSettingsBody"
+                                                           TextWrapping="Wrap"/>
+                                                <ItemsControl ItemsSource="{Binding InlineSettings.DataDirectoryItems}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:DataDirectoryItem">
+                                                            <Border Classes="dataDirectoryRow"
+                                                                    Margin="0,0,0,8">
+                                                                <Grid ColumnDefinitions="*,Auto"
+                                                                      RowDefinitions="Auto,Auto,Auto"
+                                                                      ColumnSpacing="10"
+                                                                      RowSpacing="4">
+                                                                    <TextBlock Text="{Binding Title}"
+                                                                               Classes="inlineSettingsCardTitle"
+                                                                               FontSize="12"/>
+                                                                    <Button Grid.Column="1"
+                                                                            Content="打开"
+                                                                            Classes="inlineSettingsBackButton"
+                                                                            Command="{Binding OpenCommand}"
+                                                                            Padding="10,5"/>
+                                                                    <TextBlock Grid.Row="1"
+                                                                               Grid.ColumnSpan="2"
+                                                                               Text="{Binding Path}"
+                                                                               Classes="inlineSettingsBody"
+                                                                               TextTrimming="CharacterEllipsis"/>
+                                                                    <TextBlock Grid.Row="2"
+                                                                               Text="{Binding Description}"
+                                                                               Classes="inlineSettingsBody"
+                                                                               TextWrapping="Wrap"/>
+                                                                    <TextBlock Grid.Row="2"
+                                                                               Grid.Column="1"
+                                                                               Text="{Binding Status}"
+                                                                               Classes="inlineSettingsBody"
+                                                                               HorizontalAlignment="Right"/>
+                                                                </Grid>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <TextBlock Text="{Binding InlineSettings.DataSettingsStatus}"
+                                                           Classes="inlineSettingsBody"
+                                                           TextWrapping="Wrap"/>
+                                                <WrapPanel>
+                                                    <Button Content="刷新目录"
+                                                            Classes="inlineSettingsBackButton"
+                                                            Command="{Binding InlineSettings.RefreshDataDirectoriesCommand}"
+                                                            Margin="0,0,8,8"/>
+                                                    <Button Content="打开数据根目录"
+                                                            Classes="inlineSettingsBackButton"
+                                                            Command="{Binding InlineSettings.OpenDataRootDirectoryCommand}"
+                                                            Margin="0,0,8,8"/>
+                                                    <Button Content="清理本地缓存"
+                                                            Classes="inlineSettingsBackButton"
+                                                            Command="{Binding InlineSettings.ClearDataCacheCommand}"
+                                                            Margin="0,0,8,8"/>
+                                                </WrapPanel>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+
                                     <Border Classes="inlineSettingsCard">
                                         <StackPanel Spacing="8">
-                                            <TextBlock Text="{Binding InlineSettingsTitle}"
+                                            <TextBlock Text="当前状态"
                                                        Classes="inlineSettingsCardTitle"/>
                                             <TextBlock Text="{Binding InlineSettingsStatus}"
                                                        Classes="inlineSettingsBody"
                                                        TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </Border>
-
-                                    <Border Classes="inlineSettingsCard">
-                                        <StackPanel Spacing="8">
-                                            <TextBlock Text="当前阶段"
-                                                       Classes="inlineSettingsCardTitle"/>
-                                            <TextBlock Text="设置中心已并入主对话框，后续把现有设置窗口中的表单逐项迁移到这里，点击设置不会再弹出独立窗口。"
-                                                       Classes="inlineSettingsBody"
-                                                       TextWrapping="Wrap"/>
-                                        </StackPanel>
-                                    </Border>
                                 </StackPanel>
                             </ScrollViewer>
+                            <Border Classes="inlineSettingsBusyOverlay"
+                                    IsVisible="{Binding InlineSettings.IsBusy}">
+                                <StackPanel HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Spacing="8">
+                                    <ProgressBar Classes="compactProgress"
+                                                 IsIndeterminate="True"
+                                                 Width="160"/>
+                                    <TextBlock Text="正在处理设置操作..."
+                                               Classes="inlineSettingsBody"
+                                               TextAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                            </Grid>
                         </Grid>
                     </Grid>
                     </Grid>

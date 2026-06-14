@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using System.Runtime.InteropServices;
 using DesktopMascot.UI.ViewModels;
 using DesktopMascot.UI.Views;
 
@@ -10,8 +11,8 @@ namespace DesktopMascot.UI.Services;
 
 public sealed class DesktopShellService : IDisposable
 {
-    private const double CollapsedWindowWidth = 132;
-    private const double CollapsedWindowHeight = 152;
+    private const double CollapsedWindowWidth = 180;
+    private const double CollapsedWindowHeight = 240;
 
     private readonly IWindowPlacementStore _placementStore;
     private readonly IGlobalHotkeyService _hotkeyService;
@@ -324,15 +325,12 @@ public sealed class DesktopShellService : IDisposable
         if (_window is null)
             return;
 
-        var state = _placementStore.Load();
         var width = CollapsedWindowWidth;
         var height = CollapsedWindowHeight;
 
         _window.Width = width;
         _window.Height = height;
-        _window.Position = state is not null && IsReasonablePlacement(state)
-            ? ClampWindowPosition(GetAnchoredRestorePosition(state, width, height), width, height)
-            : GetDefaultWindowPosition(width, height);
+        _window.Position = GetDefaultWindowPosition(width, height);
     }
 
     private PixelPoint GetAnchoredRestorePosition(WindowPlacementState state, double targetWidth, double targetHeight)
@@ -380,16 +378,7 @@ public sealed class DesktopShellService : IDisposable
 
         if (_viewModel?.IsChatDialogVisible == true)
         {
-            position = GetAnchoredRestorePosition(
-                new WindowPlacementState
-                {
-                    X = _window.Position.X,
-                    Y = _window.Position.Y,
-                    Width = _window.Width,
-                    Height = _window.Height
-                },
-                CollapsedWindowWidth,
-                CollapsedWindowHeight);
+            position = GetDefaultWindowPosition(CollapsedWindowWidth, CollapsedWindowHeight);
             width = CollapsedWindowWidth;
             height = CollapsedWindowHeight;
         }
@@ -415,17 +404,28 @@ public sealed class DesktopShellService : IDisposable
     private PixelPoint GetDefaultWindowPosition(double width, double height)
     {
         var screen = _window?.Screens.Primary ?? _window?.Screens.All.FirstOrDefault();
-        if (screen is null)
-            return _window?.Position ?? new PixelPoint(80, 80);
+        if (screen is not null)
+        {
+            var scaling = GetScreenScaling(screen);
+            var pixelWidth = Math.Max(1, (int)Math.Ceiling(width * scaling));
+            var pixelHeight = Math.Max(1, (int)Math.Ceiling(height * scaling));
+            var area = screen.WorkingArea;
+            var x = area.X + area.Width - pixelWidth - 24;
+            var y = area.Y + area.Height - pixelHeight - 32;
 
-        var scaling = GetScreenScaling(screen);
-        var pixelWidth = Math.Max(1, (int)Math.Ceiling(width * scaling));
-        var pixelHeight = Math.Max(1, (int)Math.Ceiling(height * scaling));
-        var area = screen.WorkingArea;
-        var x = area.X + area.Width - pixelWidth - 24;
-        var y = area.Y + area.Height - pixelHeight - 32;
+            return ClampWindowPositionToScreen(new PixelPoint(x, y), width, height, screen);
+        }
 
-        return ClampWindowPositionToScreen(new PixelPoint(x, y), width, height, screen);
+        if (TryGetWindowsPrimaryWorkArea(out var windowsArea))
+        {
+            var defaultX = windowsArea.Right - (int)Math.Ceiling(width) - 24;
+            var defaultY = windowsArea.Bottom - (int)Math.Ceiling(height) - 32;
+            return new PixelPoint(
+                Math.Max(windowsArea.Left, defaultX),
+                Math.Max(windowsArea.Top, defaultY));
+        }
+
+        return _window?.Position ?? new PixelPoint(80, 80);
     }
 
     private PixelPoint ClampWindowPositionToScreen(PixelPoint desiredPosition, double width, double height, Screen screen)
@@ -474,11 +474,22 @@ public sealed class DesktopShellService : IDisposable
         return max < min ? min : Math.Clamp(value, min, max);
     }
 
-    private static bool IsReasonablePlacement(WindowPlacementState state)
+    private static bool TryGetWindowsPrimaryWorkArea(out NativeRect workArea)
     {
-        return state.X is > -100000 and < 100000 &&
-               state.Y is > -100000 and < 100000 &&
-               state.Width is >= CollapsedWindowWidth and <= 1000 &&
-               state.Height is >= CollapsedWindowHeight and <= 1000;
+        workArea = default;
+        return OperatingSystem.IsWindows() &&
+               SystemParametersInfo(0x0030, 0, ref workArea, 0);
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool SystemParametersInfo(uint action, uint param, ref NativeRect rect, uint updateIni);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
     }
 }

@@ -12,8 +12,8 @@ namespace DesktopMascot.UI.Views;
 
 public partial class FloatingWindow : Window
 {
-    private const double CollapsedWidth = 132;
-    private const double CollapsedHeight = 152;
+    private const double CollapsedWidth = 180;
+    private const double CollapsedHeight = 240;
     private const double ExpandedWidth = 640;
     private const double ExpandedHeight = 560;
 
@@ -44,12 +44,14 @@ public partial class FloatingWindow : Window
         {
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
             _viewModel.MessageItems.CollectionChanged -= OnMessageItemsCollectionChanged;
+            _viewModel.SetInlineSettingsOwner(null);
         }
 
         _viewModel = DataContext as FloatingWindowViewModel;
 
         if (_viewModel is not null)
         {
+            _viewModel.SetInlineSettingsOwner(this);
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
             _viewModel.MessageItems.CollectionChanged += OnMessageItemsCollectionChanged;
             ApplyWindowMode(_viewModel.IsChatDialogVisible);

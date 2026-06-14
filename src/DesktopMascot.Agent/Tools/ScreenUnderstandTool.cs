@@ -39,6 +39,10 @@ public class ScreenUnderstandTool : ITool
             "user_hint": {
                 "type": "string",
                 "description": "用户的补充说明（可选）"
+            },
+            "content_type": {
+                "type": "string",
+                "description": "内容类型提示（可选：code/error/document/webpage/ui/data/terminal/chat）"
             }
         }
     }
@@ -50,6 +54,7 @@ public class ScreenUnderstandTool : ITool
         {
             ScreenRegion? region = null;
             string? userHint = null;
+            ScreenContentType? contentType = null;
 
             if (!string.IsNullOrEmpty(arguments) && arguments != "{}")
             {
@@ -68,8 +73,24 @@ public class ScreenUnderstandTool : ITool
                 {
                     userHint = hintElement.GetString();
                 }
+                if (doc.RootElement.TryGetProperty("content_type", out var ctElement))
+                {
+                    var ctStr = ctElement.GetString()?.ToLower();
+                    if (Enum.TryParse<ScreenContentType>(ctStr, true, out var parsedCt))
+                    {
+                        contentType = parsedCt;
+                    }
+                }
             }
 
+            // 获取当前窗口信息用于内容类型检测
+            var snapshot = await _contextProvider.GetActiveWindowContextAsync(ct);
+            if (contentType == null)
+            {
+                contentType = ScreenPromptBuilder.DetectContentType(snapshot.ActiveWindowTitle, snapshot.ActiveApplication);
+            }
+
+            // 截图
             var screenshotPath = await _contextProvider.CaptureScreenshotAsync(ct: ct);
             if (string.IsNullOrEmpty(screenshotPath) || screenshotPath.StartsWith("["))
             {
@@ -84,8 +105,9 @@ public class ScreenUnderstandTool : ITool
             var imageBytes = await File.ReadAllBytesAsync(screenshotPath, ct);
             var base64 = Convert.ToBase64String(imageBytes);
 
-            var systemPrompt = BuildSystemPrompt();
-            var userPrompt = BuildUserPrompt(region, userHint);
+            // 生成专门的 prompt
+            var systemPrompt = ScreenPromptBuilder.BuildPrompt(contentType.Value, userHint);
+            var userPrompt = BuildUserPrompt(region, userHint, snapshot);
 
             var messages = new List<LlmMessage>
             {
@@ -107,7 +129,7 @@ public class ScreenUnderstandTool : ITool
                 };
             }
 
-            var result = ParseResponse(response.Content, userHint);
+            var result = ParseResponse(response.Content, userHint, contentType.Value);
 
             return new ToolResult
             {
@@ -131,54 +153,9 @@ public class ScreenUnderstandTool : ITool
         }
     }
 
-    private static string BuildSystemPrompt()
+    private static string BuildUserPrompt(ScreenRegion? region, string? userHint, ContextSnapshot snapshot)
     {
-        return """
-            你是一个专业的屏幕内容分析助手。你的任务是分析用户截取的屏幕区域，理解内容并帮助用户。
-
-            请按以下三层结构分析：
-
-            ## 第一层：识别（这是什么）
-            - 屏幕上显示的是什么内容
-            - 什么应用、什么界面元素
-            - 关键文字、图标、按钮
-
-            ## 第二层：理解（用户可能想做什么）
-            - 根据内容判断用户可能的意图
-            - 如果无法确定意图，返回用户的原始输入
-            - 不要猜测，宁可说"不确定"也不要瞎猜
-
-            ## 第三层：行动（怎么帮用户）
-            - 给出具体的建议操作
-            - 如果需要执行操作，说明操作类型和参数
-            - 评估操作风险
-
-            请严格按以下 JSON 格式返回：
-            ```json
-            {
-              "identification": "这是什么内容",
-              "understanding": "用户可能想做什么",
-              "userIntent": "如果无法理解，返回用户的原始输入",
-              "suggestions": ["建议1", "建议2"],
-              "needsAction": true/false,
-              "recommendedActions": [
-                {
-                  "name": "操作名称",
-                  "description": "操作描述",
-                  "actionType": "read_file/run_command/open_url/copy_text",
-                  "parameters": {},
-                  "riskLevel": "low/medium/high"
-                }
-              ],
-              "confidence": 0.8
-            }
-            ```
-            """;
-    }
-
-    private static string BuildUserPrompt(ScreenRegion? region, string? userHint)
-    {
-        var prompt = "请分析这个屏幕区域的内容。";
+        var prompt = $"请分析这个屏幕区域的内容。\n\n当前窗口：{snapshot.ActiveWindowTitle}（{snapshot.ActiveApplication}）";
 
         if (region != null)
         {
@@ -199,7 +176,7 @@ public class ScreenUnderstandTool : ITool
         return prompt;
     }
 
-    private static ScreenUnderstandResult ParseResponse(string content, string? userHint)
+    private static EnhancedScreenResult ParseResponse(string content, string? userHint, ScreenContentType contentType)
     {
         try
         {
@@ -210,11 +187,13 @@ public class ScreenUnderstandTool : ITool
                 var json = content.Substring(jsonStart, jsonEnd - jsonStart + 1);
                 var parsed = JsonSerializer.Deserialize<JsonElement>(json);
 
-                var result = new ScreenUnderstandResult
+                var result = new EnhancedScreenResult
                 {
                     Identification = parsed.TryGetProperty("identification", out var id) ? id.GetString() ?? "" : "",
                     Understanding = parsed.TryGetProperty("understanding", out var ud) ? ud.GetString() ?? "" : "",
                     UserIntent = parsed.TryGetProperty("userIntent", out var ui) ? ui.GetString() : null,
+                    ContentType = contentType,
+                    ExtractedText = parsed.TryGetProperty("extractedText", out var et) ? et.GetString() : null,
                     NeedsAction = parsed.TryGetProperty("needsAction", out var na) && na.GetBoolean(),
                     Confidence = parsed.TryGetProperty("confidence", out var cf) ? cf.GetSingle() : 0.5f,
                     RawResponse = content
@@ -240,6 +219,19 @@ public class ScreenUnderstandTool : ITool
                     }
                 }
 
+                if (parsed.TryGetProperty("keyElements", out var ke) && ke.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var k in ke.EnumerateArray())
+                        result.KeyElements.Add(k.GetString() ?? "");
+                }
+
+                if (parsed.TryGetProperty("errorType", out var et2))
+                    result.ErrorType = et2.GetString();
+                if (parsed.TryGetProperty("errorCode", out var ec))
+                    result.ErrorCode = ec.GetString();
+                if (parsed.TryGetProperty("errorMessage", out var em))
+                    result.ErrorMessage = em.GetString();
+
                 if (string.IsNullOrEmpty(result.Understanding) && !string.IsNullOrEmpty(userHint))
                 {
                     result.UserIntent = userHint;
@@ -250,11 +242,12 @@ public class ScreenUnderstandTool : ITool
         }
         catch { }
 
-        return new ScreenUnderstandResult
+        return new EnhancedScreenResult
         {
             Identification = "无法解析",
             Understanding = content,
             UserIntent = userHint,
+            ContentType = contentType,
             RawResponse = content,
             Confidence = 0.3f
         };

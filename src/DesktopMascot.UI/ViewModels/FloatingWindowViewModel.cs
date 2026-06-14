@@ -1,10 +1,13 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DesktopMascot.Core.Configuration;
 using DesktopMascot.Core.Enums;
 using DesktopMascot.Core.Interfaces;
 using DesktopMascot.Core.Memory;
@@ -36,6 +39,8 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     private string _lastUserMessage = string.Empty;
     private Dictionary<string, string> _characterStateImages = new();
     private bool _isApplyingCharacterProfile;
+    private bool _hasLoadedInlineSettings;
+    private Window? _inlineSettingsOwner;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsMascotBusy))]
@@ -136,6 +141,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     public ObservableCollection<TaskTimelineItem> TaskTimeline { get; } = new();
     public ObservableCollection<TaskToolCallItem> TaskToolCalls { get; } = new();
     public ObservableCollection<ComputerUseActionItem> ComputerUseActions { get; } = new();
+    public SettingsWindowViewModel InlineSettings { get; }
 
     public bool CanSendMessage => !IsBusy && !IsWaitingForUserConfirmation && !string.IsNullOrWhiteSpace(InputText);
     public bool CanStartScreenSelection => !IsBusy && !IsWaitingForUserConfirmation;
@@ -168,7 +174,12 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         ICharacterImageService characterImageService,
         ITaskResultActionService taskResultActionService,
         IConfirmationHandler confirmationHandler,
-        IMemoryConfirmationHandler memoryConfirmationHandler)
+        IMemoryConfirmationHandler memoryConfirmationHandler,
+        IConfigurationManager configurationManager,
+        ISettingsDiagnosticsService settingsDiagnosticsService,
+        IOnboardingWindowService onboardingWindowService,
+        ICharacterAssetImportService characterAssetImportService,
+        IGlobalHotkeyService hotkeyService)
     {
         _taskRouter = taskRouter;
         _eventBus = eventBus;
@@ -178,6 +189,16 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         _taskResultActionService = taskResultActionService;
         _confirmationHandler = confirmationHandler;
         _memoryConfirmationHandler = memoryConfirmationHandler;
+        InlineSettings = new SettingsWindowViewModel(
+            configurationManager,
+            settingsDiagnosticsService,
+            onboardingWindowService,
+            characterStore,
+            characterImageService,
+            characterAssetImportService,
+            new CharacterAssetPickerService(() => _inlineSettingsOwner),
+            hotkeyService);
+        InlineSettings.PropertyChanged += OnInlineSettingsPropertyChanged;
 
         _characterStore.ProfileChanged += OnCharacterProfileChanged;
         ApplyCharacterProfile(_characterStore.Load(), save: false);
@@ -188,6 +209,11 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         // 监听任务事件
         _eventBus.TaskEventPublished += OnTaskEventPublished;
         _eventStreamSubscription = _eventStream.SubscribeAll().Subscribe(new TaskEventObserver(OnTaskStreamEvent));
+    }
+
+    public void SetInlineSettingsOwner(Window? owner)
+    {
+        _inlineSettingsOwner = owner;
     }
 
     private void OnTaskEventPublished(object? sender, TaskEvent e)
@@ -659,6 +685,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void SelectInlineSettingsSection(string? section)
     {
+        InlineSettings.SelectSectionById(section);
         ApplyInlineSettingsSection(section);
     }
 
@@ -768,22 +795,108 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         IsChatVisible = true;
         IsChatPageVisible = false;
         IsSettingsPageVisible = true;
+        InlineSettings.SelectSectionById(section);
         ApplyInlineSettingsSection(section);
+        _ = LoadInlineSettingsAsync(section);
+    }
+
+    private async Task LoadInlineSettingsAsync(string? section)
+    {
+        try
+        {
+            if (!_hasLoadedInlineSettings)
+            {
+                _hasLoadedInlineSettings = true;
+                await InlineSettings.LoadAsync();
+            }
+
+            InlineSettings.SelectSectionById(section);
+            SyncInlineSettingsStatus();
+        }
+        catch
+        {
+            InlineSettingsStatus = "设置加载失败，请稍后重试。";
+        }
     }
 
     private void ApplyInlineSettingsSection(string? section)
     {
         var key = string.IsNullOrWhiteSpace(section) ? "overview" : section;
-        (InlineSettingsTitle, InlineSettingsDescription, InlineSettingsStatus) = key switch
+        var (title, description, fallbackStatus) = key switch
         {
-            "model" => ("模型设置", "配置 Provider、API Key、Base URL 和默认模型。", "后续会把现有模型表单迁到这个内嵌页。"),
-            "mimoCode" => ("Mimo Code", "接入本机 Mimo Code，模型调用仍使用用户自己的 API 配置。", "保留 CLI 路径、工作目录和连接检测入口。"),
+            "model" => ("模型设置", "配置 Provider、API Key、Base URL 和默认模型。", "模型配置会保存到本机配置目录。"),
+            "mimoCode" => ("Mimo Code", "接入本机 Mimo Code，模型调用仍使用用户自己的 API 配置。", "Mimo Code 接入配置会保存到本机配置目录。"),
             "permission" => ("权限", "查看文件写入、命令执行和高风险工具的确认策略。", "权限确认仍走当前独立确认弹窗体系。"),
             "memory" => ("记忆", "管理待确认记忆、已保存记忆和自动学习策略。", "记忆确认仍走当前 M30 回调入口。"),
             "hotkey" => ("快捷键", "配置唤起输入和屏幕圈选快捷键。", "快捷键保存会继续做冲突检测和失败回滚。"),
-            "data" => ("日志/数据", "查看本机配置、日志、缓存和数据目录。", "数据目录入口后续接入打开文件夹和清理操作。"),
+            "data" => ("日志/数据", "查看本机配置、日志、缓存和数据目录。", "可打开目录、刷新占用并清理本地缓存。"),
             "appearance" => ("角色外观", "管理人物图片、状态图映射、角色名、颜色和预设。", "角色图片仍优先导入到本机稳定资源目录。"),
             _ => ("设置", "模型、权限、记忆、快捷键、数据目录和角色外观都在这里管理。", "选择左侧设置项查看当前配置入口。")
+        };
+        InlineSettingsTitle = title;
+        InlineSettingsDescription = description;
+        InlineSettingsStatus = GetInlineSettingsStatus(key, fallbackStatus);
+    }
+
+    private void OnInlineSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (!ShouldSyncInlineSettingsStatus(e.PropertyName))
+            return;
+
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            SyncInlineSettingsStatus();
+            return;
+        }
+
+        Dispatcher.UIThread.Post(SyncInlineSettingsStatus);
+    }
+
+    private static bool ShouldSyncInlineSettingsStatus(string? propertyName)
+    {
+        return propertyName is
+            nameof(SettingsWindowViewModel.SelectedSectionId) or
+            nameof(SettingsWindowViewModel.IsBusy) or
+            nameof(SettingsWindowViewModel.ModelSettingsStatus) or
+            nameof(SettingsWindowViewModel.MimoCodeStatus) or
+            nameof(SettingsWindowViewModel.PermissionSettingsStatus) or
+            nameof(SettingsWindowViewModel.MemorySettingsStatus) or
+            nameof(SettingsWindowViewModel.HotkeySettingsStatus) or
+            nameof(SettingsWindowViewModel.DataSettingsStatus) or
+            nameof(SettingsWindowViewModel.DataStorageSummary) or
+            nameof(SettingsWindowViewModel.CharacterSaveStatus) or
+            nameof(SettingsWindowViewModel.CharacterAssetSuggestionStatus) or
+            nameof(SettingsWindowViewModel.CharacterStatePreviewStatus) or
+            nameof(SettingsWindowViewModel.CharacterImageStatus);
+    }
+
+    private void SyncInlineSettingsStatus()
+    {
+        InlineSettingsStatus = GetInlineSettingsStatus(InlineSettings.SelectedSectionId, InlineSettingsStatus);
+    }
+
+    private string GetInlineSettingsStatus(string? section, string fallback)
+    {
+        if (InlineSettings.IsBusy)
+            return "正在处理设置操作，请稍候。";
+
+        return section switch
+        {
+            "model" => InlineSettings.ModelSettingsStatus,
+            "mimoCode" => InlineSettings.MimoCodeStatus,
+            "permission" => InlineSettings.PermissionSettingsStatus,
+            "memory" => InlineSettings.MemorySettingsStatus,
+            "hotkey" => InlineSettings.HotkeySettingsStatus,
+            "data" => $"{InlineSettings.DataSettingsStatus} {InlineSettings.DataStorageSummary}",
+            "appearance" => string.Join(" ",
+                new[]
+                {
+                    InlineSettings.CharacterSaveStatus,
+                    InlineSettings.CharacterImageStatus,
+                    InlineSettings.CharacterAssetSuggestionStatus,
+                    InlineSettings.CharacterStatePreviewStatus
+                }.Where(text => !string.IsNullOrWhiteSpace(text))),
+            _ => fallback
         };
     }
 

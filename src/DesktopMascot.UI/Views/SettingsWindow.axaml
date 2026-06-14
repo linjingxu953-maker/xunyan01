@@ -837,8 +837,68 @@
                                    FontSize="22"
                                    FontWeight="SemiBold"/>
                         <Border Classes="toolCard">
-                            <TextBlock Text="日志目录、数据目录和清理策略会在设置中心后续迭代中补齐。"
-                                       Classes="bodyText"/>
+                            <StackPanel Spacing="12">
+                                <Grid ColumnDefinitions="*,Auto,Auto,Auto"
+                                      ColumnSpacing="8">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding DataStorageSummary}"
+                                                   Classes="bodyText"
+                                                   TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding DataSettingsStatus}"
+                                                   Classes="captionText"
+                                                   TextWrapping="Wrap"
+                                                   Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1"
+                                            Content="刷新"
+                                            Classes="secondaryAction"
+                                            Command="{Binding RefreshDataDirectoriesCommand}"/>
+                                    <Button Grid.Column="2"
+                                            Content="打开根目录"
+                                            Classes="secondaryAction"
+                                            Command="{Binding OpenDataRootDirectoryCommand}"/>
+                                    <Button Grid.Column="3"
+                                            Content="清理缓存"
+                                            Classes="secondaryAction"
+                                            Command="{Binding ClearDataCacheCommand}"/>
+                                </Grid>
+
+                                <ItemsControl ItemsSource="{Binding DataDirectoryItems}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:DataDirectoryItem">
+                                            <Border Classes="dataDirectoryRow"
+                                                    Margin="0,0,0,8">
+                                                <Grid ColumnDefinitions="*,Auto"
+                                                      RowDefinitions="Auto,Auto,Auto"
+                                                      ColumnSpacing="10"
+                                                      RowSpacing="4">
+                                                    <TextBlock Text="{Binding Title}"
+                                                               Classes="sectionTitle"/>
+                                                    <Button Grid.Column="1"
+                                                            Content="打开"
+                                                            Classes="secondaryAction"
+                                                            Command="{Binding OpenCommand}"
+                                                            Padding="10,5"/>
+                                                    <TextBlock Grid.Row="1"
+                                                               Grid.ColumnSpan="2"
+                                                               Text="{Binding Path}"
+                                                               Classes="captionText"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Grid.Row="2"
+                                                               Text="{Binding Description}"
+                                                               Classes="bodyText"
+                                                               TextWrapping="Wrap"/>
+                                                    <TextBlock Grid.Row="2"
+                                                               Grid.Column="1"
+                                                               Text="{Binding Status}"
+                                                               Classes="captionText"
+                                                               HorizontalAlignment="Right"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
                         </Border>
                     </StackPanel>
 
