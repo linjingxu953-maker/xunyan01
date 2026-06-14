@@ -5,7 +5,7 @@
         x:Class="DesktopMascot.UI.Views.FloatingWindow"
         x:DataType="vm:FloatingWindowViewModel"
         Title="DesktopMascot"
-        Width="240" Height="340"
+        Width="80" Height="80"
         WindowStartupLocation="Manual"
         Position="100,100"
         Background="Transparent"
@@ -17,37 +17,65 @@
         ClipToBounds="False">
 
     <Grid ClipToBounds="False">
-        <Border Classes="floatingShell"
-                IsHitTestVisible="{Binding IsMainAreaHitTestVisible}">
-            <Grid RowDefinitions="34,*">
+        <!-- 角色图标 - 始终显示 -->
+        <Border Classes="mascotIcon"
+                IsVisible="{Binding IsMascotIconVisible}"
+                PointerPressed="MascotIcon_PointerPressed"
+                Cursor="Hand">
+            <controls:MascotView Width="64" Height="64"/>
+        </Border>
+
+        <!-- 对话框 - 点击角色后显示 -->
+        <Border Classes="chatDialog"
+                IsVisible="{Binding IsChatDialogVisible}"
+                IsHitTestVisible="{Binding IsChatDialogHitTestVisible}">
+            <Grid RowDefinitions="36,*">
+                <!-- 对话框标题栏 -->
                 <Border Grid.Row="0"
-                        Classes="windowTitleBar"
+                        Classes="dialogTitleBar"
                         PointerPressed="TitleBar_PointerPressed">
-                    <Grid ColumnDefinitions="*,Auto,Auto" Margin="12,0,8,0">
-                        <StackPanel VerticalAlignment="Center" IsHitTestVisible="False">
-                            <TextBlock Text="{Binding CharacterName}"
-                                       Classes="titleText"/>
-                            <TextBlock Text="{Binding CharacterRole}"
-                                       Classes="subtitleText"/>
-                        </StackPanel>
-                        <Button Grid.Column="1"
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="8,0,8,0">
+                        <!-- 左上角：设置按钮 -->
+                        <Button Grid.Column="0"
                                 Classes="iconButton"
-                                Command="{Binding HideWindowCommand}"
-                                Content="-"
-                                Margin="0,0,4,0"/>
+                                Command="{Binding OpenSettingsCommand}"
+                                Content="⚙"
+                                FontSize="14"
+                                Width="28" Height="28"
+                                VerticalAlignment="Center"/>
+
+                        <!-- 中间：角色名 -->
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding CharacterName}"
+                                   Classes="dialogTitleText"
+                                   VerticalAlignment="Center"
+                                   Margin="8,0,0,0"/>
+
+                        <!-- 右上角：最小化 -->
                         <Button Grid.Column="2"
                                 Classes="iconButton"
-                                Command="{Binding ExitCommand}"
-                                Content="X"/>
+                                Command="{Binding HideWindowCommand}"
+                                Content="─"
+                                FontSize="12"
+                                Width="28" Height="28"
+                                VerticalAlignment="Center"
+                                Margin="0,0,4,0"/>
+
+                        <!-- 右上角：关闭 -->
+                        <Button Grid.Column="3"
+                                Classes="iconButton"
+                                Command="{Binding CollapseDialogCommand}"
+                                Content="✕"
+                                FontSize="12"
+                                Width="28" Height="28"
+                                VerticalAlignment="Center"/>
                     </Grid>
                 </Border>
 
-                <controls:MascotView Grid.Row="1"/>
+                <!-- 聊天内容区 -->
+                <controls:ChatPanel Grid.Row="1"
+                                    x:Name="ChatPanel"/>
             </Grid>
         </Border>
-
-        <controls:ChatPanel x:Name="ChatPanel"
-                            IsVisible="{Binding IsChatVisible}"
-                            IsHitTestVisible="{Binding IsChatPanelHitTestVisible}"/>
     </Grid>
 </Window>

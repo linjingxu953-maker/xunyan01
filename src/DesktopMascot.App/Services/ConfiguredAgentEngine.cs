@@ -7,6 +7,7 @@ using DesktopMascot.Core.Interfaces;
 using DesktopMascot.Core.Models;
 using DesktopMascot.Core.Storage;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DesktopMascot.App.Services;
 
@@ -52,7 +53,6 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
         }
 
         var provider = BuildProvider(settings);
-        var computerUseOrchestrator = new ComputerUseOrchestrator(provider, _eventBus, _logger);
         var orchestrator = CreateOrchestrator(provider);
         return await orchestrator.ExecuteAsync(task, ct);
     }
@@ -81,7 +81,8 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
 
     private AgentOrchestrator CreateOrchestrator(ILlmProvider provider)
     {
-        var computerUseOrchestrator = new ComputerUseOrchestrator(provider, _eventBus, _logger);
+        var computerUseLogger = new Logger<ComputerUseOrchestrator>(Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        var computerUseOrchestrator = new ComputerUseOrchestrator(provider, _eventBus, computerUseLogger);
         return new AgentOrchestrator(
             provider,
             _toolRegistry,

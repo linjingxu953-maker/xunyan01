@@ -110,6 +110,11 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     /// </summary>
     [ObservableProperty] private bool _isChatPanelHitTestVisible = true;
 
+    // 角色图标和对话框状态
+    [ObservableProperty] private bool _isMascotIconVisible = true;
+    [ObservableProperty] private bool _isChatDialogVisible = false;
+    [ObservableProperty] private bool _isChatDialogHitTestVisible = true;
+
     public ObservableCollection<string> Messages { get; } = new();
     public ObservableCollection<TaskTimelineItem> TaskTimeline { get; } = new();
     public ObservableCollection<TaskToolCallItem> TaskToolCalls { get; } = new();
@@ -577,6 +582,28 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     private void OpenSettings()
     {
         SettingsRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// 点击角色图标 - 展开对话框
+    /// </summary>
+    [RelayCommand]
+    private void ExpandDialog()
+    {
+        IsMascotIconVisible = false;
+        IsChatDialogVisible = true;
+        IsChatVisible = true;
+    }
+
+    /// <summary>
+    /// 收起对话框 - 回到角色图标
+    /// </summary>
+    [RelayCommand]
+    private void CollapseDialog()
+    {
+        IsChatDialogVisible = false;
+        IsMascotIconVisible = true;
+        IsChatVisible = false;
     }
 
     [RelayCommand(CanExecute = nameof(CanStartScreenSelection))]

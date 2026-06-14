@@ -171,4 +171,45 @@
         <Setter Property="Maximum" Value="100"/>
         <Setter Property="Height" Value="6"/>
     </Style>
+
+    <!-- 角色图标样式 -->
+    <Style Selector="Border.mascotIcon">
+        <Setter Property="Width" Value="80"/>
+        <Setter Property="Height" Value="80"/>
+        <Setter Property="CornerRadius" Value="40"/>
+        <Setter Property="Background" Value="#EEFFFFFF"/>
+        <Setter Property="BorderBrush" Value="#40FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BoxShadow" Value="0 4 12 0 #24000000"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Bottom"/>
+        <Setter Property="Margin" Value="12,0,0,12"/>
+    </Style>
+
+    <!-- 对话框样式 -->
+    <Style Selector="Border.chatDialog">
+        <Setter Property="Width" Value="320"/>
+        <Setter Property="Height" Value="480"/>
+        <Setter Property="CornerRadius" Value="18"/>
+        <Setter Property="Background" Value="{StaticResource Brush.Surface.Window}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.Border.Glass}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BoxShadow" Value="0 12 28 0 #24000000"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+    </Style>
+
+    <!-- 对话框标题栏 -->
+    <Style Selector="Border.dialogTitleBar">
+        <Setter Property="Background" Value="#08FFFFFF"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+    </Style>
+
+    <!-- 对话框标题文字 -->
+    <Style Selector="TextBlock.dialogTitleText">
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Primary}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
 </Styles>
