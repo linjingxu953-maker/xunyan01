@@ -5,6 +5,7 @@ using DesktopMascot.Agent.Tools;
 using DesktopMascot.Core.Configuration;
 using DesktopMascot.Core.Interfaces;
 using DesktopMascot.Core.Models;
+using DesktopMascot.Core.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace DesktopMascot.App.Services;
@@ -20,6 +21,7 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
     private readonly ITaskEventStream _eventStream;
     private readonly ILogger<AgentOrchestrator> _logger;
     private readonly MemoryIntegrationService? _memoryService;
+    private readonly ITaskHistoryStore? _historyStore;
 
     public ConfiguredAgentEngine(
         IConfigurationManager configurationManager,
@@ -27,7 +29,8 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
         ITaskEventBus eventBus,
         ITaskEventStream eventStream,
         ILogger<AgentOrchestrator> logger,
-        MemoryIntegrationService? memoryService = null)
+        MemoryIntegrationService? memoryService = null,
+        ITaskHistoryStore? historyStore = null)
     {
         _configurationManager = configurationManager;
         _toolRegistry = toolRegistry;
@@ -35,6 +38,7 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
         _eventStream = eventStream;
         _logger = logger;
         _memoryService = memoryService;
+        _historyStore = historyStore;
     }
 
     public async Task<TaskResult> ExecuteAsync(AgentTask task, CancellationToken ct = default)
@@ -55,7 +59,8 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
             _eventBus,
             _logger,
             memoryService: _memoryService,
-            computerUseOrchestrator: computerUseOrchestrator);
+            computerUseOrchestrator: computerUseOrchestrator,
+            historyStore: _historyStore);
         return await orchestrator.ExecuteAsync(task, ct);
     }
 

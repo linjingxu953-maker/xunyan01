@@ -410,6 +410,15 @@ AgentOrchestrator.ExecuteAsync()
 - [x] 集成测试（2 个）
 - [x] 321 个测试全部通过
 
+### M42: 任务历史 + 取消处理 + 边界测试 ✅ 已完成
+
+- [x] AgentOrchestrator 自动记录任务历史（RecordTaskStartAsync/RecordTaskEndAsync）
+- [x] ConfiguredAgentEngine 传递 ITaskHistoryStore
+- [x] OperationCanceledException 处理
+- [x] 边界测试：空输入、长输入、LLM失败、并发任务、取消、特殊字符、Unicode
+- [x] 单元测试（7 个）
+- [x] 328 个测试全部通过
+
 ### 下一阶段
 
 - [ ] M3: 桌面体验（托盘、快捷键）- 等待 Codex 完成 UI
@@ -472,9 +481,9 @@ AgentOrchestrator.ExecuteAsync()
 
 | 指标 | 数值 |
 |------|------|
-| 已完成模块 | 32 个（M1-M2, M4-M20, M22-M28, M31-M41） |
-| 单元测试 | 321 个全部通过 |
-| 代码行数 | 约 12500+ 行 |
+| 已完成模块 | 33 个（M1-M2, M4-M20, M22-M28, M31-M42） |
+| 单元测试 | 328 个全部通过 |
+| 代码行数 | 约 13000+ 行 |
 | 核心模块 | Core, Agent |
 | 待完成 | M3（UI）、M32 UI、Computer Use UI、封测包 |
 
@@ -529,6 +538,7 @@ AgentOrchestrator.ExecuteAsync()
 | 2026-06-14 | M40 完成：Computer Use Phase 2（ComputerUseTool + ComputerUseEvent + ComputerUseOrchestrator）|
 | 2026-06-14 | 架构决策：MiMo 负责 Agent/Core，Codex 负责 UI（控制面板）|
 | 2026-06-14 | M41 完成：ComputerUseOrchestrator 集成（TaskType.ComputerUse + AgentOrchestrator 路由 + DI 注册）|
+| 2026-06-14 | M42 完成：任务历史持久化 + OperationCanceledException 处理 + 7 个边界测试 |
 
 ---
 

@@ -7,6 +7,7 @@ using DesktopMascot.Agent.Tools;
 using DesktopMascot.Core.Enums;
 using DesktopMascot.Core.Interfaces;
 using DesktopMascot.Core.Models;
+using DesktopMascot.Core.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace DesktopMascot.Agent.Engines;
@@ -22,6 +23,7 @@ public class AgentOrchestrator : IAgentEngine
     private readonly ILogger<AgentOrchestrator> _logger;
     private readonly MemoryIntegrationService? _memoryService;
     private readonly ComputerUseOrchestrator? _computerUseOrchestrator;
+    private readonly ITaskHistoryStore? _historyStore;
     private readonly int _maxIterations;
 
     public AgentOrchestrator(
@@ -31,7 +33,8 @@ public class AgentOrchestrator : IAgentEngine
         ILogger<AgentOrchestrator> logger,
         int maxIterations = 10,
         MemoryIntegrationService? memoryService = null,
-        ComputerUseOrchestrator? computerUseOrchestrator = null)
+        ComputerUseOrchestrator? computerUseOrchestrator = null,
+        ITaskHistoryStore? historyStore = null)
     {
         _llmProvider = llmProvider;
         _toolRegistry = toolRegistry;
@@ -40,78 +43,92 @@ public class AgentOrchestrator : IAgentEngine
         _maxIterations = maxIterations;
         _memoryService = memoryService;
         _computerUseOrchestrator = computerUseOrchestrator;
+        _historyStore = historyStore;
     }
 
     public async Task<TaskResult> ExecuteAsync(AgentTask task, CancellationToken ct = default)
     {
         _logger.LogInformation("Agent 开始执行任务: {Title}", task.Title);
 
-        MemoryContext? memoryContext = null;
-        if (_memoryService != null)
-        {
-            memoryContext = await _memoryService.SearchRelevantMemoriesAsync(task, ct);
-        }
+        var historyRecord = await RecordTaskStartAsync(task, ct);
 
-        var taskType = ResolveTaskType(task);
-        var contextProvider = ResolveContextProvider();
-
-        TaskResult result;
-
-        if (taskType == TaskType.SummarizePage && contextProvider != null)
+        try
         {
-            result = await ExecuteSummarizePageAsync(task, contextProvider, ct);
-        }
-        else if (taskType == TaskType.ScreenUnderstand)
-        {
-            result = await ExecuteScreenUnderstandAsync(task, ct);
-        }
-        else if (taskType == TaskType.AnalyzeError)
-        {
-            result = await ExecuteWithSpecializedPromptAsync(task, GetAnalyzeErrorPrompt(), "报错分析", ct, memoryContext);
-        }
-        else if (taskType == TaskType.InspectProject)
-        {
-            result = await ExecuteWithSpecializedPromptAsync(task, GetInspectProjectPrompt(), "项目诊断", ct, memoryContext);
-        }
-        else if (taskType == TaskType.SolveProblem)
-        {
-            result = await ExecuteWithSpecializedPromptAsync(task, GetSolveProblemPrompt(), "题目解答", ct, memoryContext);
-        }
-        else if (taskType == TaskType.WriteFile)
-        {
-            result = await ExecuteWithSpecializedPromptAsync(task, GetWriteFilePrompt(), "文件生成", ct, memoryContext);
-        }
-        else if (taskType == TaskType.RunCommand)
-        {
-            result = await ExecuteWithSpecializedPromptAsync(task, GetRunCommandPrompt(), "命令执行", ct, memoryContext);
-        }
-        else if (taskType == TaskType.ComputerUse)
-        {
-            result = await ExecuteComputerUseAsync(task, ct);
-        }
-        else
-        {
-            result = await ExecuteWithSpecializedPromptAsync(task, GetChatPrompt(), "对话", ct, memoryContext);
-        }
-
-        if (_memoryService != null && result.Success)
-        {
-            var proposals = await _memoryService.ProposeMemoriesAsync(task, result, ct);
-            if (proposals.Count > 0)
+            MemoryContext? memoryContext = null;
+            if (_memoryService != null)
             {
-                _eventBus.Publish(new TaskEvent
-                {
-                    TaskId = task.Id,
-                    State = MascotState.MemoryConfirm,
-                    Message = $"检测到 {proposals.Count} 条可保存的记忆",
-                    Progress = 95
-                });
-
-                await _memoryService.SaveProposedMemoriesAsync(proposals, ct);
+                memoryContext = await _memoryService.SearchRelevantMemoriesAsync(task, ct);
             }
-        }
 
-        return result;
+            var taskType = ResolveTaskType(task);
+            var contextProvider = ResolveContextProvider();
+
+            TaskResult result;
+
+            if (taskType == TaskType.SummarizePage && contextProvider != null)
+            {
+                result = await ExecuteSummarizePageAsync(task, contextProvider, ct);
+            }
+            else if (taskType == TaskType.ScreenUnderstand)
+            {
+                result = await ExecuteScreenUnderstandAsync(task, ct);
+            }
+            else if (taskType == TaskType.AnalyzeError)
+            {
+                result = await ExecuteWithSpecializedPromptAsync(task, GetAnalyzeErrorPrompt(), "报错分析", ct, memoryContext);
+            }
+            else if (taskType == TaskType.InspectProject)
+            {
+                result = await ExecuteWithSpecializedPromptAsync(task, GetInspectProjectPrompt(), "项目诊断", ct, memoryContext);
+            }
+            else if (taskType == TaskType.SolveProblem)
+            {
+                result = await ExecuteWithSpecializedPromptAsync(task, GetSolveProblemPrompt(), "题目解答", ct, memoryContext);
+            }
+            else if (taskType == TaskType.WriteFile)
+            {
+                result = await ExecuteWithSpecializedPromptAsync(task, GetWriteFilePrompt(), "文件生成", ct, memoryContext);
+            }
+            else if (taskType == TaskType.RunCommand)
+            {
+                result = await ExecuteWithSpecializedPromptAsync(task, GetRunCommandPrompt(), "命令执行", ct, memoryContext);
+            }
+            else if (taskType == TaskType.ComputerUse)
+            {
+                result = await ExecuteComputerUseAsync(task, ct);
+            }
+            else
+            {
+                result = await ExecuteWithSpecializedPromptAsync(task, GetChatPrompt(), "对话", ct, memoryContext);
+            }
+
+            await RecordTaskEndAsync(historyRecord, result, ct);
+
+            if (_memoryService != null && result.Success)
+            {
+                var proposals = await _memoryService.ProposeMemoriesAsync(task, result, ct);
+                if (proposals.Count > 0)
+                {
+                    _eventBus.Publish(new TaskEvent
+                    {
+                        TaskId = task.Id,
+                        State = MascotState.MemoryConfirm,
+                        Message = $"检测到 {proposals.Count} 条可保存的记忆",
+                        Progress = 95
+                    });
+
+                    await _memoryService.SaveProposedMemoriesAsync(proposals, ct);
+                }
+            }
+
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            var cancelledResult = TaskResult.Failed(task.Id, "任务已取消");
+            await RecordTaskEndAsync(historyRecord, cancelledResult, ct);
+            return cancelledResult;
+        }
     }
 
     private async Task<TaskResult> ExecuteSummarizePageAsync(
@@ -379,6 +396,48 @@ public class AgentOrchestrator : IAgentEngine
             return agentRegistry.GetContextProvider();
         }
         return null;
+    }
+
+    private async Task<TaskHistoryRecord?> RecordTaskStartAsync(AgentTask task, CancellationToken ct)
+    {
+        if (_historyStore == null) return null;
+
+        try
+        {
+            var record = new TaskHistoryRecord
+            {
+                Id = task.Id,
+                Title = task.Title,
+                Input = task.Input,
+                Type = ResolveTaskType(task),
+                Status = AppTaskStatus.Running,
+                CreatedAt = DateTime.UtcNow
+            };
+            return await _historyStore.SaveTaskAsync(record, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "记录任务开始失败");
+            return null;
+        }
+    }
+
+    private async Task RecordTaskEndAsync(TaskHistoryRecord? record, TaskResult result, CancellationToken ct)
+    {
+        if (_historyStore == null || record == null) return;
+
+        try
+        {
+            record.Status = result.Success ? AppTaskStatus.Completed : AppTaskStatus.Failed;
+            record.Result = result.Content;
+            record.Error = result.Error;
+            record.CompletedAt = DateTime.UtcNow;
+            await _historyStore.UpdateTaskAsync(record, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "记录任务结束失败");
+        }
     }
 
     private string GetSystemPrompt()
