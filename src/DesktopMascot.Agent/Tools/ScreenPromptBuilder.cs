@@ -76,20 +76,26 @@ __TYPE_PROMPT__
         var title = windowTitle?.ToLower() ?? "";
         var app = appName?.ToLower() ?? "";
 
+        // 先检查应用名（更可靠）
         if (app.Contains("terminal") || app.Contains("cmd") || app.Contains("powershell") || app.Contains("console"))
             return ScreenContentType.Terminal;
-        if (app.Contains("code") || app.Contains("visual studio") || app.Contains("rider") || app.Contains("idea"))
+        if (app.Contains("visual studio") || app.Contains("rider") || app.Contains("idea") || app.Contains("vim") || app.Contains("emacs"))
             return ScreenContentType.Code;
         if (app.Contains("chrome") || app.Contains("firefox") || app.Contains("edge") || app.Contains("browser"))
             return ScreenContentType.WebPage;
         if (app.Contains("word") || app.Contains("excel") || app.Contains("powerpoint") || app.Contains("document"))
             return ScreenContentType.Document;
+
+        // 再检查标题关键词
         if (title.Contains("error") || title.Contains("exception") || title.Contains("错误") || title.Contains("异常"))
             return ScreenContentType.Error;
-        if (title.Contains("data") || title.Contains("chart") || title.Contains("数据") || title.Contains("图表"))
+        if (title.Contains("data") || title.Contains("chart") || title.Contains("数据") || title.Contains("图表") || title.Contains("xlsx") || title.Contains("csv"))
             return ScreenContentType.Data;
         if (title.Contains("chat") || title.Contains("message") || title.Contains("聊天") || title.Contains("消息"))
             return ScreenContentType.Chat;
+        if (title.Contains(".cs") || title.Contains(".js") || title.Contains(".py") || title.Contains(".java") || title.Contains("code") || title.Contains("代码"))
+            return ScreenContentType.Code;
+
         return ScreenContentType.Unknown;
     }
 }
