@@ -1,5 +1,6 @@
 using DesktopMascot.Agent.Engines;
 using DesktopMascot.Agent.Memory;
+using DesktopMascot.Agent.Models;
 using DesktopMascot.Agent.Providers;
 using DesktopMascot.Agent.Tools;
 using DesktopMascot.Core.Configuration;
@@ -31,6 +32,7 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
     private readonly LearningEngine? _learningEngine;
     private readonly IAuditLogStore? _auditLogStore;
     private readonly ErrorHandler? _errorHandler;
+    private readonly AgentPersonality? _personality;
 
     public ConfiguredAgentEngine(
         IConfigurationManager configurationManager,
@@ -43,7 +45,8 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
         ConversationManager? conversationManager = null,
         LearningEngine? learningEngine = null,
         IAuditLogStore? auditLogStore = null,
-        ErrorHandler? errorHandler = null)
+        ErrorHandler? errorHandler = null,
+        AgentPersonality? personality = null)
     {
         _configurationManager = configurationManager;
         _toolRegistry = toolRegistry;
@@ -56,6 +59,7 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
         _learningEngine = learningEngine;
         _auditLogStore = auditLogStore;
         _errorHandler = errorHandler;
+        _personality = personality;
     }
 
     public async Task<TaskResult> ExecuteAsync(AgentTask task, CancellationToken ct = default)
@@ -110,7 +114,8 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
             conversationManager: _conversationManager,
             learningEngine: _learningEngine,
             auditLogStore: _auditLogStore,
-            errorHandler: _errorHandler);
+            errorHandler: _errorHandler,
+            personality: _personality);
     }
 
     private static ILlmProvider BuildProvider(AppSettings settings)

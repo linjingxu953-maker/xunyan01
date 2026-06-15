@@ -114,9 +114,9 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [ObservableProperty] private bool _isHotkeySectionSelected;
     [ObservableProperty] private bool _isDataSectionSelected;
     [ObservableProperty] private bool _isAppearanceSectionSelected;
-    [ObservableProperty] private string _characterName = "小桌灵";
-    [ObservableProperty] private string _characterRole = "桌面工作助手";
-    [ObservableProperty] private string _characterAvatarText = "灵";
+    [ObservableProperty] private string _characterName = "妍";
+    [ObservableProperty] private string _characterRole = "寻研桌面助手";
+    [ObservableProperty] private string _characterAvatarText = "妍";
     [ObservableProperty] private string _characterPersonality = "沉稳可靠";
     [ObservableProperty] private string _characterCatchphrase = "我在桌面待命，随时可以接任务。";
     [ObservableProperty] private string _characterAccentColor = "#2563EB";
@@ -493,7 +493,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private void UseAppProviderForMimoCode()
     {
         MimoCodeModelConfigMode = "AppProvider";
-        MimoCodeStatus = "已选择使用桌面小人设置中心的 Provider/API Key。";
+        MimoCodeStatus = "已选择使用寻研设置中心的 Provider/API Key。";
         RefreshMimoCodeCards();
     }
 
@@ -1303,7 +1303,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         MimoCodeReadinessItems.Add(new SettingsListItem(
             "接入状态",
             IsMimoCodeEnabled ? "已启用" : "未启用",
-            "开启后桌面小人可以把代码任务交给本机 Mimo Code connector。"));
+            "开启后寻研可以把代码任务交给本机 Mimo Code connector。"));
         MimoCodeReadinessItems.Add(new SettingsListItem(
             "模型 API",
             GetMimoCodeModelModeText(MimoCodeModelConfigMode),
@@ -1314,7 +1314,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             "集成或分发时需要保留 Mimo Code 的版权声明和许可证文本。"));
         MimoCodeReadinessItems.Add(new SettingsListItem(
             "权限确认",
-            "走桌面小人确认体系",
+            "走寻研确认体系",
             "文件写入、命令执行和记忆保存仍通过当前权限/记忆弹窗确认。"));
         MimoCodeReadinessItems.Add(new SettingsListItem(
             "后续对接",
@@ -1331,7 +1331,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     {
         return NormalizeMimoCodeModelMode(value) == "MimoLocalConfig"
             ? "使用 Mimo Code 本机配置"
-            : "使用桌面小人 Provider/API Key";
+            : "使用寻研 Provider/API Key";
     }
 
     private void RefreshHotkeyCards()
@@ -2096,9 +2096,9 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
 
         try
         {
-            CharacterName = CleanText(profile.Name, "小桌灵", 12);
-            CharacterRole = CleanText(profile.Role, "桌面工作助手", 24);
-            CharacterAvatarText = CleanText(profile.AvatarText, "灵", 4);
+            CharacterName = CleanText(profile.Name, "妍", 12);
+            CharacterRole = CleanText(profile.Role, "寻研桌面助手", 24);
+            CharacterAvatarText = CleanText(profile.AvatarText, "妍", 4);
             CharacterPersonality = CleanText(profile.Personality, "沉稳可靠", 12);
             CharacterCatchphrase = CleanText(profile.Catchphrase, "我在桌面待命，随时可以接任务。", 40);
             CharacterAccentColor = NormalizeHexColor(profile.AccentColor, "#2563EB");
@@ -2130,9 +2130,9 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
 
     private MascotCharacterProfile BuildCurrentCharacterProfile() => new()
     {
-        Name = CleanText(CharacterName, "小桌灵", 12),
-        Role = CleanText(CharacterRole, "桌面工作助手", 24),
-        AvatarText = CleanText(CharacterAvatarText, "灵", 4),
+        Name = CleanText(CharacterName, "妍", 12),
+        Role = CleanText(CharacterRole, "寻研桌面助手", 24),
+        AvatarText = CleanText(CharacterAvatarText, "妍", 4),
         Personality = CleanText(CharacterPersonality, "沉稳可靠", 12),
         Catchphrase = CleanText(CharacterCatchphrase, "我在桌面待命，随时可以接任务。", 40),
         AccentColor = NormalizeHexColor(CharacterAccentColor, "#2563EB"),

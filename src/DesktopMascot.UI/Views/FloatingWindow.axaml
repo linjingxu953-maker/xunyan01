@@ -4,18 +4,18 @@
         xmlns:controls="using:DesktopMascot.UI.Views.Controls"
         x:Class="DesktopMascot.UI.Views.FloatingWindow"
         x:DataType="vm:FloatingWindowViewModel"
-        Title="DesktopMascot"
+        Title="寻研"
         Width="180"
         Height="240"
         MinWidth="180"
         MinHeight="240"
-        MaxWidth="640"
+        MaxWidth="820"
         MaxHeight="560"
         WindowStartupLocation="Manual"
         Background="Transparent"
         Topmost="True"
         WindowDecorations="None"
-        TransparencyLevelHint="AcrylicBlur"
+        TransparencyLevelHint="Transparent"
         CanResize="False"
         ShowInTaskbar="False"
         ClipToBounds="False">
@@ -31,6 +31,7 @@
                 PointerPressed="MascotIcon_PointerPressed"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Bottom"
+                Panel.ZIndex="2"
                 Margin="0,0,4,4">
             <Grid>
                 <Border x:Name="MascotHalo"
@@ -63,8 +64,9 @@
         <Border Classes="chatDialog"
                 IsVisible="{Binding IsChatDialogVisible}"
                 IsHitTestVisible="{Binding IsChatDialogHitTestVisible}"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Bottom">
+                HorizontalAlignment="Left"
+                VerticalAlignment="Bottom"
+                Panel.ZIndex="1">
             <Grid RowDefinitions="52,*">
                 <Border Grid.Row="0"
                         Classes="dialogTitleBar"

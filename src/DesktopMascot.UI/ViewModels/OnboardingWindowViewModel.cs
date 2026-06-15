@@ -74,7 +74,7 @@ public sealed partial class OnboardingWindowViewModel : ObservableObject
     public string ModeSummaryText => IsMimoCodeMode ? "MiMo Code" : "内置 Agent";
     public string MimoCodeModelModeText => NormalizeMimoCodeModelMode(MimoCodeModelConfigMode) == "MimoLocalConfig"
         ? "使用 MiMo Code 本机配置"
-        : "使用桌面小人 Provider/API Key";
+        : "使用寻研 Provider/API Key";
 
     public event EventHandler? Completed;
     public event EventHandler? Skipped;
@@ -113,7 +113,7 @@ public sealed partial class OnboardingWindowViewModel : ObservableObject
         AgentMode = mode == "MimoCode" ? "MimoCode" : "BuiltIn";
         SetupStatus = IsMimoCodeMode
             ? "已选择 MiMo Code：代码任务会交给本机 CLI，仍使用用户自己的模型配置。"
-            : "已选择内置 Agent：任务直接由桌面小人内置 Agent 执行。";
+            : "已选择内置 Agent：任务直接由寻研内置 Agent 执行。";
         RefreshDerivedProperties();
     }
 

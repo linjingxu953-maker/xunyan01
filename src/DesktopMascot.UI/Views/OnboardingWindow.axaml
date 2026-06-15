@@ -3,7 +3,7 @@
         xmlns:vm="using:DesktopMascot.UI.ViewModels"
         x:Class="DesktopMascot.UI.Views.OnboardingWindow"
         x:DataType="vm:OnboardingWindowViewModel"
-        Title="DesktopMascot 初始设置"
+        Title="寻研 初始设置"
         Width="820"
         Height="620"
         MinWidth="720"
@@ -137,7 +137,7 @@
                                 <StackPanel Spacing="10">
                                     <TextBlock Text="内置 Agent"
                                                Classes="panelTitle"/>
-                                    <TextBlock Text="直接使用桌面小人内置 Agent，适合日常问答、上下文读取和工具调用。"
+                                    <TextBlock Text="直接使用寻研内置 Agent，适合日常问答、上下文读取和工具调用。"
                                                Classes="bodyText"/>
                                     <Button Content="使用内置 Agent"
                                             Classes="primaryAction"
@@ -323,7 +323,7 @@
                                        Foreground="{StaticResource Brush.Text.Primary}"
                                        FontSize="22"
                                        FontWeight="SemiBold"/>
-                            <TextBlock Text="保存后进入桌面小人。"
+                            <TextBlock Text="保存后进入寻研。"
                                        Classes="bodyText"/>
                         </StackPanel>
 

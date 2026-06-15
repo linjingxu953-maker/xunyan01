@@ -98,9 +98,9 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanSendMessage))]
     private string _inputText = string.Empty;
-    [ObservableProperty] private string _characterName = "小桌灵";
-    [ObservableProperty] private string _characterRole = "桌面工作助手";
-    [ObservableProperty] private string _characterAvatarText = "灵";
+    [ObservableProperty] private string _characterName = "妍";
+    [ObservableProperty] private string _characterRole = "寻研桌面助手";
+    [ObservableProperty] private string _characterAvatarText = "妍";
     [ObservableProperty] private string _characterPersonality = "沉稳可靠";
     [ObservableProperty] private string _characterCatchphrase = "我在桌面待命，随时可以接任务。";
     [ObservableProperty] private string _characterAccentColor = "#2563EB";
@@ -285,6 +285,13 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     partial void OnInputTextChanged(string value)
     {
         SendMessageCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnCurrentStateChanged(MascotState value)
+    {
+        StateAccentBrush = GetAccentBrush(value);
+        MascotBackgroundBrush = GetMascotBackgroundBrush(value);
+        RefreshCharacterImage();
     }
 
     partial void OnIsBusyChanged(bool value)
@@ -681,7 +688,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ExpandDialog()
     {
-        IsMascotIconVisible = false;
+        IsMascotIconVisible = true;
         IsChatDialogVisible = true;
         IsChatVisible = true;
         IsChatPageVisible = true;
@@ -816,7 +823,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
 
     public void OpenSettingsPanel(string? section = null)
     {
-        IsMascotIconVisible = false;
+        IsMascotIconVisible = true;
         IsChatDialogVisible = true;
         IsChatVisible = true;
         IsChatPageVisible = false;
@@ -2054,9 +2061,9 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
 
         try
         {
-            CharacterName = CleanText(profile.Name, "小桌灵", 12);
-            CharacterRole = CleanText(profile.Role, "桌面工作助手", 24);
-            CharacterAvatarText = CleanText(profile.AvatarText, "灵", 4);
+            CharacterName = CleanText(profile.Name, "妍", 12);
+            CharacterRole = CleanText(profile.Role, "寻研桌面助手", 24);
+            CharacterAvatarText = CleanText(profile.AvatarText, "妍", 4);
             CharacterPersonality = CleanText(profile.Personality, "沉稳可靠", 12);
             CharacterCatchphrase = CleanText(profile.Catchphrase, "我在桌面待命，随时可以接任务。", 40);
             CharacterAccentColor = NormalizeHexColor(profile.AccentColor, "#2563EB");
@@ -2085,9 +2092,9 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
 
     private MascotCharacterProfile BuildCurrentCharacterProfile() => new()
     {
-        Name = CleanText(CharacterName, "小桌灵", 12),
-        Role = CleanText(CharacterRole, "桌面工作助手", 24),
-        AvatarText = CleanText(CharacterAvatarText, "灵", 4),
+        Name = CleanText(CharacterName, "妍", 12),
+        Role = CleanText(CharacterRole, "寻研桌面助手", 24),
+        AvatarText = CleanText(CharacterAvatarText, "妍", 4),
         Personality = CleanText(CharacterPersonality, "沉稳可靠", 12),
         Catchphrase = CleanText(CharacterCatchphrase, "我在桌面待命，随时可以接任务。", 40),
         AccentColor = NormalizeHexColor(CharacterAccentColor, "#2563EB"),
@@ -2198,7 +2205,7 @@ public class MessageItem
 {
     public string Role { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
-    public string RoleText => Role == "user" ? "你" : "小桌灵";
+    public string RoleText => Role == "user" ? "你" : "妍";
     public HorizontalAlignment BubbleAlignment => Role == "user" ? HorizontalAlignment.Right : HorizontalAlignment.Left;
     public CornerRadius BubbleCornerRadius => Role == "user"
         ? new CornerRadius(14, 14, 4, 14)

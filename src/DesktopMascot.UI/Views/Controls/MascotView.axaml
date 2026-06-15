@@ -10,14 +10,14 @@
             <Grid>
                 <Ellipse Width="116"
                          Height="116"
-                         Fill="{Binding MascotBackgroundBrush}"
-                         Stroke="{Binding StateAccentBrush}"
-                         StrokeThickness="3"
+                         Fill="Transparent"
+                         Stroke="Transparent"
+                         StrokeThickness="0"
                          HorizontalAlignment="Center"
                          VerticalAlignment="Center"/>
                 <Ellipse Width="86"
                          Height="86"
-                         Fill="{StaticResource Brush.White}"
+                         Fill="Transparent"
                          HorizontalAlignment="Center"
                          VerticalAlignment="Center"/>
                 <Border Width="94"

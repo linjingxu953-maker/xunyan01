@@ -35,6 +35,8 @@ public class AgentOrchestrator : IAgentEngine
     private readonly LearningEngine _learningEngine;
     private readonly int _maxIterations;
 
+    private readonly AgentPersonality _personality;
+
     public AgentOrchestrator(
         ILlmProvider llmProvider,
         ToolRegistry toolRegistry,
@@ -47,7 +49,8 @@ public class AgentOrchestrator : IAgentEngine
         ConversationManager? conversationManager = null,
         LearningEngine? learningEngine = null,
         IAuditLogStore? auditLogStore = null,
-        ErrorHandler? errorHandler = null)
+        ErrorHandler? errorHandler = null,
+        AgentPersonality? personality = null)
     {
         _llmProvider = llmProvider;
         _toolRegistry = toolRegistry;
@@ -61,6 +64,7 @@ public class AgentOrchestrator : IAgentEngine
         _learningEngine = learningEngine ?? new LearningEngine();
         _auditLogStore = auditLogStore;
         _errorHandler = errorHandler;
+        _personality = personality ?? new AgentPersonality();
     }
 
     public async Task<TaskResult> ExecuteAsync(AgentTask task, CancellationToken ct = default)
@@ -510,16 +514,7 @@ public class AgentOrchestrator : IAgentEngine
     private string GetSystemPrompt()
     {
         var toolNames = string.Join(", ", _toolRegistry.GetToolDefinitions().Select(t => t.Name));
-        return $"""
-            你是一个智能助手，可以帮助用户完成各种任务。
-
-            可用工具: {toolNames}
-
-            当你需要使用工具时，请在响应中包含工具调用。
-            当任务完成时，直接返回结果给用户。
-
-            请用中文回复。
-            """;
+        return _personality.BuildSystemPrompt(toolNames, hasContext: true);
     }
 
     private List<ToolCall> ParseToolCalls(string content)

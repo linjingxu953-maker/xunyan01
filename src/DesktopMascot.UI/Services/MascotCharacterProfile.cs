@@ -17,9 +17,9 @@ public sealed class MascotCharacterProfile
         ["Error"] = "error.png"
     };
 
-    public string Name { get; set; } = "小桌灵";
-    public string Role { get; set; } = "桌面工作助手";
-    public string AvatarText { get; set; } = "灵";
+    public string Name { get; set; } = "妍";
+    public string Role { get; set; } = "寻研桌面助手";
+    public string AvatarText { get; set; } = "妍";
     public string Personality { get; set; } = "沉稳可靠";
     public string Catchphrase { get; set; } = "我在桌面待命，随时可以接任务。";
     public string AccentColor { get; set; } = "#2563EB";

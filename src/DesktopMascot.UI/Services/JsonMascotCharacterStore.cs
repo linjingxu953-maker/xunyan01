@@ -44,6 +44,7 @@ public sealed class JsonMascotCharacterStore : IMascotCharacterStore
             var json = File.ReadAllText(_filePath);
             var profile = JsonSerializer.Deserialize<MascotCharacterProfile>(json, SerializerOptions)
                 ?? new MascotCharacterProfile();
+            ApplyCurrentBrandDefaults(profile);
             profile.EnsureImageDefaults();
             return profile;
         }
@@ -60,6 +61,7 @@ public sealed class JsonMascotCharacterStore : IMascotCharacterStore
         try
         {
             profile.EnsureImageDefaults();
+            ApplyCurrentBrandDefaults(profile);
             var directory = Path.GetDirectoryName(_filePath);
             if (!string.IsNullOrWhiteSpace(directory))
             {
@@ -108,6 +110,10 @@ public sealed class JsonMascotCharacterStore : IMascotCharacterStore
 
             var json = File.ReadAllText(filePath);
             var profile = JsonSerializer.Deserialize<MascotCharacterProfile>(json, SerializerOptions);
+            if (profile is not null)
+            {
+                ApplyCurrentBrandDefaults(profile);
+            }
             profile?.EnsureImageDefaults();
             return profile;
         }
@@ -167,6 +173,7 @@ public sealed class JsonMascotCharacterStore : IMascotCharacterStore
             if (profile is null)
                 return null;
 
+            ApplyCurrentBrandDefaults(profile);
             profile.EnsureImageDefaults();
             var id = Path.GetFileNameWithoutExtension(filePath);
             return CreateEntry(id, profile, File.GetLastWriteTimeUtc(filePath), activeId);
@@ -235,6 +242,18 @@ public sealed class JsonMascotCharacterStore : IMascotCharacterStore
         }
 
         return null;
+    }
+
+    private static void ApplyCurrentBrandDefaults(MascotCharacterProfile profile)
+    {
+        if (string.Equals(profile.Name, "小桌灵", StringComparison.Ordinal))
+            profile.Name = "妍";
+
+        if (string.Equals(profile.Role, "桌面工作助手", StringComparison.Ordinal))
+            profile.Role = "寻研桌面助手";
+
+        if (string.Equals(profile.AvatarText, "灵", StringComparison.Ordinal))
+            profile.AvatarText = "妍";
     }
 
     private static IEnumerable<string> EnumerateCharacterRootCandidates()

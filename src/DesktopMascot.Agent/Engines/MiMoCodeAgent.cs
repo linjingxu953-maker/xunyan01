@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using DesktopMascot.Core.Enums;
 using DesktopMascot.Core.Interfaces;
@@ -187,6 +188,8 @@ public class MiMoCodeAgent : IAgentEngine
         {
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8,
             UseShellExecute = false,
             CreateNoWindow = true,
             WorkingDirectory = workingDirectory

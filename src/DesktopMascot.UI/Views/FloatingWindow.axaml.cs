@@ -14,7 +14,7 @@ public partial class FloatingWindow : Window
 {
     private const double CollapsedWidth = 180;
     private const double CollapsedHeight = 240;
-    private const double ExpandedWidth = 640;
+    private const double ExpandedWidth = 820;
     private const double ExpandedHeight = 560;
 
     private readonly DispatcherTimer _animationTimer;
