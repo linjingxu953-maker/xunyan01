@@ -7,6 +7,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DesktopMascot.Core.Configuration;
 using DesktopMascot.Core.Enums;
+using DesktopMascot.Core.Memory;
+using DesktopMascot.Core.Security;
 using DesktopMascot.UI.Services;
 
 namespace DesktopMascot.UI.ViewModels;
@@ -58,10 +60,17 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private readonly ICharacterAssetImportService _characterAssetImportService;
     private readonly ICharacterAssetPickerService _characterAssetPickerService;
     private readonly IGlobalHotkeyService _hotkeyService;
+    private readonly IPermissionManager? _permissionManager;
+    private readonly IAuditLogStore? _auditLogStore;
+    private readonly IMemoryStore? _memoryStore;
     private bool _isApplyingProvider;
     private bool _isApplyingCharacterProfile;
     private AppSettings _settings = new();
     private PermissionSettings _permissionSettings = new();
+    private List<AuditLogEntry> _recentAuditLogs = [];
+    private int _auditLogTotalCount;
+    private MemoryStatistics? _memoryStatistics;
+    private List<MemoryEntry> _recentMemoryEntries = [];
 
     [ObservableProperty] private string _selectedSectionId = "model";
     [ObservableProperty] private ModelProviderOption? _selectedProvider;
@@ -149,7 +158,10 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         ICharacterImageService characterImageService,
         ICharacterAssetImportService characterAssetImportService,
         ICharacterAssetPickerService characterAssetPickerService,
-        IGlobalHotkeyService hotkeyService)
+        IGlobalHotkeyService hotkeyService,
+        IPermissionManager? permissionManager = null,
+        IAuditLogStore? auditLogStore = null,
+        IMemoryStore? memoryStore = null)
     {
         _configurationManager = configurationManager;
         _diagnosticsService = diagnosticsService;
@@ -159,6 +171,9 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         _characterAssetImportService = characterAssetImportService;
         _characterAssetPickerService = characterAssetPickerService;
         _hotkeyService = hotkeyService;
+        _permissionManager = permissionManager;
+        _auditLogStore = auditLogStore;
+        _memoryStore = memoryStore;
 
         Sections =
         [
@@ -299,15 +314,15 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
 
             ModelSettingsStatus = "已加载本机模型配置。";
             MimoCodeStatus = "已加载 Mimo Code 接入配置。模型调用不会使用内置 Key。";
-            PermissionSettingsStatus = "已加载本机权限策略。M29 接入后会显示真实请求和审计数据。";
-            MemorySettingsStatus = "已加载本机记忆开关。记忆确认弹窗已接入 IMemoryConfirmationPrompt。";
+            PermissionSettingsStatus = "已加载本机权限策略。正在读取权限审计数据。";
+            MemorySettingsStatus = "已加载本机记忆开关。正在读取记忆统计。";
             ApplyCharacterProfile(_characterStore.Load(), save: false);
             CharacterSaveStatus = "已加载本机角色外观配置。";
             RefreshCharacterProfiles();
             LoadHotkeyTextFromService();
             RefreshMimoCodeCards();
-            RefreshPermissionCards();
-            RefreshMemoryCards();
+            await RefreshPermissionSnapshotAsync(ct);
+            await RefreshMemorySnapshotAsync(ct);
             RefreshHotkeyCards();
             RefreshDataDirectoryItems();
         }
@@ -543,7 +558,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
 
             PermissionSettingsStatus =
                 $"已保存权限策略：{SelectedAutoApproveLevel.Title}，审计日志保留 {retentionDays} 天。";
-            RefreshPermissionCards();
+            await RefreshPermissionSnapshotAsync();
         }
         finally
         {
@@ -552,22 +567,52 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void RefreshPermissionStatus()
+    private async Task RefreshPermissionStatus()
     {
-        PermissionSettingsStatus = "权限 UI 壳已就绪。等待 M29 将 IPermissionManager 的请求、审计和授权状态接入。";
-        RefreshPermissionCards();
+        IsBusy = true;
+
+        try
+        {
+            await RefreshPermissionSnapshotAsync();
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
-    private void OpenPermissionAudit()
+    private async Task OpenPermissionAudit()
     {
-        PermissionSettingsStatus = "审计日志入口已预留。M29 接入后这里会读取 IPermissionManager.GetAuditLogsAsync。";
+        IsBusy = true;
+
+        try
+        {
+            await RefreshPermissionSnapshotAsync();
+            PermissionSettingsStatus = _recentAuditLogs.Count == 0
+                ? "权限审计服务已连接，当前还没有审计记录。"
+                : $"已显示最近 {_recentAuditLogs.Count} 条权限审计记录。";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
     private void ManagePermanentPermissions()
     {
-        PermissionSettingsStatus = "永久授权管理入口已预留。M29 接入后这里会支持查看和撤销授权。";
+        if (_permissionSettings.PermanentPermissions.Count == 0)
+        {
+            PermissionSettingsStatus = "当前配置里没有永久授权项；运行时永久授权列表尚未通过 IPermissionManager 暴露。";
+            return;
+        }
+
+        var preview = string.Join("、", _permissionSettings.PermanentPermissions
+            .Take(3)
+            .Select(x => $"{x.Key} L{x.Value}"));
+        PermissionSettingsStatus =
+            $"当前配置含 {_permissionSettings.PermanentPermissions.Count} 项永久授权：{preview}。撤销入口后续会接二次确认。";
     }
 
     [RelayCommand]
@@ -583,7 +628,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             MemorySettingsStatus = IsMemoryEnabled
                 ? "已开启记忆功能。保存长期记忆前会通过 IMemoryConfirmationPrompt 请求确认。"
                 : "已关闭记忆功能。后续工具链应跳过新记忆保存。";
-            RefreshMemoryCards();
+            await RefreshMemorySnapshotAsync();
         }
         finally
         {
@@ -592,11 +637,18 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void RefreshMemoryStatus()
+    private async Task RefreshMemoryStatus()
     {
-        MemorySettingsStatus = "记忆 UI 已接入 IMemoryConfirmationPrompt。统计、浏览和队列数据后续可从 IMemoryStore/事件流填充。";
-        RefreshMemoryCards();
-        RefreshPendingMemoryReviewState();
+        IsBusy = true;
+
+        try
+        {
+            await RefreshMemorySnapshotAsync();
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
@@ -691,31 +743,64 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void OpenMemoryBrowser()
+    private async Task OpenMemoryBrowser()
     {
-        MemorySettingsStatus = "记忆浏览入口已预留。后续这里会支持按类型检索和确认状态筛选。";
+        IsBusy = true;
+
+        try
+        {
+            await RefreshMemorySnapshotAsync();
+            MemorySettingsStatus = _recentMemoryEntries.Count == 0
+                ? "记忆存储已连接，当前还没有已保存记忆。"
+                : $"已显示最近 {_recentMemoryEntries.Count} 条记忆，可按类型和确认状态检查。";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
-    private void ExportMemory()
+    private async Task ExportMemory()
     {
-        MemorySettingsStatus = "记忆导出入口已预留。后续这里会调用 IMemoryStore.ExportAsync。";
+        if (_memoryStore is null)
+        {
+            MemorySettingsStatus = "IMemoryStore 未注入，暂时无法导出记忆。";
+            return;
+        }
+
+        IsBusy = true;
+
+        try
+        {
+            var data = await _memoryStore.ExportAsync();
+            var exportDirectory = Path.Combine(GetLocalDataRoot(), "Exports");
+            Directory.CreateDirectory(exportDirectory);
+            var exportPath = Path.Combine(exportDirectory, $"memories-{DateTime.Now:yyyyMMdd-HHmmss}.json");
+            await File.WriteAllTextAsync(exportPath, data);
+            MemorySettingsStatus = $"已导出记忆到 {exportPath}。";
+            await RefreshMemorySnapshotAsync();
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
     private void ImportMemory()
     {
-        MemorySettingsStatus = "记忆导入入口已预留。后续这里会调用 IMemoryStore.ImportAsync。";
+        MemorySettingsStatus = "导入需要文件选择入口；当前先保留状态提示，避免误读剪贴板或草稿内容。";
     }
 
     [RelayCommand]
     private void ClearMemory()
     {
-        MemorySettingsStatus = "记忆清理入口已预留。真实删除需要 M30 后增加二次确认。";
+        MemorySettingsStatus = "清理记忆是高风险操作，当前不直接删除；后续接二次确认和审计后再开放。";
     }
 
     [RelayCommand]
-    private void ConfirmPendingMemoryReview()
+    private async Task ConfirmPendingMemoryReview()
     {
         if (SelectedPendingMemoryReview is null)
         {
@@ -723,8 +808,26 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             return;
         }
 
-        MemorySettingsStatus =
-            $"保存入口已预留：{SelectedPendingMemoryReview.Key}。接入队列数据后会返回 MemoryDecision.Save。";
+        if (_memoryStore is null)
+        {
+            MemorySettingsStatus = "IMemoryStore 未注入，暂时无法确认记忆。";
+            return;
+        }
+
+        IsBusy = true;
+
+        try
+        {
+            var saved = await _memoryStore.ConfirmAsync(SelectedPendingMemoryReview.Id);
+            MemorySettingsStatus = saved
+                ? $"已确认并保存记忆：{SelectedPendingMemoryReview.Key}。"
+                : $"没有找到待确认记忆：{SelectedPendingMemoryReview.Key}。";
+            await RefreshMemorySnapshotAsync();
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
@@ -750,11 +853,11 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         }
 
         MemorySettingsStatus =
-            $"拒绝入口已预留：{SelectedPendingMemoryReview.Key}。接入队列数据后会返回 MemoryDecision.Reject。";
+            $"拒绝记忆需要删除或归档语义，当前不直接移除：{SelectedPendingMemoryReview.Key}。后续接二次确认后开放。";
     }
 
     [RelayCommand]
-    private void SaveEditedPendingMemoryReview()
+    private async Task SaveEditedPendingMemoryReview()
     {
         if (SelectedPendingMemoryReview is null)
         {
@@ -768,8 +871,33 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             return;
         }
 
-        MemorySettingsStatus =
-            $"编辑后保存入口已预留：{SelectedPendingMemoryReview.Key}。接入队列数据后会返回 MemoryDecision.Save 和 EditedContent。";
+        if (_memoryStore is null)
+        {
+            MemorySettingsStatus = "IMemoryStore 未注入，暂时无法保存编辑后的记忆。";
+            return;
+        }
+
+        IsBusy = true;
+
+        try
+        {
+            var entry = await _memoryStore.GetByIdAsync(SelectedPendingMemoryReview.Id);
+            if (entry is null)
+            {
+                MemorySettingsStatus = $"没有找到待编辑记忆：{SelectedPendingMemoryReview.Key}。";
+                return;
+            }
+
+            entry.Content = PendingMemoryDraftContent.Trim();
+            entry.IsConfirmed = true;
+            await _memoryStore.SaveAsync(entry);
+            MemorySettingsStatus = $"已编辑并确认记忆：{entry.Key}。";
+            await RefreshMemorySnapshotAsync();
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
