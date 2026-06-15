@@ -3,105 +3,108 @@
              xmlns:vm="using:DesktopMascot.UI.ViewModels"
              x:Class="DesktopMascot.UI.Views.Controls.ComputerUsePanel"
              x:DataType="vm:FloatingWindowViewModel">
-    <Border Classes="inlineCard">
-        <StackPanel Spacing="10">
+    <Border Classes="computerUsePanel">
+        <StackPanel Spacing="9">
             <Grid ColumnDefinitions="*,Auto">
-                <StackPanel>
+                <StackPanel Spacing="2">
                     <TextBlock Text="Computer Use"
-                               Classes="sectionTitle"/>
+                               Classes="computerUseTitle"/>
                     <TextBlock Text="{Binding ComputerUseStatusText}"
-                               Classes="bodyText"
+                               Classes="computerUseBody"
+                               TextWrapping="Wrap"
                                MaxLines="2"/>
                 </StackPanel>
                 <Border Grid.Column="1"
-                        Background="{StaticResource Brush.Info.Surface}"
-                        CornerRadius="8"
-                        Padding="7,2"
+                        Classes="computerUseModeBadge"
                         VerticalAlignment="Top">
                     <TextBlock Text="{Binding ComputerUseModeText}"
-                               Foreground="{StaticResource Brush.Info.Text}"
-                               FontSize="10"
-                               FontWeight="SemiBold"/>
+                               Classes="computerUseModeText"/>
                 </Border>
             </Grid>
 
             <Grid ColumnDefinitions="*,Auto">
-                <StackPanel>
+                <StackPanel Spacing="2">
                     <TextBlock Text="目标"
-                               Classes="sectionTitle"/>
+                               Classes="computerUseSubTitle"/>
                     <TextBlock Text="{Binding ComputerUseTargetText}"
-                               Classes="bodyText"
+                               Classes="computerUseBody"
+                               TextWrapping="Wrap"
                                MaxLines="2"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1"
                             Orientation="Horizontal"
-                            Spacing="6"
+                            Spacing="5"
                             VerticalAlignment="Center">
                     <Button Content="暂停"
-                            Classes="secondaryAction"
+                            Classes="computerUseButton"
                             Command="{Binding PauseComputerUseCommand}"/>
                     <Button Content="继续"
-                            Classes="secondaryAction"
+                            Classes="computerUseButton"
                             Command="{Binding ResumeComputerUseCommand}"/>
                     <Button Content="接管"
-                            Classes="primaryAction"
-                            Background="{Binding StateAccentBrush}"
+                            Classes="computerUsePrimaryButton"
                             Command="{Binding TakeOverComputerUseCommand}"
-                            Padding="10,6"/>
+                            Padding="10,5"/>
                     <Button Content="停止"
-                            Classes="secondaryAction"
+                            Classes="computerUseDangerButton"
                             Command="{Binding StopComputerUseCommand}"/>
                 </StackPanel>
             </Grid>
 
             <TextBlock Text="{Binding ComputerUseControlStatus}"
-                       Classes="captionText"
+                       Classes="computerUseCaption"
                        TextWrapping="Wrap"/>
 
             <TextBlock Text="暂无 Computer Use 动作"
-                       Classes="captionText"
+                       Classes="computerUseCaption"
                        IsVisible="{Binding HasNoComputerUseActions}"/>
 
-            <ItemsControl ItemsSource="{Binding ComputerUseActions}"
+            <ScrollViewer MaxHeight="138"
+                          VerticalScrollBarVisibility="Auto"
                           IsVisible="{Binding HasComputerUseActions}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:ComputerUseActionItem">
-                        <Grid ColumnDefinitions="*,Auto"
-                              RowDefinitions="Auto,Auto,Auto"
-                              Margin="0,0,0,8">
-                            <StackPanel Orientation="Horizontal"
-                                        Spacing="6">
-                                <TextBlock Text="{Binding ActionName}"
-                                           Foreground="{StaticResource Brush.Text.Primary}"
-                                           FontSize="12"
-                                           FontWeight="SemiBold"/>
-                                <Border Background="{StaticResource Brush.Success.Surface}"
-                                        CornerRadius="8"
-                                        Padding="6,1">
-                                    <TextBlock Text="{Binding StatusText}"
-                                               Foreground="{StaticResource Brush.Success.Text}"
-                                               FontSize="10"
-                                               FontWeight="SemiBold"/>
-                                </Border>
-                            </StackPanel>
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding TimeText}"
-                                       Classes="captionText"/>
-                            <TextBlock Grid.Row="1"
-                                       Grid.ColumnSpan="2"
-                                       Text="{Binding Target}"
-                                       Classes="captionText"
-                                       Margin="0,3,0,0"/>
-                            <TextBlock Grid.Row="2"
-                                       Grid.ColumnSpan="2"
-                                       Text="{Binding Detail}"
-                                       Classes="bodyText"
-                                       Margin="0,2,0,0"
-                                       MaxLines="2"/>
-                        </Grid>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                <ItemsControl ItemsSource="{Binding ComputerUseActions}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ComputerUseActionItem">
+                            <Border Classes="computerUseActionRow"
+                                    Margin="0,0,0,7">
+                                <Grid ColumnDefinitions="*,Auto"
+                                      RowDefinitions="Auto,Auto,Auto"
+                                      ColumnSpacing="8">
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="6">
+                                        <TextBlock Text="{Binding ActionName}"
+                                                   Classes="computerUseActionTitle"/>
+                                        <Border Background="{Binding StatusBrush}"
+                                                CornerRadius="8"
+                                                Padding="6,1">
+                                            <TextBlock Text="{Binding StatusText}"
+                                                       Foreground="{Binding StatusForeground}"
+                                                       FontSize="10"
+                                                       FontWeight="SemiBold"/>
+                                        </Border>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding TimeText}"
+                                               Classes="computerUseCaption"/>
+                                    <TextBlock Grid.Row="1"
+                                               Grid.ColumnSpan="2"
+                                               Text="{Binding Target}"
+                                               Classes="computerUseCaption"
+                                               TextTrimming="CharacterEllipsis"
+                                               Margin="0,3,0,0"/>
+                                    <TextBlock Grid.Row="2"
+                                               Grid.ColumnSpan="2"
+                                               Text="{Binding Detail}"
+                                               Classes="computerUseBody"
+                                               TextWrapping="Wrap"
+                                               Margin="0,2,0,0"
+                                               MaxLines="2"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
         </StackPanel>
     </Border>
 </UserControl>

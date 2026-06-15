@@ -1558,6 +1558,151 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             : localAppData;
     }
 
+    private async Task RefreshPermissionSnapshotAsync(CancellationToken ct = default)
+    {
+        var logs = new List<AuditLogEntry>();
+
+        if (_permissionManager is not null)
+        {
+            logs.AddRange(await _permissionManager.GetAuditLogsAsync(50, ct));
+        }
+
+        if (_auditLogStore is not null)
+        {
+            logs.AddRange(await _auditLogStore.GetLogsAsync(50, ct));
+            _auditLogTotalCount = await _auditLogStore.GetTotalCountAsync(ct);
+        }
+
+        _recentAuditLogs = logs
+            .GroupBy(CreateAuditLogKey)
+            .Select(group => group.OrderByDescending(item => item.Timestamp).First())
+            .OrderByDescending(item => item.Timestamp)
+            .Take(8)
+            .ToList();
+
+        if (_auditLogTotalCount < _recentAuditLogs.Count)
+        {
+            _auditLogTotalCount = _recentAuditLogs.Count;
+        }
+
+        PermissionSettingsStatus = _permissionManager is null && _auditLogStore is null
+            ? "权限服务未注入，当前只能保存本地策略配置。"
+            : _recentAuditLogs.Count == 0
+                ? "权限服务已连接，当前暂无审计记录。"
+                : $"已读取 {_recentAuditLogs.Count} 条最近审计记录；总记录约 {_auditLogTotalCount} 条。";
+        RefreshPermissionCards();
+    }
+
+    private async Task RefreshMemorySnapshotAsync(CancellationToken ct = default)
+    {
+        if (_memoryStore is null)
+        {
+            _memoryStatistics = null;
+            _recentMemoryEntries = [];
+            PendingMemoryReviews.Clear();
+            MemorySettingsStatus = "IMemoryStore 未注入，当前只能保存记忆开关。";
+            RefreshMemoryCards();
+            RefreshPendingMemoryReviewState();
+            return;
+        }
+
+        _memoryStatistics = await _memoryStore.GetStatisticsAsync(ct);
+        var result = await _memoryStore.SearchAsync(string.Empty, null, 200, ct);
+        _recentMemoryEntries = result.Entries
+            .OrderByDescending(item => item.UpdatedAt)
+            .Take(10)
+            .ToList();
+
+        PopulatePendingMemoryReviews(result.Entries
+            .Where(item => !item.IsConfirmed)
+            .OrderByDescending(item => item.UpdatedAt)
+            .Take(20));
+
+        MemorySettingsStatus = _memoryStatistics.TotalCount == 0
+            ? "记忆存储已连接，当前还没有长期记忆。"
+            : $"已读取 {_memoryStatistics.TotalCount} 条记忆，待确认 {_memoryStatistics.UnconfirmedCount} 条。";
+        RefreshMemoryCards();
+        RefreshPendingMemoryReviewState();
+    }
+
+    private void PopulatePendingMemoryReviews(IEnumerable<MemoryEntry> entries)
+    {
+        var selectedId = SelectedPendingMemoryReview?.Id;
+        PendingMemoryReviews.Clear();
+
+        foreach (var entry in entries)
+        {
+            PendingMemoryReviews.Add(CreatePendingMemoryReviewItem(entry));
+        }
+
+        SelectedPendingMemoryReview = !string.IsNullOrWhiteSpace(selectedId)
+            ? PendingMemoryReviews.FirstOrDefault(item => item.Id == selectedId)
+            : PendingMemoryReviews.FirstOrDefault();
+    }
+
+    private static PendingMemoryReviewItem CreatePendingMemoryReviewItem(MemoryEntry entry)
+    {
+        var tags = entry.Tags.Count == 0
+            ? "无标签"
+            : string.Join("、", entry.Tags.Select(item => $"{item.Key}:{item.Value}"));
+
+        return new PendingMemoryReviewItem(
+            entry.Id,
+            GetMemoryTypeText(entry.Type),
+            entry.Key,
+            string.IsNullOrWhiteSpace(entry.Source) ? "IMemoryStore" : entry.Source,
+            "来自记忆存储的未确认条目。",
+            FormatTime(entry.CreatedAt),
+            entry.IsConfirmed ? "已确认" : "待确认",
+            entry.Content,
+            tags,
+            entry.ExpiresAt.HasValue ? FormatTime(entry.ExpiresAt.Value) : "长期");
+    }
+
+    private static string CreateAuditLogKey(AuditLogEntry entry)
+    {
+        if (!string.IsNullOrWhiteSpace(entry.Id))
+            return entry.Id;
+
+        return $"{entry.TaskId}|{entry.Operation}|{entry.Target}|{entry.Timestamp:O}";
+    }
+
+    private static string FormatTime(DateTime value)
+    {
+        var local = value.Kind == DateTimeKind.Local ? value : value.ToLocalTime();
+        return local.ToString("MM-dd HH:mm");
+    }
+
+    private static string FormatPermissionLevel(PermissionLevel level) => level switch
+    {
+        PermissionLevel.L0_Chat => "L0 聊天",
+        PermissionLevel.L1_WindowTitle => "L1 窗口标题",
+        PermissionLevel.L2_ScreenBrowser => "L2 屏幕/浏览器",
+        PermissionLevel.L3_FileRead => "L3 文件读取",
+        PermissionLevel.L4_FileWrite => "L4 文件写入",
+        PermissionLevel.L5_CommandExec => "L5 命令执行",
+        PermissionLevel.L6_Forbidden => "L6 禁止",
+        _ => level.ToString()
+    };
+
+    private static string FormatPermissionDecision(PermissionDecision decision) => decision switch
+    {
+        PermissionDecision.Allow => "允许",
+        PermissionDecision.AllowOnce => "允许一次",
+        PermissionDecision.AllowAlways => "永久允许",
+        PermissionDecision.Deny => "拒绝",
+        _ => decision.ToString()
+    };
+
+    private static string GetMemoryTypeText(MemoryType type) => type switch
+    {
+        MemoryType.User => "用户偏好",
+        MemoryType.Project => "项目信息",
+        MemoryType.Skill => "技能流程",
+        MemoryType.History => "任务历史",
+        _ => type.ToString()
+    };
+
     private void RefreshPermissionCards()
     {
         PermissionReadinessItems.Clear();
@@ -1567,40 +1712,70 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             "文件写入、命令执行、权限请求和记忆保存可以共用当前确认弹窗体系。"));
         PermissionReadinessItems.Add(new SettingsListItem(
             "M29 回调接口",
-            "接入中",
-            "MiMo 接入权限确认接口后，这里会显示真实权限请求状态。"));
+            _permissionManager is null ? "未注入" : "已接入",
+            "设置页会读取 IPermissionManager 和 IAuditLogStore 的最近权限审计数据。"));
         PermissionReadinessItems.Add(new SettingsListItem(
             "自动批准等级",
             SelectedAutoApproveLevel?.Title ?? "每次确认",
-            "本地策略已可保存，后续由工具执行管道读取并执行。"));
+            $"本地策略已可保存，审计日志保留 {AuditLogRetentionDays} 天。"));
+        PermissionReadinessItems.Add(new SettingsListItem(
+            "审计记录",
+            _auditLogTotalCount <= 0 ? "暂无" : $"{_auditLogTotalCount} 条",
+            _recentAuditLogs.Count == 0 ? "当前没有可展示的权限决策记录。" : $"已展示最近 {_recentAuditLogs.Count} 条。"));
 
         PermissionRequestTypeItems.Clear();
-        PermissionRequestTypeItems.Add(new SettingsListItem(
-            "文件写入确认",
-            "弹窗入口已预留",
-            "用于保存、覆盖、删除等会修改本地文件的操作。"));
-        PermissionRequestTypeItems.Add(new SettingsListItem(
-            "命令执行确认",
-            "弹窗入口已预留",
-            "用于 PowerShell、外部程序和高风险命令执行。"));
-        PermissionRequestTypeItems.Add(new SettingsListItem(
-            "工具权限确认",
-            "等待 M25/M29",
-            "用于工具执行管道的权限检查、用户决策和结果回写。"));
+        foreach (var group in _recentAuditLogs
+                     .GroupBy(item => item.Level)
+                     .OrderByDescending(group => group.Key)
+                     .Take(4))
+        {
+            PermissionRequestTypeItems.Add(new SettingsListItem(
+                FormatPermissionLevel(group.Key),
+                $"{group.Count()} 条",
+                $"最近权限审计中 {FormatPermissionLevel(group.Key)} 的请求数量。"));
+        }
+
+        if (PermissionRequestTypeItems.Count == 0)
+        {
+            PermissionRequestTypeItems.Add(new SettingsListItem(
+                "文件写入确认",
+                "已接入",
+                "用于保存、覆盖、删除等会修改本地文件的操作。"));
+            PermissionRequestTypeItems.Add(new SettingsListItem(
+                "命令执行确认",
+                "已接入",
+                "用于 PowerShell、外部程序和高风险命令执行。"));
+            PermissionRequestTypeItems.Add(new SettingsListItem(
+                "工具权限确认",
+                "等待记录",
+                "工具执行管道产生审计后会在这里按风险级别统计。"));
+        }
 
         PermissionAuditItems.Clear();
         PermissionAuditItems.Add(new SettingsListItem(
             "永久授权",
             $"{_permissionSettings.PermanentPermissions.Count} 项",
-            "后续支持查看、撤销和按操作类型筛选。"));
+            _permissionSettings.PermanentPermissions.Count == 0
+                ? "当前本地策略没有保存永久授权项。"
+                : string.Join("、", _permissionSettings.PermanentPermissions.Take(3).Select(item => $"{item.Key} L{item.Value}"))));
         PermissionAuditItems.Add(new SettingsListItem(
             "黑名单命令",
             $"{_permissionSettings.BlockedCommands.Count} 项",
-            "后续支持从设置页维护阻止规则。"));
+            _permissionSettings.BlockedCommands.Count == 0
+                ? "当前没有配置本地阻止命令。"
+                : string.Join("、", _permissionSettings.BlockedCommands.Take(3))));
         PermissionAuditItems.Add(new SettingsListItem(
             "审计日志",
             $"保留 {AuditLogRetentionDays} 天",
-            "M29 接入后会展示最近请求、决策、目标和时间。"));
+            _recentAuditLogs.Count == 0 ? "暂无最近审计记录。" : "最近权限审计记录如下。"));
+
+        foreach (var entry in _recentAuditLogs)
+        {
+            PermissionAuditItems.Add(new SettingsListItem(
+                FormatTime(entry.Timestamp),
+                FormatPermissionDecision(entry.Decision),
+                $"{entry.Operation} / {FormatPermissionLevel(entry.Level)} / {entry.Target}"));
+        }
     }
 
     private void RefreshMemoryCards()
@@ -1617,23 +1792,45 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         MemoryReadinessItems.Add(new SettingsListItem(
             "待确认队列",
             HasPendingMemoryReviews ? $"{PendingMemoryReviews.Count} 条" : "空",
-            "后续可绑定 MemoryConfirmationRequest 列表或状态事件流。"));
+            "来自 IMemoryStore 中 IsConfirmed=false 的记忆条目。"));
         MemoryReadinessItems.Add(new SettingsListItem(
             "记忆存储统计",
-            "等待 IMemoryStore",
-            "后续会读取 TotalCount、UnconfirmedCount 和分类数量。"));
+            _memoryStore is null ? "未注入" : "已接入",
+            _memoryStatistics is null
+                ? "等待读取 MemoryStatistics。"
+                : $"最近更新时间：{(_memoryStatistics.LastUpdated.HasValue ? FormatTime(_memoryStatistics.LastUpdated.Value) : "暂无")}。"));
 
         MemoryStatsItems.Clear();
-        MemoryStatsItems.Add(new SettingsListItem("全部记忆", "待接入", "对应 MemoryStatistics.TotalCount。"));
-        MemoryStatsItems.Add(new SettingsListItem("用户偏好", "待接入", "对应 MemoryType.User。"));
-        MemoryStatsItems.Add(new SettingsListItem("项目信息", "待接入", "对应 MemoryType.Project。"));
-        MemoryStatsItems.Add(new SettingsListItem("技能流程", "待接入", "对应 MemoryType.Skill。"));
-        MemoryStatsItems.Add(new SettingsListItem("待确认", "待接入", "对应 MemoryStatistics.UnconfirmedCount。"));
+        if (_memoryStatistics is null)
+        {
+            MemoryStatsItems.Add(new SettingsListItem("全部记忆", "未读取", "等待 IMemoryStore.GetStatisticsAsync。"));
+            MemoryStatsItems.Add(new SettingsListItem("待确认", "未读取", "等待 IMemoryStore.GetStatisticsAsync。"));
+        }
+        else
+        {
+            MemoryStatsItems.Add(new SettingsListItem("全部记忆", $"{_memoryStatistics.TotalCount}", "MemoryStatistics.TotalCount。"));
+            MemoryStatsItems.Add(new SettingsListItem("用户偏好", $"{_memoryStatistics.UserCount}", "MemoryType.User。"));
+            MemoryStatsItems.Add(new SettingsListItem("项目信息", $"{_memoryStatistics.ProjectCount}", "MemoryType.Project。"));
+            MemoryStatsItems.Add(new SettingsListItem("技能流程", $"{_memoryStatistics.SkillCount}", "MemoryType.Skill。"));
+            MemoryStatsItems.Add(new SettingsListItem("任务历史", $"{_memoryStatistics.HistoryCount}", "MemoryType.History。"));
+            MemoryStatsItems.Add(new SettingsListItem("待确认", $"{_memoryStatistics.UnconfirmedCount}", "未确认记忆需要用户确认后进入长期记忆。"));
+        }
 
         MemoryActionItems.Clear();
-        MemoryActionItems.Add(new SettingsListItem("浏览记忆", "预留", "按类型、标签和关键词查看记忆。"));
-        MemoryActionItems.Add(new SettingsListItem("导入/导出", "预留", "通过 IMemoryStore 导入导出结构化记忆。"));
-        MemoryActionItems.Add(new SettingsListItem("清理记忆", "预留", "删除前需要二次确认和审计记录。"));
+        if (_recentMemoryEntries.Count == 0)
+        {
+            MemoryActionItems.Add(new SettingsListItem("最近记忆", "暂无", "保存记忆后会在这里显示最近条目。"));
+        }
+        else
+        {
+            foreach (var entry in _recentMemoryEntries)
+            {
+                MemoryActionItems.Add(new SettingsListItem(
+                    $"{GetMemoryTypeText(entry.Type)} / {entry.Key}",
+                    entry.IsConfirmed ? "已确认" : "待确认",
+                    $"{FormatTime(entry.UpdatedAt)} · {CleanText(entry.Content, "无内容", 80)}"));
+            }
+        }
     }
 
     private void RefreshCharacterAssetSuggestions()

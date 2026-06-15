@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:DesktopMascot.UI.ViewModels"
+        xmlns:controls="using:DesktopMascot.UI.Views.Controls"
         x:Class="DesktopMascot.UI.Views.FloatingWindow"
         x:DataType="vm:FloatingWindowViewModel"
         Title="DesktopMascot"
@@ -152,7 +153,7 @@
                     </Border>
 
                     <Grid Grid.Column="1">
-                    <Grid RowDefinitions="*,Auto,Auto"
+                    <Grid RowDefinitions="*,Auto,Auto,Auto"
                           IsVisible="{Binding IsChatPageVisible}">
                         <Border Grid.Row="0"
                                 Classes="messageList">
@@ -200,7 +201,11 @@
                             </Grid>
                         </Border>
 
-                        <Border Grid.Row="1"
+                        <controls:ComputerUsePanel Grid.Row="1"
+                                                   Margin="14,0,14,10"
+                                                   IsVisible="{Binding IsComputerUsePanelVisible}"/>
+
+                        <Border Grid.Row="2"
                                 Classes="statusBar"
                                 IsVisible="{Binding IsTaskActive}">
                             <Grid ColumnDefinitions="Auto,*,Auto"
@@ -224,7 +229,7 @@
                             </Grid>
                         </Border>
 
-                        <Border Grid.Row="2"
+                        <Border Grid.Row="3"
                                 Classes="inputArea">
                             <Grid ColumnDefinitions="*,Auto"
                                   Margin="14,12">
@@ -404,32 +409,50 @@
                                                 <TextBlock Text="{Binding InlineSettings.PermissionSettingsStatus}"
                                                            Classes="inlineSettingsBody"
                                                            TextWrapping="Wrap"/>
-                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
-                                                    <TextBlock Text="M29 权限确认入口已接入，策略保存到本机。"
-                                                               Classes="inlineSettingsBody"
-                                                               TextWrapping="Wrap"
-                                                               VerticalAlignment="Center"/>
-                                                    <Button Grid.Column="1"
-                                                            Content="刷新"
+                                                <TextBlock Text="M29 权限确认入口已接入，策略保存到本机。"
+                                                           Classes="inlineSettingsBody"
+                                                           TextWrapping="Wrap"/>
+                                                <WrapPanel>
+                                                    <Button Content="刷新"
                                                             Classes="inlineSettingsBackButton"
                                                             Command="{Binding InlineSettings.RefreshPermissionStatusCommand}"
-                                                            Margin="8,0,0,0"/>
-                                                    <Button Grid.Column="2"
-                                                            Content="永久授权"
+                                                            Margin="0,0,8,8"/>
+                                                    <Button Content="永久授权"
                                                             Classes="inlineSettingsBackButton"
                                                             Command="{Binding InlineSettings.ManagePermanentPermissionsCommand}"
-                                                            Margin="8,0,0,0"/>
-                                                    <Button Grid.Column="3"
-                                                            Content="审计日志"
+                                                            Margin="0,0,8,8"/>
+                                                    <Button Content="审计日志"
                                                             Classes="inlineSettingsBackButton"
                                                             Command="{Binding InlineSettings.OpenPermissionAuditCommand}"
-                                                            Margin="8,0,0,0"/>
-                                                    <Button Grid.Column="4"
-                                                            Content="保存"
+                                                            Margin="0,0,8,8"/>
+                                                    <Button Content="保存"
                                                             Classes="sendButton"
                                                             Command="{Binding InlineSettings.SavePermissionSettingsCommand}"
-                                                            Margin="8,0,0,0"/>
-                                                </Grid>
+                                                            Margin="0,0,8,8"/>
+                                                </WrapPanel>
+                                                <TextBlock Text="最近审计"
+                                                           Classes="inlineSettingsCardTitle"/>
+                                                <ItemsControl ItemsSource="{Binding InlineSettings.PermissionAuditItems}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:SettingsListItem">
+                                                            <Grid ColumnDefinitions="88,76,*"
+                                                                  ColumnSpacing="8"
+                                                                  Margin="0,0,0,7">
+                                                                <TextBlock Text="{Binding Title}"
+                                                                           Classes="inlineSettingsBody"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Grid.Column="1"
+                                                                           Text="{Binding Value}"
+                                                                           Classes="inlineSettingsBody"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Grid.Column="2"
+                                                                           Text="{Binding Description}"
+                                                                           Classes="inlineSettingsBody"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>
@@ -443,37 +466,107 @@
                                                 <TextBlock Text="{Binding InlineSettings.MemorySettingsStatus}"
                                                            Classes="inlineSettingsBody"
                                                            TextWrapping="Wrap"/>
-                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto">
-                                                    <TextBlock Text="M30 记忆确认接口已接入，操作会给出状态反馈。"
-                                                               Classes="inlineSettingsBody"
-                                                               TextWrapping="Wrap"
-                                                               VerticalAlignment="Center"/>
-                                                    <Button Grid.Column="1"
-                                                            Content="刷新"
+                                                <TextBlock Text="M30 记忆确认接口已接入，操作会给出状态反馈。"
+                                                           Classes="inlineSettingsBody"
+                                                           TextWrapping="Wrap"/>
+                                                <WrapPanel>
+                                                    <Button Content="刷新"
                                                             Classes="inlineSettingsBackButton"
                                                             Command="{Binding InlineSettings.RefreshMemoryStatusCommand}"
-                                                            Margin="8,0,0,0"/>
-                                                    <Button Grid.Column="2"
-                                                            Content="浏览"
+                                                            Margin="0,0,8,8"/>
+                                                    <Button Content="浏览"
                                                             Classes="inlineSettingsBackButton"
                                                             Command="{Binding InlineSettings.OpenMemoryBrowserCommand}"
-                                                            Margin="8,0,0,0"/>
-                                                    <Button Grid.Column="3"
-                                                            Content="导出"
+                                                            Margin="0,0,8,8"/>
+                                                    <Button Content="导出"
                                                             Classes="inlineSettingsBackButton"
                                                             Command="{Binding InlineSettings.ExportMemoryCommand}"
-                                                            Margin="8,0,0,0"/>
-                                                    <Button Grid.Column="4"
-                                                            Content="导入"
+                                                            Margin="0,0,8,8"/>
+                                                    <Button Content="导入"
                                                             Classes="inlineSettingsBackButton"
                                                             Command="{Binding InlineSettings.ImportMemoryCommand}"
-                                                            Margin="8,0,0,0"/>
-                                                    <Button Grid.Column="5"
-                                                            Content="保存"
+                                                            Margin="0,0,8,8"/>
+                                                    <Button Content="保存"
                                                             Classes="sendButton"
                                                             Command="{Binding InlineSettings.SaveMemorySettingsCommand}"
-                                                            Margin="8,0,0,0"/>
-                                                </Grid>
+                                                            Margin="0,0,8,8"/>
+                                                </WrapPanel>
+                                                <TextBlock Text="记忆统计"
+                                                           Classes="inlineSettingsCardTitle"/>
+                                                <ItemsControl ItemsSource="{Binding InlineSettings.MemoryStatsItems}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:SettingsListItem">
+                                                            <Grid ColumnDefinitions="82,54,*"
+                                                                  ColumnSpacing="8"
+                                                                  Margin="0,0,0,7">
+                                                                <TextBlock Text="{Binding Title}"
+                                                                           Classes="inlineSettingsBody"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Grid.Column="1"
+                                                                           Text="{Binding Value}"
+                                                                           Classes="inlineSettingsBody"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Grid.Column="2"
+                                                                           Text="{Binding Description}"
+                                                                           Classes="inlineSettingsBody"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <TextBlock Text="待确认记忆"
+                                                           Classes="inlineSettingsCardTitle"/>
+                                                <TextBlock Text="当前没有待确认记忆。"
+                                                           Classes="inlineSettingsBody"
+                                                           IsVisible="{Binding InlineSettings.HasNoPendingMemoryReviews}"/>
+                                                <ItemsControl ItemsSource="{Binding InlineSettings.PendingMemoryReviews}"
+                                                              IsVisible="{Binding InlineSettings.HasPendingMemoryReviews}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:PendingMemoryReviewItem">
+                                                            <Grid RowDefinitions="Auto,Auto"
+                                                                  Margin="0,0,0,8">
+                                                                <Grid ColumnDefinitions="*,Auto"
+                                                                      ColumnSpacing="8">
+                                                                    <TextBlock Text="{Binding Key}"
+                                                                               Classes="inlineSettingsBody"
+                                                                               TextTrimming="CharacterEllipsis"/>
+                                                                    <TextBlock Grid.Column="1"
+                                                                               Text="{Binding Status}"
+                                                                               Classes="inlineSettingsBody"/>
+                                                                </Grid>
+                                                                <TextBlock Grid.Row="1"
+                                                                           Text="{Binding Content}"
+                                                                           Classes="inlineSettingsBody"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <TextBlock Text="最近记忆"
+                                                           Classes="inlineSettingsCardTitle"/>
+                                                <ItemsControl ItemsSource="{Binding InlineSettings.MemoryActionItems}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:SettingsListItem">
+                                                            <Grid ColumnDefinitions="*,68"
+                                                                  RowDefinitions="Auto,Auto"
+                                                                  ColumnSpacing="8"
+                                                                  Margin="0,0,0,8">
+                                                                <TextBlock Text="{Binding Title}"
+                                                                           Classes="inlineSettingsBody"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Grid.Column="1"
+                                                                           Text="{Binding Value}"
+                                                                           Classes="inlineSettingsBody"
+                                                                           HorizontalAlignment="Right"/>
+                                                                <TextBlock Grid.Row="1"
+                                                                           Grid.ColumnSpan="2"
+                                                                           Text="{Binding Description}"
+                                                                           Classes="inlineSettingsBody"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>

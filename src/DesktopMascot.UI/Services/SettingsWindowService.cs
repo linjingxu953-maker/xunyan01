@@ -2,6 +2,8 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using DesktopMascot.Core.Configuration;
+using DesktopMascot.Core.Memory;
+using DesktopMascot.Core.Security;
 using DesktopMascot.UI.ViewModels;
 using DesktopMascot.UI.Views;
 
@@ -16,6 +18,9 @@ public sealed class SettingsWindowService : ISettingsWindowService
     private readonly ICharacterImageService _characterImageService;
     private readonly ICharacterAssetImportService _characterAssetImportService;
     private readonly IGlobalHotkeyService _hotkeyService;
+    private readonly IPermissionManager _permissionManager;
+    private readonly IAuditLogStore _auditLogStore;
+    private readonly IMemoryStore _memoryStore;
     private SettingsWindow? _window;
 
     public SettingsWindowService(
@@ -25,7 +30,10 @@ public sealed class SettingsWindowService : ISettingsWindowService
         IMascotCharacterStore characterStore,
         ICharacterImageService characterImageService,
         ICharacterAssetImportService characterAssetImportService,
-        IGlobalHotkeyService hotkeyService)
+        IGlobalHotkeyService hotkeyService,
+        IPermissionManager permissionManager,
+        IAuditLogStore auditLogStore,
+        IMemoryStore memoryStore)
     {
         _configurationManager = configurationManager;
         _diagnosticsService = diagnosticsService;
@@ -34,6 +42,9 @@ public sealed class SettingsWindowService : ISettingsWindowService
         _characterImageService = characterImageService;
         _characterAssetImportService = characterAssetImportService;
         _hotkeyService = hotkeyService;
+        _permissionManager = permissionManager;
+        _auditLogStore = auditLogStore;
+        _memoryStore = memoryStore;
     }
 
     public void ShowSettingsWindow(string? sectionId = null)
@@ -61,7 +72,10 @@ public sealed class SettingsWindowService : ISettingsWindowService
             _characterImageService,
             _characterAssetImportService,
             assetPickerService,
-            _hotkeyService);
+            _hotkeyService,
+            _permissionManager,
+            _auditLogStore,
+            _memoryStore);
         _window = window;
         _window.DataContext = viewModel;
         SelectSection(viewModel, sectionId);

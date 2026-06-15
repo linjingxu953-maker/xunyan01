@@ -470,6 +470,100 @@
         <Setter Property="Padding" Value="10"/>
     </Style>
 
+    <Style Selector="Border.computerUsePanel">
+        <Setter Property="Background" Value="#C50B1220"/>
+        <Setter Property="BorderBrush" Value="#2EFFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Padding" Value="12"/>
+        <Setter Property="BoxShadow" Value="0 12 28 0 #36000000"/>
+    </Style>
+
+    <Style Selector="Border.computerUseModeBadge">
+        <Setter Property="Background" Value="#1E40AF"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="8,3"/>
+    </Style>
+
+    <Style Selector="Border.computerUseActionRow">
+        <Setter Property="Background" Value="#12FFFFFF"/>
+        <Setter Property="BorderBrush" Value="#18FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="8"/>
+    </Style>
+
+    <Style Selector="TextBlock.computerUseTitle">
+        <Setter Property="Foreground" Value="#F8FAFC"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="TextBlock.computerUseSubTitle">
+        <Setter Property="Foreground" Value="#CBD5E1"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="TextBlock.computerUseBody">
+        <Setter Property="Foreground" Value="#D8E0EA"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="LineHeight" Value="17"/>
+    </Style>
+
+    <Style Selector="TextBlock.computerUseCaption">
+        <Setter Property="Foreground" Value="#94A3B8"/>
+        <Setter Property="FontSize" Value="10"/>
+    </Style>
+
+    <Style Selector="TextBlock.computerUseModeText">
+        <Setter Property="Foreground" Value="#DBEAFE"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="TextBlock.computerUseActionTitle">
+        <Setter Property="Foreground" Value="#F8FAFC"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="Button.computerUseButton">
+        <Setter Property="Padding" Value="9,5"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Background" Value="#18FFFFFF"/>
+        <Setter Property="BorderBrush" Value="#26FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="#E5E7EB"/>
+        <Setter Property="FontSize" Value="11"/>
+    </Style>
+
+    <Style Selector="Button.computerUseButton:pointerover">
+        <Setter Property="Background" Value="#28FFFFFF"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+
+    <Style Selector="Button.computerUsePrimaryButton">
+        <Setter Property="Padding" Value="9,5"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Background" Value="#2563EB"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="Button.computerUseDangerButton">
+        <Setter Property="Padding" Value="9,5"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Background" Value="#3A1117"/>
+        <Setter Property="BorderBrush" Value="#7F1D1D"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="#FCA5A5"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
     <Style Selector="TextBlock.inlineSettingsCardTitle">
         <Setter Property="Foreground" Value="#F8FAFC"/>
         <Setter Property="FontSize" Value="14"/>

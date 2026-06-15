@@ -179,7 +179,10 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         ISettingsDiagnosticsService settingsDiagnosticsService,
         IOnboardingWindowService onboardingWindowService,
         ICharacterAssetImportService characterAssetImportService,
-        IGlobalHotkeyService hotkeyService)
+        IGlobalHotkeyService hotkeyService,
+        IPermissionManager permissionManager,
+        IAuditLogStore auditLogStore,
+        IMemoryStore memoryStore)
     {
         _taskRouter = taskRouter;
         _eventBus = eventBus;
@@ -197,7 +200,10 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
             characterImageService,
             characterAssetImportService,
             new CharacterAssetPickerService(() => _inlineSettingsOwner),
-            hotkeyService);
+            hotkeyService,
+            permissionManager,
+            auditLogStore,
+            memoryStore);
         InlineSettings.PropertyChanged += OnInlineSettingsPropertyChanged;
 
         _characterStore.ProfileChanged += OnCharacterProfileChanged;
@@ -481,7 +487,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     {
         PrimeComputerUsePanel("暂停请求", "人工控制", "已请求", "已请求暂停自动桌面操作。");
         ComputerUseModeText = "暂停中";
-        ComputerUseControlStatus = "已请求暂停 Computer Use，等待控制管道接入。";
+        ComputerUseControlStatus = "暂停请求已记录；底层暂停 API 暂未开放，敏感动作仍会走权限确认。";
     }
 
     [RelayCommand]
@@ -489,7 +495,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     {
         PrimeComputerUsePanel("继续请求", "人工控制", "已请求", "已请求继续自动桌面操作。");
         ComputerUseModeText = "执行中";
-        ComputerUseControlStatus = "已请求继续 Computer Use，等待控制管道接入。";
+        ComputerUseControlStatus = "继续请求已记录；后续接入 Agent 控制 API 后会恢复自动动作。";
     }
 
     [RelayCommand]
@@ -497,7 +503,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     {
         PrimeComputerUsePanel("人工接管", "当前桌面", "已请求", "已请求人工接管当前桌面操作。");
         ComputerUseModeText = "接管中";
-        ComputerUseControlStatus = "已请求人工接管，后续会由 Computer Use 回调确认。";
+        TryCancelComputerUseTask("已请求人工接管，正在停止自动桌面操作。");
     }
 
     [RelayCommand]
@@ -505,7 +511,27 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     {
         PrimeComputerUsePanel("停止请求", "当前任务", "已请求", "已请求停止 Computer Use 自动操作。");
         ComputerUseModeText = "停止中";
-        ComputerUseControlStatus = "已请求停止 Computer Use，等待控制管道接入。";
+        TryCancelComputerUseTask("已请求停止 Computer Use 自动操作。");
+    }
+
+    private void TryCancelComputerUseTask(string requestedStatus)
+    {
+        if (string.IsNullOrWhiteSpace(ActiveTaskId))
+        {
+            ComputerUseControlStatus = $"{requestedStatus} 当前没有活动任务 ID。";
+            return;
+        }
+
+        if (_taskRouter.CancelTask(ActiveTaskId))
+        {
+            CanCancelTask = false;
+            ComputerUseControlStatus = $"{requestedStatus} 已向任务路由发送取消请求。";
+            TaskActionStatus = "已请求中断 Computer Use。";
+            StatusMessage = "正在中断 Computer Use...";
+            return;
+        }
+
+        ComputerUseControlStatus = $"{requestedStatus} 当前任务路由未接受取消请求，可能任务已结束。";
     }
 
     [RelayCommand(CanExecute = nameof(CanUseTaskResultActions))]
@@ -1248,7 +1274,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
 
     private static bool IsComputerUseTask(AgentTask task, string typeText, string userMessage)
     {
-        if (task.Type == TaskType.ScreenUnderstand)
+        if (task.Type is TaskType.ScreenUnderstand or TaskType.ComputerUse)
             return true;
 
         if (ContainsComputerUseSignal(typeText) ||
@@ -1295,6 +1321,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
                text.Contains("computer-use") ||
                text.Contains("computer_use") ||
                text.Contains("computeruse") ||
+               text.Contains("computer use 任务") ||
                text.Contains("desktop action") ||
                text.Contains("desktop_action") ||
                text.Contains("screen action") ||
@@ -1305,17 +1332,29 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
                text.Contains("screen capture") ||
                text.Contains("screencapture") ||
                text.Contains("screenshot") ||
+               text.Contains("screenobserved") ||
+               text.Contains("actionplanned") ||
+               text.Contains("actionexecuting") ||
+               text.Contains("actioncompleted") ||
                text.Contains("mouse") ||
                text.Contains("keyboard") ||
                text.Contains("click") ||
                text.Contains("type_text") ||
+               text.Contains("hotkey") ||
+               text.Contains("scroll") ||
                text.Contains("控制电脑") ||
                text.Contains("操作电脑") ||
                text.Contains("桌面操作") ||
+               text.Contains("观察屏幕") ||
+               text.Contains("规划动作") ||
+               text.Contains("执行动作") ||
+               text.Contains("自动桌面") ||
                text.Contains("人工接管") ||
                text.Contains("鼠标") ||
                text.Contains("键盘") ||
                text.Contains("点击") ||
+               text.Contains("滚动") ||
+               text.Contains("快捷键") ||
                text.Contains("输入文本");
     }
 
@@ -1334,6 +1373,8 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
             _ => taskEvent.State switch
             {
                 MascotState.WaitingApproval => "待确认",
+                MascotState.ReadingContext => "观察中",
+                MascotState.Planning => "规划中",
                 MascotState.Working => "执行中",
                 MascotState.Completed => "完成",
                 MascotState.Error => "异常",
@@ -1347,6 +1388,18 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         var action = GetFirstMetadataString(taskEvent, "computerAction", "action", "operation", "step", "toolName");
         if (!string.IsNullOrWhiteSpace(action))
             return action;
+
+        if (taskEvent.Message.Contains("观察屏幕", StringComparison.OrdinalIgnoreCase))
+            return "观察屏幕";
+
+        if (taskEvent.Message.Contains("规划", StringComparison.OrdinalIgnoreCase))
+            return "动作规划";
+
+        if (taskEvent.Message.Contains("等待确认", StringComparison.OrdinalIgnoreCase))
+            return "等待确认";
+
+        if (taskEvent.Message.Contains("用户已接管", StringComparison.OrdinalIgnoreCase))
+            return "人工接管";
 
         return taskEvent.EventType switch
         {
@@ -1379,7 +1432,15 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
             TaskEventType.TaskCompleted => "已完成",
             TaskEventType.TaskFailed => "失败",
             TaskEventType.TaskCancelled => "已停止",
-            _ => "进行中"
+            _ => taskEvent.State switch
+            {
+                MascotState.ReadingContext => "观察中",
+                MascotState.Planning => "规划中",
+                MascotState.WaitingApproval => "待确认",
+                MascotState.Completed => "已完成",
+                MascotState.Error => "失败",
+                _ => "进行中"
+            }
         };
     }
 
@@ -1434,6 +1495,8 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
             TaskEventType.TaskCompleted => "Computer Use 任务已完成。",
             TaskEventType.TaskFailed => "Computer Use 任务执行失败，可交给用户接管或重试。",
             TaskEventType.TaskCancelled => "Computer Use 任务已停止。",
+            TaskEventType.ToolCallStarted => "正在执行桌面动作，可随时停止或接管。",
+            TaskEventType.ToolCallCompleted => "桌面动作已完成，等待下一步。",
             _ => CleanText(message, "Computer Use 状态已更新。", 80)
         };
     }
@@ -1879,6 +1942,9 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
 
         if (input.Contains("报错") || input.Contains("错误") || lower.Contains("error") || lower.Contains("exception"))
             return (TaskType.AnalyzeError, PermissionLevel.L1_WindowTitle, "分析当前报错", "报错分析");
+
+        if (ContainsComputerUseSignal(input))
+            return (TaskType.ComputerUse, PermissionLevel.L2_ScreenBrowser, "桌面自动操作", "Computer Use");
 
         if (input.Contains("项目") || input.Contains("目录") || lower.Contains("project") || lower.Contains("repo"))
             return (TaskType.InspectProject, PermissionLevel.L3_FileRead, "诊断项目目录", "项目诊断");
