@@ -36,27 +36,33 @@ public class ComputerUseEvent
     public ComputerUseEventType EventType { get; set; }
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
+    // 结构化元数据 - UI 面板直接使用，无需解析 Message
+    /// <summary>操作类型（click/type/hotkey/scroll/screenshot 等）</summary>
+    public string? Action { get; set; }
+    /// <summary>工具名称（computer_use/screen_capture 等）</summary>
+    public string? ToolName { get; set; }
+    /// <summary>操作目标（坐标、文本、快捷键等）</summary>
+    public string? Target { get; set; }
+    /// <summary>详细参数 JSON</summary>
+    public string? Detail { get; set; }
+    /// <summary>状态（pending/executing/completed/failed/waiting_approval）</summary>
+    public string? Status { get; set; }
+
+    // 事件特定字段
     /// <summary>屏幕截图路径（ScreenObserved 时）</summary>
     public string? ScreenshotPath { get; set; }
-
     /// <summary>规划的动作列表（ActionPlanned 时）</summary>
     public List<PlannedAction>? PlannedActions { get; set; }
-
     /// <summary>当前执行的动作（ActionExecuting 时）</summary>
     public PlannedAction? CurrentAction { get; set; }
-
     /// <summary>执行结果（ActionCompleted 时）</summary>
     public string? ActionResult { get; set; }
-
     /// <summary>需要确认的操作信息（WaitingUserApproval 时）</summary>
     public ApprovalRequest? ApprovalRequest { get; set; }
-
     /// <summary>错误信息（ComputerUseFailed 时）</summary>
     public string? ErrorMessage { get; set; }
-
     /// <summary>进度（0-100）</summary>
     public int Progress { get; set; }
-
     /// <summary>状态消息</summary>
     public string Message { get; set; } = string.Empty;
 }

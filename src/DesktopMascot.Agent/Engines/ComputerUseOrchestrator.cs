@@ -48,6 +48,9 @@ public class ComputerUseOrchestrator
             TaskId = taskId,
             EventType = ComputerUseEventType.ComputerUseStarted,
             Message = "Computer Use 任务开始",
+            Action = "task_start",
+            ToolName = "computer_use",
+            Status = "executing",
             Progress = 0
         });
 
@@ -58,6 +61,9 @@ public class ComputerUseOrchestrator
                 TaskId = taskId,
                 EventType = ComputerUseEventType.ScreenObserved,
                 Message = "正在观察屏幕...",
+                Action = "screenshot",
+                ToolName = "computer_use",
+                Status = "executing",
                 Progress = 10
             });
 
@@ -68,6 +74,9 @@ public class ComputerUseOrchestrator
                 TaskId = taskId,
                 EventType = ComputerUseEventType.ActionPlanned,
                 Message = "正在规划动作...",
+                Action = "plan_actions",
+                ToolName = "computer_use",
+                Status = "executing",
                 Progress = 30,
                 ScreenshotPath = screenshotPath
             });
@@ -80,6 +89,9 @@ public class ComputerUseOrchestrator
                 TaskId = taskId,
                 EventType = ComputerUseEventType.ActionPlanned,
                 Message = $"已规划 {plan.Count} 个动作",
+                Action = "plan_complete",
+                ToolName = "computer_use",
+                Status = "completed",
                 Progress = 40,
                 PlannedActions = plan
             });
@@ -102,6 +114,8 @@ public class ComputerUseOrchestrator
                         TaskId = taskId,
                         EventType = ComputerUseEventType.UserTakeoverRequested,
                         Message = "用户已接管控制",
+                        Action = "user_takeover",
+                        Status = "completed",
                         Progress = 100
                     });
                     break;
@@ -115,6 +129,11 @@ public class ComputerUseOrchestrator
                     TaskId = taskId,
                     EventType = ComputerUseEventType.ActionExecuting,
                     Message = $"正在执行：{action.Description}",
+                    Action = action.ActionName,
+                    ToolName = action.ToolName,
+                    Target = ExtractTarget(action),
+                    Detail = action.Arguments,
+                    Status = "executing",
                     Progress = 40 + (i * 50 / plan.Count),
                     CurrentAction = action
                 });
@@ -128,6 +147,10 @@ public class ComputerUseOrchestrator
                         TaskId = taskId,
                         EventType = ComputerUseEventType.WaitingUserApproval,
                         Message = $"等待确认：{action.Description}",
+                        Action = action.ActionName,
+                        ToolName = action.ToolName,
+                        Target = ExtractTarget(action),
+                        Status = "waiting_approval",
                         Progress = 40 + (i * 50 / plan.Count),
                         ApprovalRequest = new ApprovalRequest
                         {
@@ -149,6 +172,11 @@ public class ComputerUseOrchestrator
                     TaskId = taskId,
                     EventType = result.Success ? ComputerUseEventType.ActionCompleted : ComputerUseEventType.ComputerUseFailed,
                     Message = result.Success ? $"已完成：{action.Description}" : $"失败：{result.Error}",
+                    Action = action.ActionName,
+                    ToolName = action.ToolName,
+                    Target = ExtractTarget(action),
+                    Detail = action.Arguments,
+                    Status = result.Success ? "completed" : "failed",
                     Progress = 40 + ((i + 1) * 50 / plan.Count),
                     ActionResult = result.Content,
                     ErrorMessage = result.Error
@@ -170,6 +198,8 @@ public class ComputerUseOrchestrator
                 TaskId = taskId,
                 EventType = ComputerUseEventType.ComputerUseCompleted,
                 Message = "Computer Use 任务完成",
+                Action = "task_complete",
+                Status = "completed",
                 Progress = 100
             });
 
@@ -189,6 +219,8 @@ public class ComputerUseOrchestrator
                 TaskId = taskId,
                 EventType = ComputerUseEventType.ComputerUseFailed,
                 Message = $"任务失败：{ex.Message}",
+                Action = "task_failed",
+                Status = "failed",
                 ErrorMessage = ex.Message
             });
 
@@ -324,6 +356,51 @@ public class ComputerUseOrchestrator
         if (start >= 0 && end > start)
             return content[start..(end + 1)];
         return content;
+    }
+
+    private static string ExtractTarget(PlannedAction action)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(action.Arguments) || action.Arguments == "{}")
+                return "";
+
+            using var doc = System.Text.Json.JsonDocument.Parse(action.Arguments);
+            var root = doc.RootElement;
+            var actionName = action.ActionName.ToLower();
+
+            if (actionName is "click" or "double_click" or "right_click")
+            {
+                var x = root.TryGetProperty("x", out var xEl) ? xEl.GetInt32() : 0;
+                var y = root.TryGetProperty("y", out var yEl) ? yEl.GetInt32() : 0;
+                return $"坐标({x}, {y})";
+            }
+            if (actionName is "type")
+            {
+                return root.TryGetProperty("text", out var tEl) ? $"文本: {tEl.GetString()}" : "";
+            }
+            if (actionName is "hotkey")
+            {
+                return root.TryGetProperty("keys", out var kEl) ? $"快捷键: {kEl.GetString()}" : "";
+            }
+            if (actionName is "scroll")
+            {
+                return root.TryGetProperty("delta", out var dEl) ? $"滚动: {dEl.GetInt32()}" : "";
+            }
+            if (actionName is "open_url")
+            {
+                return root.TryGetProperty("url", out var uEl) ? $"URL: {uEl.GetString()}" : "";
+            }
+            if (actionName is "run_command")
+            {
+                return root.TryGetProperty("command", out var cEl) ? $"命令: {cEl.GetString()}" : "";
+            }
+            return "";
+        }
+        catch
+        {
+            return "";
+        }
     }
 
     private async Task WaitForApprovalAsync(PlannedAction action, CancellationToken ct)

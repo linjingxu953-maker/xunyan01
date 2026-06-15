@@ -190,26 +190,41 @@ public sealed class SettingsDiagnosticsService : ISettingsDiagnosticsService
 
     private static string? ResolveExecutablePath(string executablePath)
     {
+        executablePath = executablePath.Trim().Trim('"');
+
         if (HasDirectoryPart(executablePath))
         {
             var fullPath = Path.GetFullPath(executablePath);
-            return File.Exists(fullPath) ? fullPath : null;
+            if (!string.IsNullOrWhiteSpace(Path.GetExtension(fullPath)))
+                return File.Exists(fullPath) ? fullPath : null;
+
+            var directory = Path.GetDirectoryName(fullPath);
+            var fileName = Path.GetFileName(fullPath);
+            return string.IsNullOrWhiteSpace(directory) || string.IsNullOrWhiteSpace(fileName)
+                ? null
+                : ResolveFromDirectory(directory, fileName);
         }
 
         var pathValues = (Environment.GetEnvironmentVariable("PATH") ?? string.Empty)
             .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var extensions = GetExecutableExtensions(executablePath);
 
         foreach (var directory in pathValues)
         {
-            foreach (var extension in extensions)
-            {
-                var candidate = Path.Combine(directory, executablePath + extension);
-                if (File.Exists(candidate))
-                {
-                    return candidate;
-                }
-            }
+            var resolved = ResolveFromDirectory(directory, executablePath);
+            if (resolved is not null)
+                return resolved;
+        }
+
+        return null;
+    }
+
+    private static string? ResolveFromDirectory(string directory, string executableName)
+    {
+        foreach (var extension in GetExecutableExtensions(executableName))
+        {
+            var candidate = Path.Combine(directory, executableName + extension);
+            if (File.Exists(candidate))
+                return candidate;
         }
 
         return null;
@@ -254,13 +269,25 @@ public sealed class SettingsDiagnosticsService : ISettingsDiagnosticsService
             yield break;
         }
 
-        yield return string.Empty;
+        if (!OperatingSystem.IsWindows())
+        {
+            yield return string.Empty;
+            yield break;
+        }
 
-        var pathExt = Environment.GetEnvironmentVariable("PATHEXT") ?? ".EXE;.CMD;.BAT";
+        var pathExt = Environment.GetEnvironmentVariable("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD";
+        var emitted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var extension in pathExt.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            yield return extension;
+            var normalized = extension.StartsWith('.') ? extension : $".{extension}";
+            if (normalized.Equals(".PS1", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (emitted.Add(normalized))
+                yield return normalized;
         }
+
+        yield return string.Empty;
     }
 
     private static Uri BuildChatCompletionsUri(Uri baseUri)
