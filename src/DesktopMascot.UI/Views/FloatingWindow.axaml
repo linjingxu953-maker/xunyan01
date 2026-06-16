@@ -131,17 +131,53 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:TaskHistoryItem">
                                             <Border Classes="historyItem"
-                                                    PointerPressed="HistoryItem_PointerPressed"
                                                     Tag="{Binding}">
-                                                <StackPanel Margin="12,10"
-                                                            Spacing="4">
-                                                    <TextBlock Text="{Binding Title}"
-                                                               Classes="historyTitle"
-                                                               MaxLines="2"
-                                                               TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Text="{Binding TimeText}"
-                                                               Classes="historyTime"/>
-                                                </StackPanel>
+                                                <Expander>
+                                                    <Expander.Header>
+                                                        <StackPanel Margin="10,8"
+                                                                    Spacing="3">
+                                                            <TextBlock Text="{Binding Title}"
+                                                                       Classes="historyTitle"
+                                                                       MaxLines="2"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                            <Grid ColumnDefinitions="*,Auto">
+                                                                <TextBlock Text="{Binding TimeText}"
+                                                                           Classes="historyTime"/>
+                                                                <TextBlock Grid.Column="1"
+                                                                           Text="{Binding MessageCountText}"
+                                                                           Classes="historyTime"/>
+                                                            </Grid>
+                                                        </StackPanel>
+                                                    </Expander.Header>
+                                                    <StackPanel Margin="10,0,10,10"
+                                                                Spacing="8">
+                                                        <TextBlock Text="{Binding PreviewText}"
+                                                                   Classes="historyPreview"
+                                                                   TextWrapping="Wrap"/>
+                                                        <WrapPanel>
+                                                            <Button Content="打开"
+                                                                    Classes="historyActionButton"
+                                                                    Tag="{Binding}"
+                                                                    Click="OpenHistoryItem_Click"
+                                                                    Margin="0,0,6,6"/>
+                                                            <Button Content="复制"
+                                                                    Classes="historyActionButton"
+                                                                    Tag="{Binding}"
+                                                                    Click="CopyHistoryItem_Click"
+                                                                    Margin="0,0,6,6"/>
+                                                            <Button Content="保存"
+                                                                    Classes="historyActionButton"
+                                                                    Tag="{Binding}"
+                                                                    Click="SaveHistoryItem_Click"
+                                                                    Margin="0,0,6,6"/>
+                                                            <Button Content="删除"
+                                                                    Classes="historyDangerButton"
+                                                                    Tag="{Binding}"
+                                                                    Click="DeleteHistoryItem_Click"
+                                                                    Margin="0,0,6,6"/>
+                                                        </WrapPanel>
+                                                    </StackPanel>
+                                                </Expander>
                                             </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>

@@ -326,6 +326,32 @@
         <Setter Property="FontSize" Value="10"/>
     </Style>
 
+    <Style Selector="TextBlock.historyPreview">
+        <Setter Property="Foreground" Value="#94A3B8"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="LineHeight" Value="15"/>
+    </Style>
+
+    <Style Selector="Button.historyActionButton">
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="CornerRadius" Value="7"/>
+        <Setter Property="Background" Value="#16FFFFFF"/>
+        <Setter Property="BorderBrush" Value="#24FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="#E5E7EB"/>
+        <Setter Property="FontSize" Value="10"/>
+    </Style>
+
+    <Style Selector="Button.historyDangerButton">
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="CornerRadius" Value="7"/>
+        <Setter Property="Background" Value="#24DC2626"/>
+        <Setter Property="BorderBrush" Value="#44F87171"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="#FCA5A5"/>
+        <Setter Property="FontSize" Value="10"/>
+    </Style>
+
     <Style Selector="Button.newChatButton">
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="Padding" Value="10,8"/>

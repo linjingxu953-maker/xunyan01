@@ -187,11 +187,47 @@ public partial class FloatingWindow : Window
         if (sender is not Border { DataContext: TaskHistoryItem item } || _viewModel is null)
             return;
 
-        _viewModel.MessageItems.Clear();
-        foreach (var message in item.Messages)
+        _viewModel.OpenTaskHistoryItem(item);
+    }
+
+    private void OpenHistoryItem_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: TaskHistoryItem item })
         {
-            _viewModel.MessageItems.Add(message);
+            _viewModel?.OpenTaskHistoryItem(item);
         }
+
+        e.Handled = true;
+    }
+
+    private async void CopyHistoryItem_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: TaskHistoryItem item } && _viewModel is not null)
+        {
+            await _viewModel.CopyTaskHistoryItemAsync(item);
+        }
+
+        e.Handled = true;
+    }
+
+    private async void SaveHistoryItem_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: TaskHistoryItem item } && _viewModel is not null)
+        {
+            await _viewModel.SaveTaskHistoryItemAsync(item);
+        }
+
+        e.Handled = true;
+    }
+
+    private void DeleteHistoryItem_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: TaskHistoryItem item })
+        {
+            _viewModel?.DeleteTaskHistoryItem(item);
+        }
+
+        e.Handled = true;
     }
 
     private void InputBox_KeyDown(object? sender, KeyEventArgs e)

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Text;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
@@ -803,6 +804,52 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         // 清空当前对话
         MessageItems.Clear();
         Messages.Clear();
+    }
+
+    public void OpenTaskHistoryItem(TaskHistoryItem? item)
+    {
+        if (item is null)
+            return;
+
+        BackToChat();
+        MessageItems.Clear();
+        Messages.Clear();
+
+        foreach (var message in item.Messages)
+        {
+            MessageItems.Add(message);
+            Messages.Add($"{message.RoleText}：{message.Content}");
+        }
+
+        StateHint = "历史";
+        TaskActionStatus = $"已打开历史任务：{item.Title}";
+    }
+
+    public async Task CopyTaskHistoryItemAsync(TaskHistoryItem? item)
+    {
+        if (item is null)
+            return;
+
+        var copied = await _taskResultActionService.CopyToClipboardAsync(BuildTaskHistoryDocument(item));
+        TaskActionStatus = copied ? "历史任务已复制到剪贴板。" : "复制失败：当前没有可用剪贴板。";
+    }
+
+    public async Task SaveTaskHistoryItemAsync(TaskHistoryItem? item)
+    {
+        if (item is null)
+            return;
+
+        var path = await _taskResultActionService.SaveResultAsync(item.Title, BuildTaskHistoryDocument(item));
+        TaskActionStatus = $"历史任务已保存：{path}";
+    }
+
+    public void DeleteTaskHistoryItem(TaskHistoryItem? item)
+    {
+        if (item is null)
+            return;
+
+        TaskHistory.Remove(item);
+        TaskActionStatus = $"已删除历史任务：{item.Title}";
     }
 
     [RelayCommand(CanExecute = nameof(CanStartScreenSelection))]
@@ -1956,6 +2003,32 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
                """;
     }
 
+    private static string BuildTaskHistoryDocument(TaskHistoryItem item)
+    {
+        var messages = new StringBuilder();
+        foreach (var message in item.Messages)
+        {
+            if (messages.Length > 0)
+            {
+                messages.AppendLine();
+                messages.AppendLine();
+            }
+
+            messages.AppendLine($"## {message.RoleText}");
+            messages.AppendLine();
+            messages.AppendLine(message.Content);
+        }
+
+        return $"""
+               # {item.Title}
+
+               - 时间：{item.TimeText}
+               - 消息：{item.MessageCountText}
+
+               {messages}
+               """;
+    }
+
     private static string ResolveResultText(TaskResult result)
     {
         if (result.Success)
@@ -2346,4 +2419,12 @@ public class TaskHistoryItem
     public string Title { get; set; } = string.Empty;
     public string TimeText { get; set; } = string.Empty;
     public List<MessageItem> Messages { get; set; } = new();
+    public string MessageCountText => Messages.Count == 0 ? "无消息" : $"{Messages.Count} 条消息";
+    public string PreviewText => Trim(Messages.LastOrDefault()?.Content ?? "暂无内容", 96);
+
+    private static string Trim(string value, int maxLength)
+    {
+        var text = string.IsNullOrWhiteSpace(value) ? "暂无内容" : value.Trim();
+        return text.Length <= maxLength ? text : $"{text[..maxLength]}...";
+    }
 }
