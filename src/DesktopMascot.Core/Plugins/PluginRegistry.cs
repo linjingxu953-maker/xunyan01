@@ -7,10 +7,12 @@ public class PluginRegistry
 {
     private readonly Dictionary<string, IPlugin> _plugins = new();
     private readonly PluginLoader _loader;
+    private FileSystemWatcher? _watcher;
 
     public event Action<IPlugin>? PluginLoaded;
     public event Action<IPlugin>? PluginUnloaded;
     public event Action<IPlugin>? PluginStateChanged;
+    public event Action<string>? PluginHotReloaded;
 
     public PluginRegistry(PluginLoader loader)
     {
@@ -118,5 +120,107 @@ public class PluginRegistry
     public IEnumerable<object> GetAllTools()
     {
         return GetToolProviders().SelectMany(p => p.GetTools());
+    }
+
+    /// <summary>
+    /// 启用热加载监控
+    /// </summary>
+    public void EnableHotReload(string? pluginsDirectory = null)
+    {
+        var dir = pluginsDirectory ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "plugins");
+        
+        _watcher = new FileSystemWatcher(dir, "*.dll")
+        {
+            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.CreationTime,
+            EnableRaisingEvents = true
+        };
+
+        _watcher.Created += OnPluginFileChanged;
+        _watcher.Changed += OnPluginFileChanged;
+    }
+
+    /// <summary>
+    /// 禁用热加载监控
+    /// </summary>
+    public void DisableHotReload()
+    {
+        _watcher?.Dispose();
+        _watcher = null;
+    }
+
+    private async void OnPluginFileChanged(object sender, FileSystemEventArgs e)
+    {
+        try
+        {
+            await Task.Delay(1000); // 等待文件写入完成
+            
+            var pluginId = Path.GetFileNameWithoutExtension(e.Name);
+            
+            if (e.ChangeType == WatcherChangeTypes.Created || e.ChangeType == WatcherChangeTypes.Changed)
+            {
+                // 尝试重新加载插件
+                if (_plugins.ContainsKey(pluginId))
+                {
+                    await UnloadPluginAsync(pluginId);
+                }
+                
+                var plugin = await _loader.LoadPluginFromAssemblyAsync(e.FullPath);
+                if (plugin != null)
+                {
+                    RegisterPlugin(plugin);
+                    PluginHotReloaded?.Invoke(pluginId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"热加载失败: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 检查插件依赖
+    /// </summary>
+    public List<string> CheckDependencies(string pluginId)
+    {
+        var missing = new List<string>();
+        var plugin = GetPlugin(pluginId);
+        
+        if (plugin == null)
+            return new List<string> { pluginId };
+
+        foreach (var dep in plugin.Metadata.Dependencies)
+        {
+            if (!_plugins.ContainsKey(dep))
+            {
+                missing.Add(dep);
+            }
+        }
+
+        return missing;
+    }
+
+    /// <summary>
+    /// 获取插件配置
+    /// </summary>
+    public Dictionary<string, string> GetPluginSettings(string pluginId)
+    {
+        var plugin = GetPlugin(pluginId);
+        return plugin?.Metadata.Settings ?? new Dictionary<string, string>();
+    }
+
+    /// <summary>
+    /// 更新插件配置
+    /// </summary>
+    public void UpdatePluginSettings(string pluginId, Dictionary<string, string> settings)
+    {
+        var plugin = GetPlugin(pluginId);
+        if (plugin != null)
+        {
+            foreach (var kvp in settings)
+            {
+                plugin.Metadata.Settings[kvp.Key] = kvp.Value;
+            }
+        }
     }
 }
