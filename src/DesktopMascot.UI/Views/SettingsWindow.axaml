@@ -773,28 +773,168 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
-                                <TextBlock Text="最近记忆"
+                                <TextBlock Text="记忆浏览器"
                                            Classes="sectionTitle"/>
-                                <ItemsControl ItemsSource="{Binding MemoryActionItems}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:SettingsListItem">
-                                            <Grid ColumnDefinitions="160,90,*"
-                                                  Margin="0,0,0,8"
-                                                  ColumnSpacing="12">
-                                                <TextBlock Text="{Binding Title}"
-                                                           Classes="sectionTitle"
-                                                           TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Grid.Column="1"
-                                                           Text="{Binding Value}"
-                                                           Classes="captionText"/>
-                                                <TextBlock Grid.Column="2"
-                                                           Text="{Binding Description}"
-                                                           Classes="bodyText"
-                                                           TextTrimming="CharacterEllipsis"/>
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
+                                <Grid ColumnDefinitions="*,160,Auto,Auto"
+                                      ColumnSpacing="10">
+                                    <TextBox Text="{Binding MemorySearchText}"
+                                             PlaceholderText="搜索 key、内容或来源"
+                                             Classes="formInput"/>
+                                    <ComboBox Grid.Column="1"
+                                              ItemsSource="{Binding MemoryFilterOptions}"
+                                              SelectedItem="{Binding SelectedMemoryFilter}"/>
+                                    <Button Grid.Column="2"
+                                            Content="搜索"
+                                            Classes="secondaryAction"
+                                            Command="{Binding SearchMemoryBrowserCommand}"/>
+                                    <Button Grid.Column="3"
+                                            Content="重置"
+                                            Classes="secondaryAction"
+                                            Command="{Binding ResetMemoryBrowserCommand}"/>
+                                </Grid>
+
+                                <Grid ColumnDefinitions="280,*"
+                                      ColumnSpacing="12">
+                                    <Border Classes="inlineCard">
+                                        <Grid>
+                                            <TextBlock Text="当前没有可浏览的记忆。"
+                                                       Classes="bodyText"
+                                                       IsVisible="{Binding HasNoMemoryBrowserItems}"
+                                                       VerticalAlignment="Center"
+                                                       HorizontalAlignment="Center"
+                                                       TextAlignment="Center"
+                                                       Margin="10"/>
+
+                                            <ListBox ItemsSource="{Binding MemoryBrowserItems}"
+                                                     SelectedItem="{Binding SelectedMemoryBrowserItem}"
+                                                     IsVisible="{Binding HasMemoryBrowserItems}"
+                                                     MinHeight="220"
+                                                     MaxHeight="320">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:MemoryBrowserItem">
+                                                        <StackPanel Spacing="4"
+                                                                    Margin="0,4">
+                                                            <Grid ColumnDefinitions="*,Auto"
+                                                                  ColumnSpacing="8">
+                                                                <TextBlock Text="{Binding Key}"
+                                                                           Classes="sectionTitle"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Grid.Column="1"
+                                                                           Text="{Binding Status}"
+                                                                           Classes="captionText"/>
+                                                            </Grid>
+                                                            <TextBlock Text="{Binding Type}"
+                                                                       Classes="captionText"/>
+                                                            <TextBlock Text="{Binding Content}"
+                                                                       Classes="bodyText"
+                                                                       MaxLines="2"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </Grid>
+                                    </Border>
+
+                                    <Border Grid.Column="1"
+                                            Classes="inlineCard">
+                                        <Grid>
+                                            <TextBlock Text="选择一条记忆后查看详情。"
+                                                       Classes="bodyText"
+                                                       IsVisible="{Binding HasNoMemoryBrowserItemSelected}"
+                                                       VerticalAlignment="Center"
+                                                       HorizontalAlignment="Center"
+                                                       TextAlignment="Center"
+                                                       Margin="10"/>
+
+                                            <StackPanel Spacing="10"
+                                                        IsVisible="{Binding IsMemoryBrowserItemSelected}">
+                                                <Grid ColumnDefinitions="96,*"
+                                                      RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
+                                                      RowSpacing="7"
+                                                      ColumnSpacing="10">
+                                                    <TextBlock Text="类型"
+                                                               Classes="captionText"/>
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding SelectedMemoryBrowserItem.Type}"
+                                                               Classes="sectionTitle"/>
+
+                                                    <TextBlock Grid.Row="1"
+                                                               Text="Key"
+                                                               Classes="captionText"/>
+                                                    <TextBlock Grid.Row="1"
+                                                               Grid.Column="1"
+                                                               Text="{Binding SelectedMemoryBrowserItem.Key}"
+                                                               Classes="bodyText"/>
+
+                                                    <TextBlock Grid.Row="2"
+                                                               Text="来源"
+                                                               Classes="captionText"/>
+                                                    <TextBlock Grid.Row="2"
+                                                               Grid.Column="1"
+                                                               Text="{Binding SelectedMemoryBrowserItem.Source}"
+                                                               Classes="bodyText"/>
+
+                                                    <TextBlock Grid.Row="3"
+                                                               Text="状态"
+                                                               Classes="captionText"/>
+                                                    <TextBlock Grid.Row="3"
+                                                               Grid.Column="1"
+                                                               Text="{Binding SelectedMemoryBrowserItem.Status}"
+                                                               Classes="bodyText"/>
+
+                                                    <TextBlock Grid.Row="4"
+                                                               Text="更新时间"
+                                                               Classes="captionText"/>
+                                                    <TextBlock Grid.Row="4"
+                                                               Grid.Column="1"
+                                                               Text="{Binding SelectedMemoryBrowserItem.UpdatedAt}"
+                                                               Classes="bodyText"/>
+
+                                                    <TextBlock Grid.Row="5"
+                                                               Text="过期时间"
+                                                               Classes="captionText"/>
+                                                    <TextBlock Grid.Row="5"
+                                                               Grid.Column="1"
+                                                               Text="{Binding SelectedMemoryBrowserItem.ExpiresAt}"
+                                                               Classes="bodyText"/>
+                                                </Grid>
+
+                                                <StackPanel Spacing="6">
+                                                    <TextBlock Text="标签"
+                                                               Classes="sectionTitle"/>
+                                                    <TextBlock Text="{Binding SelectedMemoryBrowserItem.Tags}"
+                                                               Classes="bodyText"
+                                                               TextWrapping="Wrap"/>
+                                                </StackPanel>
+
+                                                <StackPanel Spacing="6">
+                                                    <TextBlock Text="内容"
+                                                               Classes="sectionTitle"/>
+                                                    <TextBox Text="{Binding SelectedMemoryBrowserItem.Content, Mode=OneWay}"
+                                                             IsReadOnly="True"
+                                                             AcceptsReturn="True"
+                                                             TextWrapping="Wrap"
+                                                             MinHeight="110"
+                                                             MaxHeight="170"
+                                                             Classes="formInput"/>
+                                                </StackPanel>
+
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <TextBlock Text="删除会直接调用 IMemoryStore.DeleteAsync，适用于误存条目清理。"
+                                                               Classes="captionText"
+                                                               VerticalAlignment="Center"
+                                                               TextWrapping="Wrap"/>
+                                                    <Button Grid.Column="1"
+                                                            Content="删除当前记忆"
+                                                            Classes="secondaryAction"
+                                                            Command="{Binding DeleteSelectedMemoryCommand}"
+                                                            Margin="8,0,0,0"/>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
 
                                 <Grid ColumnDefinitions="*,Auto">
                                     <TextBlock Text="清理记忆会保留为高风险操作，真实删除前需要 M30 的二次确认弹窗。"

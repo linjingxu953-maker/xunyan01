@@ -71,6 +71,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private int _auditLogTotalCount;
     private MemoryStatistics? _memoryStatistics;
     private List<MemoryEntry> _recentMemoryEntries = [];
+    private List<MemoryEntry> _memoryBrowserEntries = [];
 
     [ObservableProperty] private string _selectedSectionId = "model";
     [ObservableProperty] private ModelProviderOption? _selectedProvider;
@@ -89,6 +90,8 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [ObservableProperty] private bool _isMemoryEnabled = true;
     [ObservableProperty] private string _memorySettingsStatus = "M30 记忆确认接口已就绪，当前页面保存记忆开关并预留队列入口。";
     [ObservableProperty] private string _pendingMemoryDraftContent = string.Empty;
+    [ObservableProperty] private string _memorySearchText = string.Empty;
+    [ObservableProperty] private string _selectedMemoryFilter = "全部";
     [ObservableProperty] private string _hotkeySettingsStatus = "快捷键状态会在应用启动后显示。";
     [ObservableProperty] private string _chatHotkeyText = string.Empty;
     [ObservableProperty] private string _screenSelectionHotkeyText = string.Empty;
@@ -102,6 +105,11 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsPendingMemoryReviewSelected))]
     [NotifyPropertyChangedFor(nameof(HasNoPendingMemoryReviewSelected))]
     private PendingMemoryReviewItem? _selectedPendingMemoryReview;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMemoryBrowserItemSelected))]
+    [NotifyPropertyChangedFor(nameof(HasNoMemoryBrowserItemSelected))]
+    private MemoryBrowserItem? _selectedMemoryBrowserItem;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNotBusy))]
@@ -197,6 +205,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         ];
 
         Providers = new ObservableCollection<ModelProviderOption>(ModelProviderCatalog.CreateDefaults());
+        MemoryFilterOptions = ["全部", "用户偏好", "项目信息", "技能流程", "任务历史", "仅待确认"];
         CharacterToneStyleOptions = ["友善", "专业", "轻松", "可爱", "沉稳", "讽刺"];
         CharacterLanguageStyleOptions = ["标准", "简洁", "详细", "技术", "口语"];
         CharacterReplyLengthOptions = ["短", "平衡", "详细"];
@@ -230,6 +239,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         MemoryReadinessItems = [];
         MemoryStatsItems = [];
         MemoryActionItems = [];
+        MemoryBrowserItems = [];
         HotkeyItems = [];
         DataDirectoryItems = [];
         PendingMemoryReviews = [];
@@ -260,6 +270,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             RefreshPendingMemoryReviewState();
             RefreshMemoryCards();
         };
+        MemoryBrowserItems.CollectionChanged += (_, _) => RefreshMemoryBrowserState();
         CharacterProfiles.CollectionChanged += (_, _) => RefreshCharacterProfileState();
         CharacterAssetSuggestions.CollectionChanged += (_, _) => RefreshCharacterAssetSuggestionState();
 
@@ -279,6 +290,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
 
     public ObservableCollection<SettingsSectionItem> Sections { get; }
     public ObservableCollection<ModelProviderOption> Providers { get; }
+    public ObservableCollection<string> MemoryFilterOptions { get; }
     public ObservableCollection<PermissionLevelOption> PermissionAutoApproveLevels { get; }
     public ObservableCollection<string> CharacterToneStyleOptions { get; }
     public ObservableCollection<string> CharacterLanguageStyleOptions { get; }
@@ -293,6 +305,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     public ObservableCollection<SettingsListItem> MemoryReadinessItems { get; }
     public ObservableCollection<SettingsListItem> MemoryStatsItems { get; }
     public ObservableCollection<SettingsListItem> MemoryActionItems { get; }
+    public ObservableCollection<MemoryBrowserItem> MemoryBrowserItems { get; }
     public ObservableCollection<SettingsListItem> HotkeyItems { get; }
     public ObservableCollection<DataDirectoryItem> DataDirectoryItems { get; }
     public ObservableCollection<PendingMemoryReviewItem> PendingMemoryReviews { get; }
@@ -305,6 +318,10 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     public bool HasNoPendingMemoryReviews => !HasPendingMemoryReviews;
     public bool IsPendingMemoryReviewSelected => SelectedPendingMemoryReview is not null;
     public bool HasNoPendingMemoryReviewSelected => !IsPendingMemoryReviewSelected;
+    public bool HasMemoryBrowserItems => MemoryBrowserItems.Count > 0;
+    public bool HasNoMemoryBrowserItems => !HasMemoryBrowserItems;
+    public bool IsMemoryBrowserItemSelected => SelectedMemoryBrowserItem is not null;
+    public bool HasNoMemoryBrowserItemSelected => !IsMemoryBrowserItemSelected;
     public bool HasNoCharacterImage => !HasCharacterImage;
     public bool HasCharacterProfiles => CharacterProfiles.Count > 0;
     public bool HasNoCharacterProfiles => !HasCharacterProfiles;
@@ -794,9 +811,60 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         try
         {
             await RefreshMemorySnapshotAsync();
-            MemorySettingsStatus = _recentMemoryEntries.Count == 0
+            MemorySettingsStatus = _memoryBrowserEntries.Count == 0
                 ? "记忆存储已连接，当前还没有已保存记忆。"
-                : $"已显示最近 {_recentMemoryEntries.Count} 条记忆，可按类型和确认状态检查。";
+                : $"已加载 {_memoryBrowserEntries.Count} 条记忆，可继续搜索、筛选和查看详情。";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task SearchMemoryBrowser()
+    {
+        if (_memoryStore is null)
+        {
+            MemorySettingsStatus = "IMemoryStore 未注入，暂时无法搜索记忆。";
+            return;
+        }
+
+        IsBusy = true;
+
+        try
+        {
+            var query = MemorySearchText.Trim();
+            var memoryType = ResolveMemoryFilterType(SelectedMemoryFilter);
+            var result = await _memoryStore.SearchAsync(query, memoryType, 100);
+            var entries = result.Entries
+                .Where(entry => SelectedMemoryFilter != "仅待确认" || !entry.IsConfirmed)
+                .OrderByDescending(entry => entry.UpdatedAt)
+                .ToList();
+
+            PopulateMemoryBrowserItems(entries);
+            MemorySettingsStatus = entries.Count == 0
+                ? "没有找到匹配的记忆。"
+                : $"已匹配 {entries.Count} 条记忆。";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ResetMemoryBrowser()
+    {
+        MemorySearchText = string.Empty;
+        SelectedMemoryFilter = "全部";
+
+        IsBusy = true;
+
+        try
+        {
+            await RefreshMemorySnapshotAsync();
+            MemorySettingsStatus = "已恢复默认记忆视图。";
         }
         finally
         {
@@ -841,6 +909,42 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private void ClearMemory()
     {
         MemorySettingsStatus = "清理记忆是高风险操作，当前不直接删除；后续接二次确认和审计后再开放。";
+    }
+
+    [RelayCommand]
+    private async Task DeleteSelectedMemory()
+    {
+        if (SelectedMemoryBrowserItem is null)
+        {
+            MemorySettingsStatus = "请先选择一条记忆。";
+            return;
+        }
+
+        if (_memoryStore is null)
+        {
+            MemorySettingsStatus = "IMemoryStore 未注入，暂时无法删除记忆。";
+            return;
+        }
+
+        IsBusy = true;
+
+        try
+        {
+            var deleted = await _memoryStore.DeleteAsync(SelectedMemoryBrowserItem.Id);
+            MemorySettingsStatus = deleted
+                ? $"已删除记忆：{SelectedMemoryBrowserItem.Key}。"
+                : $"没有找到记忆：{SelectedMemoryBrowserItem.Key}。";
+
+            await RefreshMemorySnapshotAsync();
+            if (!string.IsNullOrWhiteSpace(MemorySearchText) || SelectedMemoryFilter != "全部")
+            {
+                await SearchMemoryBrowser();
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
@@ -1371,6 +1475,14 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         PendingMemoryDraftContent = value?.Content ?? string.Empty;
     }
 
+    partial void OnSelectedMemoryBrowserItemChanged(MemoryBrowserItem? value)
+    {
+        if (value is null)
+            return;
+
+        MemorySettingsStatus = $"已选中记忆：{value.Key}。";
+    }
+
     partial void OnSelectedCharacterProfileChanged(CharacterProfileListItem? value)
     {
         CharacterProfileNameDraft = value?.Name ?? CharacterName;
@@ -1713,20 +1825,27 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         {
             _memoryStatistics = null;
             _recentMemoryEntries = [];
+            _memoryBrowserEntries = [];
             PendingMemoryReviews.Clear();
+            MemoryBrowserItems.Clear();
             MemorySettingsStatus = "IMemoryStore 未注入，当前只能保存记忆开关。";
             RefreshMemoryCards();
             RefreshPendingMemoryReviewState();
+            RefreshMemoryBrowserState();
             return;
         }
 
         _memoryStatistics = await _memoryStore.GetStatisticsAsync(ct);
         var result = await _memoryStore.SearchAsync(string.Empty, null, 200, ct);
+        _memoryBrowserEntries = result.Entries
+            .OrderByDescending(item => item.UpdatedAt)
+            .ToList();
         _recentMemoryEntries = result.Entries
             .OrderByDescending(item => item.UpdatedAt)
             .Take(10)
             .ToList();
 
+        PopulateMemoryBrowserItems(_memoryBrowserEntries.Take(40));
         PopulatePendingMemoryReviews(result.Entries
             .Where(item => !item.IsConfirmed)
             .OrderByDescending(item => item.UpdatedAt)
@@ -1737,6 +1856,22 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             : $"已读取 {_memoryStatistics.TotalCount} 条记忆，待确认 {_memoryStatistics.UnconfirmedCount} 条。";
         RefreshMemoryCards();
         RefreshPendingMemoryReviewState();
+        RefreshMemoryBrowserState();
+    }
+
+    private void PopulateMemoryBrowserItems(IEnumerable<MemoryEntry> entries)
+    {
+        var selectedId = SelectedMemoryBrowserItem?.Id;
+        MemoryBrowserItems.Clear();
+
+        foreach (var entry in entries)
+        {
+            MemoryBrowserItems.Add(CreateMemoryBrowserItem(entry));
+        }
+
+        SelectedMemoryBrowserItem = !string.IsNullOrWhiteSpace(selectedId)
+            ? MemoryBrowserItems.FirstOrDefault(item => item.Id == selectedId)
+            : MemoryBrowserItems.FirstOrDefault();
     }
 
     private void PopulatePendingMemoryReviews(IEnumerable<MemoryEntry> entries)
@@ -1772,6 +1907,33 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             tags,
             entry.ExpiresAt.HasValue ? FormatTime(entry.ExpiresAt.Value) : "长期");
     }
+
+    private static MemoryBrowserItem CreateMemoryBrowserItem(MemoryEntry entry)
+    {
+        var tags = entry.Tags.Count == 0
+            ? "无标签"
+            : string.Join("、", entry.Tags.Select(item => $"{item.Key}:{item.Value}"));
+
+        return new MemoryBrowserItem(
+            entry.Id,
+            GetMemoryTypeText(entry.Type),
+            entry.Key,
+            string.IsNullOrWhiteSpace(entry.Source) ? "IMemoryStore" : entry.Source,
+            entry.IsConfirmed ? "已确认" : "待确认",
+            CleanText(entry.Content, "无内容", 400),
+            tags,
+            FormatTime(entry.UpdatedAt),
+            entry.ExpiresAt.HasValue ? FormatTime(entry.ExpiresAt.Value) : "长期");
+    }
+
+    private static MemoryType? ResolveMemoryFilterType(string? filter) => filter switch
+    {
+        "用户偏好" => MemoryType.User,
+        "项目信息" => MemoryType.Project,
+        "技能流程" => MemoryType.Skill,
+        "任务历史" => MemoryType.History,
+        _ => null
+    };
 
     private static string CreateAuditLogKey(AuditLogEntry entry)
     {
@@ -2659,5 +2821,17 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
 
         OnPropertyChanged(nameof(HasPendingMemoryReviews));
         OnPropertyChanged(nameof(HasNoPendingMemoryReviews));
+    }
+
+    private void RefreshMemoryBrowserState()
+    {
+        if (SelectedMemoryBrowserItem is not null &&
+            MemoryBrowserItems.All(x => x.Id != SelectedMemoryBrowserItem.Id))
+        {
+            SelectedMemoryBrowserItem = null;
+        }
+
+        OnPropertyChanged(nameof(HasMemoryBrowserItems));
+        OnPropertyChanged(nameof(HasNoMemoryBrowserItems));
     }
 }
