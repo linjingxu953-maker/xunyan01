@@ -37,34 +37,21 @@ public class AgentOrchestrator : IAgentEngine
 
     private readonly AgentPersonality _personality;
 
-    public AgentOrchestrator(
-        ILlmProvider llmProvider,
-        ToolRegistry toolRegistry,
-        ITaskEventBus eventBus,
-        ILogger<AgentOrchestrator> logger,
-        int maxIterations = 10,
-        MemoryIntegrationService? memoryService = null,
-        ComputerUseOrchestrator? computerUseOrchestrator = null,
-        ITaskHistoryStore? historyStore = null,
-        ConversationManager? conversationManager = null,
-        LearningEngine? learningEngine = null,
-        IAuditLogStore? auditLogStore = null,
-        ErrorHandler? errorHandler = null,
-        AgentPersonality? personality = null)
+    public AgentOrchestrator(AgentOrchestratorOptions options)
     {
-        _llmProvider = llmProvider;
-        _toolRegistry = toolRegistry;
-        _eventBus = eventBus;
-        _logger = logger;
-        _maxIterations = maxIterations;
-        _memoryService = memoryService;
-        _computerUseOrchestrator = computerUseOrchestrator;
-        _historyStore = historyStore;
-        _conversationManager = conversationManager ?? new ConversationManager();
-        _learningEngine = learningEngine ?? new LearningEngine();
-        _auditLogStore = auditLogStore;
-        _errorHandler = errorHandler;
-        _personality = personality ?? new AgentPersonality();
+        _llmProvider = options.LlmProvider;
+        _toolRegistry = options.ToolRegistry;
+        _eventBus = options.EventBus;
+        _logger = options.Logger;
+        _maxIterations = options.MaxIterations;
+        _memoryService = options.MemoryService;
+        _computerUseOrchestrator = options.ComputerUseOrchestrator;
+        _historyStore = options.HistoryStore;
+        _conversationManager = options.ConversationManager ?? new ConversationManager();
+        _learningEngine = options.LearningEngine ?? new LearningEngine();
+        _auditLogStore = options.AuditLogStore;
+        _errorHandler = options.ErrorHandler;
+        _personality = options.Personality ?? new AgentPersonality();
     }
 
     public async Task<TaskResult> ExecuteAsync(AgentTask task, CancellationToken ct = default)
@@ -523,42 +510,88 @@ public class AgentOrchestrator : IAgentEngine
 
         try
         {
-            if (content.Contains("tool_call"))
+            // 策略1：整个内容是 JSON 数组 [{name, arguments}, ...]
+            var trimmed = content.Trim();
+            if (trimmed.StartsWith('[') && trimmed.EndsWith(']'))
             {
-                var start = content.IndexOf("tool_call");
-                var jsonStart = content.IndexOf('{', start);
-                var jsonEnd = content.LastIndexOf('}');
-
-                if (jsonStart >= 0 && jsonEnd > jsonStart)
+                using var doc = JsonDocument.Parse(trimmed);
+                foreach (var element in doc.RootElement.EnumerateArray())
                 {
-                    var json = content.Substring(jsonStart, jsonEnd - jsonStart + 1);
-                    var doc = JsonDocument.Parse(json);
-                    var root = doc.RootElement;
-
-                    if (root.TryGetProperty("tool_call", out var toolCallWrapper))
+                    if (!element.TryGetProperty("name", out var nameEl)) continue;
+                    toolCalls.Add(new ToolCall
                     {
-                        root = toolCallWrapper;
-                    }
-
-                    if (root.TryGetProperty("name", out var name))
-                    {
-                        toolCalls.Add(new ToolCall
-                        {
-                            Name = name.GetString() ?? "",
-                            Arguments = root.TryGetProperty("arguments", out var args)
-                                ? args.GetRawText()
-                                : "{}"
-                        });
-                    }
+                        Name = nameEl.GetString() ?? "",
+                        Arguments = element.TryGetProperty("arguments", out var argsEl)
+                            ? argsEl.ToString() : "{}"
+                    });
                 }
+                if (toolCalls.Count > 0) return toolCalls;
+            }
+
+            // 策略2：整个内容是单个 JSON 对象含 name/arguments
+            if (trimmed.StartsWith('{') && trimmed.EndsWith('}'))
+            {
+                using var doc = JsonDocument.Parse(trimmed);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("name", out var nameEl))
+                {
+                    toolCalls.Add(new ToolCall
+                    {
+                        Name = nameEl.GetString() ?? "",
+                        Arguments = root.TryGetProperty("arguments", out var argsEl)
+                            ? argsEl.ToString() : "{}"
+                    });
+                    return toolCalls;
+                }
+            }
+
+            // 策略3：从 content 中提取所有 JSON 对象（兼容 tool_call 包裹格式）
+            var braceDepth = 0;
+            var jsonStart = -1;
+            for (int i = 0; i < content.Length; i++)
+            {
+                if (content[i] == '{') { if (braceDepth == 0) jsonStart = i; braceDepth++; }
+                else if (content[i] == '}') { braceDepth--; if (braceDepth == 0 && jsonStart >= 0) { ParseJsonBlock(content.Substring(jsonStart, i - jsonStart + 1), toolCalls); jsonStart = -1; } }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "解析工具调用失败");
+            _logger.LogWarning(ex, "解析工具调用 JSON 失败");
         }
 
         return toolCalls;
+    }
+
+    /// <summary>解析单个 JSON 块，可能是 {name, arguments} 或含 tool_calls 包装</summary>
+    private static void ParseJsonBlock(string json, List<ToolCall> toolCalls)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            // 解包 tool_call / tool_calls 外层
+            if (root.TryGetProperty("tool_call", out var wrapper)) root = wrapper;
+            if (root.TryGetProperty("tool_calls", out var array))
+            {
+                foreach (var e in array.EnumerateArray())
+                    ParseSingleToolCall(e, toolCalls);
+                return;
+            }
+
+            ParseSingleToolCall(root, toolCalls);
+        }
+        catch { /* 忽略无法解析的块 */ }
+    }
+
+    private static void ParseSingleToolCall(JsonElement element, List<ToolCall> toolCalls)
+    {
+        if (!element.TryGetProperty("name", out var nameEl)) return;
+        toolCalls.Add(new ToolCall
+        {
+            Name = nameEl.GetString() ?? "",
+            Arguments = element.TryGetProperty("arguments", out var argsEl) ? argsEl.ToString() : "{}"
+        });
     }
 
     private async Task<TaskResult> ExecuteWithSpecializedPromptAsync(

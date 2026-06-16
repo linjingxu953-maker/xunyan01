@@ -1,5 +1,7 @@
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
+using DesktopMascot.Agent.Models;
 
 namespace DesktopMascot.Agent.Tools;
 
@@ -33,7 +35,7 @@ public class SecurityScanTool : ITool
         @"ghp_[0-9a-zA-Z]{36}",  // GitHub Token
     };
 
-    private static readonly string[] VulnerabilityPatterns = new[]
+    private static readonly (string Pattern, string Description)[] VulnerabilityPatterns = new (string, string)[]
     {
         (@"eval\s*\(", "潜在代码注入"),
         (@"exec\s*\(", "潜在命令注入"),

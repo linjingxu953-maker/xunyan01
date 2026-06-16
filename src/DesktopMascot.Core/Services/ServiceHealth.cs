@@ -123,7 +123,7 @@ public class ServiceInitializer
 
     public async Task InitializeAllAsync(CancellationToken ct = default)
     {
-        var ordered = _initOrder.OrderBy(x => x.Priority).ToList();
+        var ordered = _initOrder.OrderByDescending(x => x.Priority).ToList();
 
         foreach (var item in ordered)
         {

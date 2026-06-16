@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using DesktopMascot.Agent.Interop;
 using DesktopMascot.Agent.Models;
 
 namespace DesktopMascot.Agent.Tools;
@@ -86,9 +87,9 @@ public class BrowserAutomationTool : ITool
 
         // 使用快捷键模拟点击（简化实现）
         var inputs = new INPUT[2];
-        inputs[0] = new INPUT { type = INPUT_KEYBOARD, u = new INPUTUNION { ki = new KEYBDINPUT { wVk = 0x0D, dwFlags = 0 } } };
-        inputs[1] = new INPUT { type = INPUT_KEYBOARD, u = new INPUTUNION { ki = new KEYBDINPUT { wVk = 0x0D, dwFlags = 0x0002 } } };
-        SendInput(2, inputs, Marshal.SizeOf<INPUT>());
+        inputs[0] = new INPUT { type = User32Interop.INPUT_KEYBOARD, u = new InputUnion { ki = new KEYBDINPUT { wVk = 0x0D, dwFlags = 0 } } };
+        inputs[1] = new INPUT { type = User32Interop.INPUT_KEYBOARD, u = new InputUnion { ki = new KEYBDINPUT { wVk = 0x0D, dwFlags = 0x0002 } } };
+        User32Interop.SendInput(2, inputs, Marshal.SizeOf<INPUT>());
 
         await Task.Delay(200);
 
@@ -107,8 +108,8 @@ public class BrowserAutomationTool : ITool
 
         foreach (char c in text)
         {
-            var input = new INPUT { type = INPUT_KEYBOARD, u = new INPUTUNION { ki = new KEYBDINPUT { wScan = (ushort)c, dwFlags = 0x0004 } } };
-            SendInput(1, new[] { input }, Marshal.SizeOf<INPUT>());
+            var input = new INPUT { type = User32Interop.INPUT_KEYBOARD, u = new InputUnion { ki = new KEYBDINPUT { wScan = (ushort)c, dwFlags = 0x0004 } } };
+            User32Interop.SendInput(1, new[] { input }, Marshal.SizeOf<INPUT>());
             Thread.Sleep(10);
         }
 
@@ -129,10 +130,10 @@ public class BrowserAutomationTool : ITool
         var dir = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
-        var hwnd = GetForegroundWindow();
+        var hwnd = User32Interop.GetForegroundWindow();
         if (hwnd == IntPtr.Zero) return Fail("无法获取当前窗口");
 
-        GetWindowRect(hwnd, out var rect);
+        User32Interop.GetWindowRect(hwnd, out var rect);
         var w = rect.Right - rect.Left;
         var h = rect.Bottom - rect.Top;
 
@@ -151,15 +152,15 @@ public class BrowserAutomationTool : ITool
 
     private async Task<ToolResult> ExtractContentAsync(JsonElement root, CancellationToken ct)
     {
-        var hwnd = GetForegroundWindow();
+        var hwnd = User32Interop.GetForegroundWindow();
         if (hwnd == IntPtr.Zero) return Fail("无法获取当前窗口");
 
         var sb = new System.Text.StringBuilder();
         var titleSb = new System.Text.StringBuilder(256);
-        GetWindowText(hwnd, titleSb, 256);
+        User32Interop.GetWindowText(hwnd, titleSb, 256);
         sb.AppendLine($"标题：{titleSb}");
 
-        GetWindowThreadProcessId(hwnd, out var pid);
+        User32Interop.GetWindowThreadProcessId(hwnd, out var pid);
         try
         {
             var process = System.Diagnostics.Process.GetProcessById((int)pid);
@@ -179,8 +180,7 @@ public class BrowserAutomationTool : ITool
     {
         var amount = root.TryGetProperty("scroll_amount", out var sEl) ? sEl.GetInt32() : -120;
 
-        const uint MOUSEEVENTF_WHEEL = 0x0800;
-        mouse_event(MOUSEEVENTF_WHEEL, 0, 0, (uint)amount, 0);
+        User32Interop.mouse_event(User32Interop.MOUSEEVENTF_WHEEL, 0, 0, (uint)amount, 0);
 
         return new ToolResult
         {
@@ -194,15 +194,15 @@ public class BrowserAutomationTool : ITool
     {
         // 使用 Alt+Left 快捷键
         var inputs = new INPUT[2];
-        inputs[0] = new INPUT { type = INPUT_KEYBOARD, u = new INPUTUNION { ki = new KEYBDINPUT { wVk = 0x12, dwFlags = 0 } } };
-        inputs[1] = new INPUT { type = INPUT_KEYBOARD, u = new INPUTUNION { ki = new KEYBDINPUT { wVk = 0x25, dwFlags = 0 } } };
-        SendInput(2, inputs, Marshal.SizeOf<INPUT>());
+        inputs[0] = new INPUT { type = User32Interop.INPUT_KEYBOARD, u = new InputUnion { ki = new KEYBDINPUT { wVk = 0x12, dwFlags = 0 } } };
+        inputs[1] = new INPUT { type = User32Interop.INPUT_KEYBOARD, u = new InputUnion { ki = new KEYBDINPUT { wVk = 0x25, dwFlags = 0 } } };
+        User32Interop.SendInput(2, inputs, Marshal.SizeOf<INPUT>());
 
         Thread.Sleep(50);
 
-        inputs[0] = new INPUT { type = INPUT_KEYBOARD, u = new INPUTUNION { ki = new KEYBDINPUT { wVk = 0x25, dwFlags = 0x0002 } } };
-        inputs[1] = new INPUT { type = INPUT_KEYBOARD, u = new INPUTUNION { ki = new KEYBDINPUT { wVk = 0x12, dwFlags = 0x0002 } } };
-        SendInput(2, inputs, Marshal.SizeOf<INPUT>());
+        inputs[0] = new INPUT { type = User32Interop.INPUT_KEYBOARD, u = new InputUnion { ki = new KEYBDINPUT { wVk = 0x25, dwFlags = 0x0002 } } };
+        inputs[1] = new INPUT { type = User32Interop.INPUT_KEYBOARD, u = new InputUnion { ki = new KEYBDINPUT { wVk = 0x12, dwFlags = 0x0002 } } };
+        User32Interop.SendInput(2, inputs, Marshal.SizeOf<INPUT>());
 
         return new ToolResult { Name = Name, Success = true, Content = "已后退" };
     }
@@ -210,15 +210,15 @@ public class BrowserAutomationTool : ITool
     private async Task<ToolResult> GoForwardAsync()
     {
         var inputs = new INPUT[2];
-        inputs[0] = new INPUT { type = INPUT_KEYBOARD, u = new INPUTUNION { ki = new KEYBDINPUT { wVk = 0x12, dwFlags = 0 } } };
-        inputs[1] = new INPUT { type = INPUT_KEYBOARD, u = new INPUTUNION { ki = new KEYBDINPUT { wVk = 0x27, dwFlags = 0 } } };
-        SendInput(2, inputs, Marshal.SizeOf<INPUT>());
+        inputs[0] = new INPUT { type = User32Interop.INPUT_KEYBOARD, u = new InputUnion { ki = new KEYBDINPUT { wVk = 0x12, dwFlags = 0 } } };
+        inputs[1] = new INPUT { type = User32Interop.INPUT_KEYBOARD, u = new InputUnion { ki = new KEYBDINPUT { wVk = 0x27, dwFlags = 0 } } };
+        User32Interop.SendInput(2, inputs, Marshal.SizeOf<INPUT>());
 
         Thread.Sleep(50);
 
-        inputs[0] = new INPUT { type = INPUT_KEYBOARD, u = new INPUTUNION { ki = new KEYBDINPUT { wVk = 0x27, dwFlags = 0x0002 } } };
-        inputs[1] = new INPUT { type = INPUT_KEYBOARD, u = new INPUTUNION { ki = new KEYBDINPUT { wVk = 0x12, dwFlags = 0x0002 } } };
-        SendInput(2, inputs, Marshal.SizeOf<INPUT>());
+        inputs[0] = new INPUT { type = User32Interop.INPUT_KEYBOARD, u = new InputUnion { ki = new KEYBDINPUT { wVk = 0x27, dwFlags = 0x0002 } } };
+        inputs[1] = new INPUT { type = User32Interop.INPUT_KEYBOARD, u = new InputUnion { ki = new KEYBDINPUT { wVk = 0x12, dwFlags = 0x0002 } } };
+        User32Interop.SendInput(2, inputs, Marshal.SizeOf<INPUT>());
 
         return new ToolResult { Name = Name, Success = true, Content = "已前进" };
     }
@@ -226,32 +226,18 @@ public class BrowserAutomationTool : ITool
     private async Task<ToolResult> RefreshAsync()
     {
         var inputs = new INPUT[2];
-        inputs[0] = new INPUT { type = INPUT_KEYBOARD, u = new INPUTUNION { ki = new KEYBDINPUT { wVk = 0x11, dwFlags = 0 } } };
-        inputs[1] = new INPUT { type = INPUT_KEYBOARD, u = new INPUTUNION { ki = new KEYBDINPUT { wVk = 0x52, dwFlags = 0 } } };
-        SendInput(2, inputs, Marshal.SizeOf<INPUT>());
+        inputs[0] = new INPUT { type = User32Interop.INPUT_KEYBOARD, u = new InputUnion { ki = new KEYBDINPUT { wVk = 0x11, dwFlags = 0 } } };
+        inputs[1] = new INPUT { type = User32Interop.INPUT_KEYBOARD, u = new InputUnion { ki = new KEYBDINPUT { wVk = 0x52, dwFlags = 0 } } };
+        User32Interop.SendInput(2, inputs, Marshal.SizeOf<INPUT>());
 
         Thread.Sleep(50);
 
-        inputs[0] = new INPUT { type = INPUT_KEYBOARD, u = new INPUTUNION { ki = new KEYBDINPUT { wVk = 0x52, dwFlags = 0x0002 } } };
-        inputs[1] = new INPUT { type = INPUT_KEYBOARD, u = new INPUTUNION { ki = new KEYBDINPUT { wVk = 0x11, dwFlags = 0x0002 } } };
-        SendInput(2, inputs, Marshal.SizeOf<INPUT>());
+        inputs[0] = new INPUT { type = User32Interop.INPUT_KEYBOARD, u = new InputUnion { ki = new KEYBDINPUT { wVk = 0x52, dwFlags = 0x0002 } } };
+        inputs[1] = new INPUT { type = User32Interop.INPUT_KEYBOARD, u = new InputUnion { ki = new KEYBDINPUT { wVk = 0x11, dwFlags = 0x0002 } } };
+        User32Interop.SendInput(2, inputs, Marshal.SizeOf<INPUT>());
 
         return new ToolResult { Name = Name, Success = true, Content = "已刷新" };
     }
-
-    [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
-    [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-    [DllImport("user32.dll")] private static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
-    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
-    [DllImport("user32.dll")] private static extern void mouse_event(uint dwFlags, int dx, int dy, uint dwData, int dwExtraInfo);
-    [DllImport("user32.dll")] private static extern void SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
-
-    private const uint INPUT_KEYBOARD = 1;
-
-    [StructLayout(LayoutKind.Sequential)] private struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
-    [StructLayout(LayoutKind.Sequential)] private struct INPUT { public uint type; public INPUTUNION u; }
-    [StructLayout(LayoutKind.Explicit)] private struct INPUTUNION { [FieldOffset(0)] public KEYBDINPUT ki; }
-    [StructLayout(LayoutKind.Sequential)] private struct KEYBDINPUT { public ushort wVk; public ushort wScan; public uint dwFlags; public uint time; public IntPtr dwExtraInfo; }
 
     private static ToolResult Fail(string error) => new() { Name = "browser_automation", Success = false, Error = error };
 }

@@ -118,18 +118,41 @@ public class MemoryIntegrationService
 
     private MemoryProposal? AnalyzeUserPreference(AgentTask task, TaskResult result)
     {
-        var preferences = new List<string>();
+        var signals = new List<(string Content, int Weight)>();
 
-        if (result.Content.Contains("中文") || result.Content.Contains("Chinese"))
-            preferences.Add("用户使用中文");
-        if (task.Input.Contains("简洁") || task.Input.Contains("简短"))
-            preferences.Add("用户喜欢简洁回答");
-        if (task.Input.Contains("详细") || task.Input.Contains("详细说明"))
-            preferences.Add("用户喜欢详细回答");
-        if (task.Type == TaskType.SolveProblem)
-            preferences.Add("用户经常问问题");
+        // --- 语言偏好（输入 + 输出双端检测）---
+        var inputChinese = ContainsCjk(task.Input);
+        var outputChinese = ContainsCjk(result.Content);
+        if (inputChinese || outputChinese)
+            signals.Add(("用户使用中文交流", 3));
 
-        if (preferences.Count == 0) return null;
+        // --- 回复风格偏好 ---
+        if (ContainsKeyword(task.Input, "简洁", "简短", "一句话", "简单说")) signals.Add(("用户偏好简洁回答", 4));
+        if (ContainsKeyword(task.Input, "详细", "详细说明", "详细解释", "展开", "深入")) signals.Add(("用户偏好详细回答", 4));
+        if (ContainsKeyword(task.Input, "代码", "code", "示例", "example", "demo")) signals.Add(("用户偏好带代码示例的回答", 3));
+
+        // --- 任务模式偏好 ---
+        if (task.Type == TaskType.SolveProblem) signals.Add(("用户经常解决题目类问题", 2));
+        if (task.Type == TaskType.InspectProject) signals.Add(("用户关注项目结构分析", 2));
+        if (task.Type == TaskType.AnalyzeError) signals.Add(("用户经常排查错误", 2));
+        if (task.Type == TaskType.WriteFile) signals.Add(("用户需要生成文件", 2));
+
+        // --- 输出内容推断 ---
+        if (result.Content.Contains("\n- ") || result.Content.Contains("\n1. ")) signals.Add(("用户偏好结构化/列表式回答", 2));
+        if (result.Content.Contains("```")) signals.Add(("用户偏好带代码块的回答", 2));
+
+        // 信号去重并按权重排序，取 Top 3
+        var merged = signals
+            .GroupBy(s => s.Content)
+            .Select(g => (Content: g.Key, Weight: g.Sum(s => s.Weight)))
+            .OrderByDescending(s => s.Weight)
+            .Take(3)
+            .ToList();
+
+        if (merged.Count == 0) return null;
+
+        var preferenceText = string.Join("；", merged.Select(m => m.Content));
+        var confidence = merged.Sum(m => m.Weight) / (float)(merged.Count * 5);
 
         return new MemoryProposal
         {
@@ -137,13 +160,32 @@ public class MemoryIntegrationService
             {
                 Type = MemoryType.User,
                 Key = $"preference_{task.Type}_{DateTime.UtcNow:yyyyMMdd}",
-                Content = string.Join("；", preferences),
+                Content = preferenceText,
                 Source = $"任务 {task.Id}",
-                Tags = new Dictionary<string, string> { ["taskType"] = task.Type.ToString(), ["source"] = "auto_detect" }
+                Tags = new Dictionary<string, string>
+                {
+                    ["taskType"] = task.Type.ToString(),
+                    ["source"] = "auto_detect",
+                    ["confidence"] = confidence.ToString("F2")
+                }
             },
-            Reason = "检测到用户偏好",
-            Priority = MemoryPriority.Low
+            Reason = confidence >= 0.6 ? "检测到明确用户偏好" : "检测到潜在用户偏好",
+            Priority = confidence >= 0.6 ? MemoryPriority.Medium : MemoryPriority.Low
         };
+    }
+
+    /// <summary>检测是否包含 CJK 字符</summary>
+    private static bool ContainsCjk(string text)
+    {
+        foreach (char c in text)
+            if (c >= 0x4E00 && c <= 0x9FFF || c >= 0x3400 && c <= 0x4DBF) return true;
+        return false;
+    }
+
+    /// <summary>批量关键词检测</summary>
+    private static bool ContainsKeyword(string text, params string[] keywords)
+    {
+        return keywords.Any(k => text.Contains(k, StringComparison.OrdinalIgnoreCase));
     }
 
     private MemoryProposal? AnalyzeProjectInfo(AgentTask task, TaskResult result)

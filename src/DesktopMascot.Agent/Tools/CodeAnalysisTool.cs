@@ -1,5 +1,7 @@
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
+using DesktopMascot.Agent.Models;
 
 namespace DesktopMascot.Agent.Tools;
 

@@ -103,19 +103,21 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
     {
         var computerUseLogger = new Logger<ComputerUseOrchestrator>(NullLoggerFactory.Instance);
         var computerUseOrchestrator = new ComputerUseOrchestrator(provider, _eventBus, computerUseLogger);
-        return new AgentOrchestrator(
-            provider,
-            _toolRegistry,
-            _eventBus,
-            _logger,
-            memoryService: _memoryService,
-            computerUseOrchestrator: computerUseOrchestrator,
-            historyStore: _historyStore,
-            conversationManager: _conversationManager,
-            learningEngine: _learningEngine,
-            auditLogStore: _auditLogStore,
-            errorHandler: _errorHandler,
-            personality: _personality);
+        return new AgentOrchestrator(new AgentOrchestratorOptions
+        {
+            LlmProvider = provider,
+            ToolRegistry = _toolRegistry,
+            EventBus = _eventBus,
+            Logger = _logger,
+            MemoryService = _memoryService,
+            ComputerUseOrchestrator = computerUseOrchestrator,
+            HistoryStore = _historyStore,
+            ConversationManager = _conversationManager,
+            LearningEngine = _learningEngine,
+            AuditLogStore = _auditLogStore,
+            ErrorHandler = _errorHandler,
+            Personality = _personality
+        });
     }
 
     private static ILlmProvider BuildProvider(AppSettings settings)

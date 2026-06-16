@@ -69,7 +69,7 @@ public class MemoryCache : ICache
         }
 
         entry.LastAccessedAt = DateTime.UtcNow;
-        Interlocked.Increment(ref entry.AccessCount);
+        entry.AccessCount++;
         Interlocked.Increment(ref _hits);
 
         if (entry.Expiration == CacheExpiration.Sliding && entry.SlidingExpiration.HasValue)
