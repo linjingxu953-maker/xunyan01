@@ -7,6 +7,7 @@ using DesktopMascot.Core.Interfaces;
 using DesktopMascot.Core.Memory;
 using DesktopMascot.Core.Models;
 using DesktopMascot.Core.Security;
+using DesktopMascot.Core.Storage;
 using DesktopMascot.UI.Services;
 
 namespace DesktopMascot.UI.ViewModels;
@@ -163,6 +164,7 @@ public partial class FloatingWindowViewModel
     private readonly ITaskRouter _taskRouter;
     private readonly ITaskEventBus _eventBus;
     private readonly ITaskEventStream _eventStream;
+    private readonly ITaskHistoryStore _taskHistoryStore;
     private readonly IMascotCharacterStore _characterStore;
     private readonly ICharacterImageService _characterImageService;
     private readonly ITaskResultActionService _taskResultActionService;
@@ -175,6 +177,8 @@ public partial class FloatingWindowViewModel
     private AgentTask? _pendingConfirmationTask;
     private string _pendingConfirmationInput = string.Empty;
     private string _lastUserMessage = string.Empty;
+    private string _currentConversationId = Guid.NewGuid().ToString("N");
+    private DateTime _currentConversationCreatedAt = DateTime.UtcNow;
     private Dictionary<string, string> _characterStateImages = new();
     private List<string> _characterPersonalityTraits = ["可靠", "主动"];
     private bool _isApplyingCharacterProfile;

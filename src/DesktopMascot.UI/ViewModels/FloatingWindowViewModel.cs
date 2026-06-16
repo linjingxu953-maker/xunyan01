@@ -14,6 +14,7 @@ using DesktopMascot.Core.Interfaces;
 using DesktopMascot.Core.Memory;
 using DesktopMascot.Core.Models;
 using DesktopMascot.Core.Security;
+using DesktopMascot.Core.Storage;
 using DesktopMascot.UI.Services;
 
 namespace DesktopMascot.UI.ViewModels;
@@ -33,9 +34,11 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         IConfigurationManager configurationManager, ISettingsDiagnosticsService settingsDiagnosticsService,
         IOnboardingWindowService onboardingWindowService, ICharacterAssetImportService characterAssetImportService,
         IGlobalHotkeyService hotkeyService, IPermissionManager permissionManager,
-        IAuditLogStore auditLogStore, IMemoryStore memoryStore)
+        IAuditLogStore auditLogStore, IMemoryStore memoryStore,
+        ITaskHistoryStore taskHistoryStore)
     {
         _taskRouter = taskRouter; _eventBus = eventBus; _eventStream = eventStream;
+        _taskHistoryStore = taskHistoryStore;
         _characterStore = characterStore; _characterImageService = characterImageService;
         _taskResultActionService = taskResultActionService;
         _confirmationHandler = confirmationHandler; _memoryConfirmationHandler = memoryConfirmationHandler;
@@ -54,6 +57,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
 
         _eventBus.TaskEventPublished += OnTaskEventPublished;
         _eventStreamSubscription = _eventStream.SubscribeAll().Subscribe(new TaskEventObserver(OnTaskStreamEvent));
+        _ = LoadTaskHistoryAsync();
     }
 
     // ── 核心任务执行 ──
@@ -91,6 +95,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
                 MessageItems.RemoveAt(MessageItems.Count - 1);
             if (result.Success) { Messages.Add($"{CharacterName}：{result.Content}"); MessageItems.Add(new MessageItem { Role = "assistant", Content = result.Content }); }
             else { Messages.Add($"{CharacterName}：{TaskResultPreview}"); MessageItems.Add(new MessageItem { Role = "assistant", Content = TaskResultPreview }); }
+            await SaveCurrentConversationAsync(task, result);
         }
         finally { IsBusy = false; IsTaskActive = false; CanCancelTask = false; }
     }
@@ -235,7 +240,156 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     public void OpenTaskHistoryItem(TaskHistoryItem? item) { if (item is null) return; BackToChat(); MessageItems.Clear(); Messages.Clear(); foreach (var m in item.Messages) { MessageItems.Add(m); Messages.Add($"{m.RoleText}：{m.Content}"); } StateHint = "历史"; TaskActionStatus = $"已打开历史任务：{item.Title}"; }
     public async Task CopyTaskHistoryItemAsync(TaskHistoryItem? item) { if (item is null) return; var copied = await _taskResultActionService.CopyToClipboardAsync(BuildTaskHistoryDocument(item)); TaskActionStatus = copied ? "历史任务已复制到剪贴板。" : "复制失败：当前没有可用剪贴板。"; }
     public async Task SaveTaskHistoryItemAsync(TaskHistoryItem? item) { if (item is null) return; var path = await _taskResultActionService.SaveResultAsync(item.Title, BuildTaskHistoryDocument(item)); TaskActionStatus = $"历史任务已保存：{path}"; }
-    public void DeleteTaskHistoryItem(TaskHistoryItem? item) { if (item is null) return; TaskHistory.Remove(item); TaskActionStatus = $"已删除历史任务：{item.Title}"; }
+    public async Task DeleteTaskHistoryItemAsync(TaskHistoryItem? item)
+    {
+        if (item is null) return;
+
+        try
+        {
+            var deleted = await _taskHistoryStore.DeleteTaskAsync(item.Id);
+            TaskHistory.Remove(item);
+            TaskActionStatus = deleted ? $"已删除历史任务：{item.Title}" : $"已从侧栏移除历史任务：{item.Title}";
+        }
+        catch
+        {
+            TaskHistory.Remove(item);
+            TaskActionStatus = $"历史任务已从侧栏移除，存储删除稍后重试：{item.Title}";
+        }
+    }
+
+    private async Task LoadTaskHistoryAsync()
+    {
+        try
+        {
+            var records = await _taskHistoryStore.GetRecentTasksAsync(30);
+            var items = records
+                .OrderByDescending(record => record.CreatedAt)
+                .Select(CreateTaskHistoryItem)
+                .Where(item => item.Messages.Count > 0)
+                .ToList();
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                TaskHistory.Clear();
+                foreach (var item in items)
+                {
+                    TaskHistory.Add(item);
+                }
+            });
+        }
+        catch
+        {
+            Dispatcher.UIThread.Post(() => TaskActionStatus = "任务历史加载失败，当前只显示本次会话历史。");
+        }
+    }
+
+    private async Task SaveCurrentConversationAsync(AgentTask? task = null, TaskResult? result = null)
+    {
+        if (MessageItems.Count == 0)
+            return;
+
+        var firstUserMessage = MessageItems.FirstOrDefault(message => message.Role == "user")?.Content ?? TaskSummary;
+        var lastAssistantMessage = MessageItems.LastOrDefault(message => message.Role != "user")?.Content ?? TaskResultPreview;
+        var metadata = task is null ? BuildTaskMetadata(firstUserMessage) : (task.Type, task.RequiredPermission, task.Title, ActiveTaskTypeText);
+        var completedAt = DateTime.UtcNow;
+        var record = new TaskHistoryRecord
+        {
+            Id = _currentConversationId,
+            Title = CleanText(firstUserMessage, metadata.Title, 42),
+            Input = firstUserMessage,
+            Type = metadata.Type,
+            Status = result is null || result.Success ? AppTaskStatus.Completed : AppTaskStatus.Failed,
+            Result = lastAssistantMessage,
+            Error = result is { Success: false } ? result.Error : null,
+            CreatedAt = _currentConversationCreatedAt,
+            CompletedAt = completedAt,
+            Events = MessageItems.Select((message, index) => new TaskEventRecord
+            {
+                TaskId = _currentConversationId,
+                State = message.Role,
+                Message = message.Content,
+                Progress = 100,
+                Timestamp = _currentConversationCreatedAt.AddMilliseconds(index)
+            }).ToList()
+        };
+
+        try
+        {
+            await _taskHistoryStore.SaveTaskAsync(record);
+            UpsertTaskHistoryItem(CreateTaskHistoryItem(record));
+        }
+        catch
+        {
+            UpsertTaskHistoryItem(new TaskHistoryItem
+            {
+                Id = record.Id,
+                Title = record.Title,
+                TimeText = FormatHistoryTime(record.CreatedAt),
+                Messages = MessageItems.Select(CloneMessage).ToList()
+            });
+            TaskActionStatus = "任务历史已保留在侧栏，持久化保存稍后重试。";
+        }
+    }
+
+    private void StartNewConversation()
+    {
+        _currentConversationId = Guid.NewGuid().ToString("N");
+        _currentConversationCreatedAt = DateTime.UtcNow;
+        _lastUserMessage = string.Empty;
+    }
+
+    private void UpsertTaskHistoryItem(TaskHistoryItem item)
+    {
+        var existing = TaskHistory.FirstOrDefault(history => history.Id == item.Id);
+        if (existing is not null)
+        {
+            var index = TaskHistory.IndexOf(existing);
+            TaskHistory[index] = item;
+        }
+        else
+        {
+            TaskHistory.Insert(0, item);
+        }
+    }
+
+    private static TaskHistoryItem CreateTaskHistoryItem(TaskHistoryRecord record)
+    {
+        var messages = record.Events
+            .Where(item => item.State is "user" or "assistant")
+            .OrderBy(item => item.Timestamp)
+            .Select(item => new MessageItem { Role = item.State, Content = item.Message })
+            .ToList();
+
+        if (messages.Count == 0 && !string.IsNullOrWhiteSpace(record.Input))
+        {
+            messages.Add(new MessageItem { Role = "user", Content = record.Input });
+
+            if (!string.IsNullOrWhiteSpace(record.Result))
+            {
+                messages.Add(new MessageItem { Role = "assistant", Content = record.Result });
+            }
+            else if (!string.IsNullOrWhiteSpace(record.Error))
+            {
+                messages.Add(new MessageItem { Role = "assistant", Content = record.Error });
+            }
+        }
+
+        return new TaskHistoryItem
+        {
+            Id = record.Id,
+            Title = CleanText(record.Title, record.Input, 42),
+            TimeText = FormatHistoryTime(record.CreatedAt),
+            Messages = messages
+        };
+    }
+
+    private static MessageItem CloneMessage(MessageItem message) => new() { Role = message.Role, Content = message.Content };
+
+    private static string FormatHistoryTime(DateTime value)
+    {
+        var local = value.Kind == DateTimeKind.Local ? value : value.ToLocalTime();
+        return local.Date == DateTime.Now.Date ? local.ToString("HH:mm") : local.ToString("MM-dd HH:mm");
+    }
 
     // ── 状态映射 ──
     private bool CanCancelCurrentTask() => CanCancelTask;

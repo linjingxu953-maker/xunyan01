@@ -191,10 +191,11 @@ public partial class FloatingWindowViewModel
     private void SelectInlineSettingsSection(string? section) { InlineSettings.SelectSectionById(section); ApplyInlineSettingsSection(section); }
 
     [RelayCommand]
-    private void NewChat()
+    private async Task NewChat()
     {
         BackToChat();
-        if (MessageItems.Count > 0) { TaskHistory.Insert(0, new TaskHistoryItem { Id = Guid.NewGuid().ToString("N"), Title = MessageItems.FirstOrDefault()?.Content ?? "新对话", TimeText = DateTime.Now.ToString("HH:mm"), Messages = new List<MessageItem>(MessageItems) }); }
+        await SaveCurrentConversationAsync();
+        StartNewConversation();
         MessageItems.Clear(); Messages.Clear();
     }
 

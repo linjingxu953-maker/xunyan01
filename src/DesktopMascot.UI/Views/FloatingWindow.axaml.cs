@@ -220,11 +220,11 @@ public partial class FloatingWindow : Window
         e.Handled = true;
     }
 
-    private void DeleteHistoryItem_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private async void DeleteHistoryItem_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (sender is Button { Tag: TaskHistoryItem item })
+        if (sender is Button { Tag: TaskHistoryItem item } && _viewModel is not null)
         {
-            _viewModel?.DeleteTaskHistoryItem(item);
+            await _viewModel.DeleteTaskHistoryItemAsync(item);
         }
 
         e.Handled = true;
