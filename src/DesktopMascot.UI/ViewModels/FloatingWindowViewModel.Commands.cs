@@ -73,10 +73,37 @@ public partial class FloatingWindowViewModel
         Messages.Add($"{CharacterName}：已取消该操作。");
     }
 
-    [RelayCommand] private void PauseComputerUse() => PrimeComputerUsePanel("暂停请求", "人工控制", "已请求", "已请求暂停自动桌面操作。");
-    [RelayCommand] private void ResumeComputerUse() => PrimeComputerUsePanel("继续请求", "人工控制", "已请求", "已请求继续自动桌面操作。");
-    [RelayCommand] private void TakeOverComputerUse() { PrimeComputerUsePanel("人工接管", "当前桌面", "已请求", "已请求人工接管当前桌面操作。"); ComputerUseModeText = "接管中"; TryCancelComputerUseTask("已请求人工接管，正在停止自动桌面操作。"); }
-    [RelayCommand] private void StopComputerUse() { PrimeComputerUsePanel("停止请求", "当前任务", "已请求", "已请求停止 Computer Use 自动操作。"); ComputerUseModeText = "停止中"; TryCancelComputerUseTask("已请求停止 Computer Use 自动操作。"); }
+    [RelayCommand]
+    private void PauseComputerUse()
+    {
+        PrimeComputerUsePanel("暂停请求", "人工控制", "已请求", "已请求暂停自动桌面操作。");
+        ComputerUseModeText = "暂停中";
+        ComputerUseControlStatus = "暂停请求已记录；底层暂停 API 暂未开放，敏感动作仍会走权限确认。";
+    }
+
+    [RelayCommand]
+    private void ResumeComputerUse()
+    {
+        PrimeComputerUsePanel("继续请求", "人工控制", "已请求", "已请求继续自动桌面操作。");
+        ComputerUseModeText = "执行中";
+        ComputerUseControlStatus = "继续请求已记录；后续接入 Agent 控制 API 后会恢复自动动作。";
+    }
+
+    [RelayCommand]
+    private void TakeOverComputerUse()
+    {
+        PrimeComputerUsePanel("人工接管", "当前桌面", "已请求", "已请求人工接管当前桌面操作。");
+        ComputerUseModeText = "接管中";
+        TryCancelComputerUseTask("已请求人工接管，正在停止自动桌面操作。");
+    }
+
+    [RelayCommand]
+    private void StopComputerUse()
+    {
+        PrimeComputerUsePanel("停止请求", "当前任务", "已请求", "已请求停止 Computer Use 自动操作。");
+        ComputerUseModeText = "停止中";
+        TryCancelComputerUseTask("已请求停止 Computer Use 自动操作。");
+    }
 
     [RelayCommand]
     private void ToggleVoiceInput() { IsVoiceRecording = !IsVoiceRecording; VoiceInputStatus = IsVoiceRecording ? "录音中，点击麦克风结束。" : "录音已结束，等待语音识别服务接入后自动转写并发送。"; }
@@ -88,8 +115,13 @@ public partial class FloatingWindowViewModel
     private void OpenComputerUsePermission()
     {
         PrimeComputerUsePanel("权限入口", "权限确认", "已打开", "已定位到当前 Computer Use 权限状态。");
-        if (IsWaitingForUserConfirmation) { ComputerUseControlStatus = $"等待用户处理：{PendingConfirmationTitle} / {PendingConfirmationRiskText}。"; return; }
-        OpenSettingsPanel(); SelectInlineSettingsSection("permission");
+        if (IsWaitingForUserConfirmation)
+        {
+            ComputerUseControlStatus = $"等待用户处理：{PendingConfirmationTitle} / {PendingConfirmationRiskText}。";
+            return;
+        }
+        OpenSettingsPanel();
+        SelectInlineSettingsSection("permission");
         ComputerUseControlStatus = "当前没有待确认权限，已打开权限设置页。";
     }
 
@@ -134,7 +166,12 @@ public partial class FloatingWindowViewModel
     {
         if (string.IsNullOrWhiteSpace(color)) return;
         CharacterAccentColor = color;
-        CharacterBackgroundColor = color switch { "#0F766E" => "#F0FDFA", "#7C2D12" => "#FFF7ED", "#7C3AED" => "#F5F3FF", "#C026D3" => "#FDF4FF", "#DC2626" => "#FEF2F2", "#2563EB" => "#EEF6FF", _ => "#F9FAFB" };
+        CharacterBackgroundColor = color switch
+        {
+            "#0F766E" => "#F0FDFA", "#7C2D12" => "#FFF7ED", "#7C3AED" => "#F5F3FF",
+            "#C026D3" => "#FDF4FF", "#DC2626" => "#FEF2F2", "#2563EB" => "#EEF6FF",
+            _ => "#F9FAFB"
+        };
         RefreshCharacterBrushes();
     }
 
