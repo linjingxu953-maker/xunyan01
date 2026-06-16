@@ -1245,17 +1245,25 @@
                                                     </StackPanel>
                                                 </Grid>
 
-                                                <Grid ColumnDefinitions="*,Auto,Auto"
+                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto"
                                                       ColumnSpacing="8">
-                                                    <TextBlock Text="保存结果会写入本机 Exports；删除只影响当前选中的历史记录。"
+                                                    <TextBlock Text="复制会写入系统剪贴板；保存结果会写入本机任务结果目录；删除只影响当前选中的历史记录。"
                                                                Classes="captionText"
                                                                VerticalAlignment="Center"
                                                                TextWrapping="Wrap"/>
                                                     <Button Grid.Column="1"
+                                                            Content="复制结果"
+                                                            Classes="secondaryAction"
+                                                            Command="{Binding CopySelectedTaskResultCommand}"/>
+                                                    <Button Grid.Column="2"
+                                                            Content="复制全文"
+                                                            Classes="secondaryAction"
+                                                            Command="{Binding CopySelectedTaskHistoryCommand}"/>
+                                                    <Button Grid.Column="3"
                                                             Content="保存结果"
                                                             Classes="secondaryAction"
                                                             Command="{Binding SaveSelectedTaskResultCommand}"/>
-                                                    <Button Grid.Column="2"
+                                                    <Button Grid.Column="4"
                                                             Content="删除记录"
                                                             Classes="secondaryAction"
                                                             Command="{Binding DeleteSelectedTaskHistoryCommand}"/>

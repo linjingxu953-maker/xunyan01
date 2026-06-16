@@ -173,7 +173,11 @@ public class ImageProcessingTool : ITool
 
         using var image = Image.FromFile(inputPath);
         var rect = new Rectangle(x, y, width, height);
-        using var cropped = image.Clone(rect, image.PixelFormat);
+        using var cropped = new Bitmap(width, height, image.PixelFormat);
+        using (var g = Graphics.FromImage(cropped))
+        {
+            g.DrawImage(image, new Rectangle(0, 0, width, height), rect, GraphicsUnit.Pixel);
+        }
         cropped.Save(outputPath);
 
         var sb = new System.Text.StringBuilder();

@@ -102,6 +102,13 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [ObservableProperty] private string _memorySearchText = string.Empty;
     [ObservableProperty] private string _selectedMemoryFilter = "全部";
     [ObservableProperty] private string _memoryClearButtonText = "清理";
+    [ObservableProperty] private string _memoryEditDraftContent = string.Empty;
+    [ObservableProperty] private string _memoryEditDraftTags = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMemoryBrowserReadMode))]
+    private bool _isMemoryBrowserEditMode;
+
     [ObservableProperty] private string _taskHistorySettingsStatus = "任务历史会从 ITaskHistoryStore 读取，支持搜索、导出和删除。";
     [ObservableProperty] private string _taskHistorySearchText = string.Empty;
     [ObservableProperty] private string _selectedTaskHistoryStatusFilter = "全部";
@@ -359,6 +366,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     public bool HasNoMemoryBrowserItems => !HasMemoryBrowserItems;
     public bool IsMemoryBrowserItemSelected => SelectedMemoryBrowserItem is not null;
     public bool HasNoMemoryBrowserItemSelected => !IsMemoryBrowserItemSelected;
+    public bool IsMemoryBrowserReadMode => !IsMemoryBrowserEditMode;
     public bool HasTaskHistoryBrowserItems => TaskHistoryBrowserItems.Count > 0;
     public bool HasNoTaskHistoryBrowserItems => !HasTaskHistoryBrowserItems;
     public bool IsTaskHistoryBrowserItemSelected => SelectedTaskHistoryBrowserItem is not null;
@@ -872,6 +880,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private async Task SearchMemoryBrowser()
     {
         ResetMemoryClearConfirmation();
+        ResetMemoryEditMode();
 
         if (_memoryStore is null)
         {
@@ -906,6 +915,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private async Task ResetMemoryBrowser()
     {
         ResetMemoryClearConfirmation();
+        ResetMemoryEditMode();
         MemorySearchText = string.Empty;
         SelectedMemoryFilter = "全部";
 
@@ -953,6 +963,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private async Task ImportMemory()
     {
         ResetMemoryClearConfirmation();
+        ResetMemoryEditMode();
 
         if (_memoryStore is null)
         {
@@ -1003,6 +1014,8 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task ClearMemory()
     {
+        ResetMemoryEditMode();
+
         if (_memoryStore is null)
         {
             MemorySettingsStatus = "IMemoryStore 未注入，暂时无法清理记忆。";
@@ -1076,6 +1089,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private async Task DeleteSelectedMemory()
     {
         ResetMemoryClearConfirmation();
+        ResetMemoryEditMode();
 
         if (SelectedMemoryBrowserItem is null)
         {
@@ -1347,6 +1361,93 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             TaskHistorySettingsStatus = removed == 0
                 ? "没有需要清理的 30 天以前任务历史。"
                 : $"已清理 {removed} 条 30 天以前的任务历史。";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private void EditSelectedMemory()
+    {
+        ResetMemoryClearConfirmation();
+
+        if (SelectedMemoryBrowserItem is null)
+        {
+            MemorySettingsStatus = "请先选择一条记忆。";
+            return;
+        }
+
+        MemoryEditDraftContent = SelectedMemoryBrowserItem.Content;
+        MemoryEditDraftTags = SelectedMemoryBrowserItem.Tags == "无标签"
+            ? string.Empty
+            : SelectedMemoryBrowserItem.Tags;
+        IsMemoryBrowserEditMode = true;
+        MemorySettingsStatus = $"正在编辑记忆：{SelectedMemoryBrowserItem.Key}。";
+    }
+
+    [RelayCommand]
+    private void CancelMemoryEdit()
+    {
+        ResetMemoryEditMode();
+        MemorySettingsStatus = SelectedMemoryBrowserItem is null
+            ? "已取消记忆编辑。"
+            : $"已取消编辑：{SelectedMemoryBrowserItem.Key}。";
+    }
+
+    [RelayCommand]
+    private async Task SaveEditedMemory()
+    {
+        ResetMemoryClearConfirmation();
+
+        if (SelectedMemoryBrowserItem is null)
+        {
+            MemorySettingsStatus = "请先选择一条记忆。";
+            return;
+        }
+
+        if (_memoryStore is null)
+        {
+            MemorySettingsStatus = "IMemoryStore 未注入，暂时无法编辑记忆。";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(MemoryEditDraftContent))
+        {
+            MemorySettingsStatus = "记忆内容不能为空。";
+            return;
+        }
+
+        var selectedId = SelectedMemoryBrowserItem.Id;
+        var selectedKey = SelectedMemoryBrowserItem.Key;
+        IsBusy = true;
+
+        try
+        {
+            var entry = await _memoryStore.GetByIdAsync(selectedId);
+            if (entry is null)
+            {
+                MemorySettingsStatus = $"没有找到记忆：{selectedKey}。";
+                await RefreshMemorySnapshotAsync();
+                return;
+            }
+
+            entry.Content = MemoryEditDraftContent.Trim();
+            entry.Tags = ParseMemoryTags(MemoryEditDraftTags);
+            entry.IsConfirmed = true;
+            await _memoryStore.SaveAsync(entry);
+
+            ResetMemoryEditMode();
+            await RefreshMemorySnapshotAsync();
+            if (!string.IsNullOrWhiteSpace(MemorySearchText) || SelectedMemoryFilter != "全部")
+            {
+                await SearchMemoryBrowser();
+            }
+
+            SelectedMemoryBrowserItem =
+                MemoryBrowserItems.FirstOrDefault(item => item.Id == selectedId) ?? SelectedMemoryBrowserItem;
+            MemorySettingsStatus = $"已保存记忆编辑：{selectedKey}。";
         }
         finally
         {
@@ -1884,6 +1985,8 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
 
     partial void OnSelectedMemoryBrowserItemChanged(MemoryBrowserItem? value)
     {
+        ResetMemoryEditMode();
+
         if (value is null)
             return;
 
@@ -1893,11 +1996,13 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     partial void OnMemorySearchTextChanged(string value)
     {
         ResetMemoryClearConfirmation();
+        ResetMemoryEditMode();
     }
 
     partial void OnSelectedMemoryFilterChanged(string value)
     {
         ResetMemoryClearConfirmation();
+        ResetMemoryEditMode();
     }
 
     partial void OnSelectedTaskHistoryBrowserItemChanged(TaskHistoryBrowserItem? value)
@@ -2376,6 +2481,36 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         _ => null
     };
 
+    private static Dictionary<string, string> ParseMemoryTags(string? value)
+    {
+        var tags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(value))
+            return tags;
+
+        var parts = value.Split(['、', ',', '，', ';', '；', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        foreach (var part in parts)
+        {
+            var text = part.Trim();
+            if (string.IsNullOrWhiteSpace(text))
+                continue;
+
+            var separatorIndex = text.IndexOf(':');
+            if (separatorIndex < 0)
+            {
+                separatorIndex = text.IndexOf('：');
+            }
+
+            var key = separatorIndex > 0 ? text[..separatorIndex].Trim() : text;
+            var tagValue = separatorIndex > 0 ? text[(separatorIndex + 1)..].Trim() : "true";
+            if (string.IsNullOrWhiteSpace(key))
+                continue;
+
+            tags[key] = string.IsNullOrWhiteSpace(tagValue) ? "true" : tagValue;
+        }
+
+        return tags;
+    }
+
     private async Task RefreshTaskHistorySnapshotAsync(CancellationToken ct = default)
     {
         if (_taskHistoryStore is null)
@@ -2587,17 +2722,6 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         return duration.Value.TotalMinutes >= 1
             ? $"{duration.Value.TotalMinutes:F1} 分钟"
             : $"{Math.Max(1, duration.Value.TotalSeconds):F0} 秒";
-    }
-
-    private static string SanitizeFileName(string value)
-    {
-        var text = CleanText(value, "task", 40);
-        foreach (var invalid in Path.GetInvalidFileNameChars())
-        {
-            text = text.Replace(invalid, '-');
-        }
-
-        return string.IsNullOrWhiteSpace(text) ? "task" : text;
     }
 
     private static string CreateAuditLogKey(AuditLogEntry entry)
