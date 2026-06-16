@@ -37,6 +37,7 @@ public class AgentOrchestrator : IAgentEngine
 
     private readonly AgentPersonality _personality;
 
+    /// <summary>主构造函数 — 通过 Options 对象注入所有依赖</summary>
     public AgentOrchestrator(AgentOrchestratorOptions options)
     {
         _llmProvider = options.LlmProvider;
@@ -52,6 +53,24 @@ public class AgentOrchestrator : IAgentEngine
         _auditLogStore = options.AuditLogStore;
         _errorHandler = options.ErrorHandler;
         _personality = options.Personality ?? new AgentPersonality();
+    }
+
+    /// <summary>便捷构造函数 — 仅必选依赖，供测试和简单场景使用</summary>
+    public AgentOrchestrator(
+        ILlmProvider llmProvider,
+        ToolRegistry toolRegistry,
+        ITaskEventBus eventBus,
+        ILogger<AgentOrchestrator> logger,
+        int maxIterations = 10)
+        : this(new AgentOrchestratorOptions
+        {
+            LlmProvider = llmProvider,
+            ToolRegistry = toolRegistry,
+            EventBus = eventBus,
+            Logger = logger,
+            MaxIterations = maxIterations
+        })
+    {
     }
 
     public async Task<TaskResult> ExecuteAsync(AgentTask task, CancellationToken ct = default)
@@ -678,173 +697,12 @@ public class AgentOrchestrator : IAgentEngine
         };
     }
 
-    private static string GetAnalyzeErrorPrompt()
-    {
-        return """
-            你是一个专业的错误分析助手。你的任务是帮助用户理解和解决软件报错。
-
-            分析步骤：
-            1. **错误识别**：提取错误类型、错误代码、错误消息
-            2. **原因分析**：分析可能的根本原因（从最可能到最不可能）
-            3. **解决方案**：给出具体的修复步骤
-            4. **预防建议**：如何避免类似错误再次发生
-
-            回答格式：
-            **错误类型**: [类型]
-            **错误信息**: [关键信息]
-            **可能原因**:
-            1. [原因1]
-            2. [原因2]
-            **解决方案**:
-            1. [步骤1]
-            2. [步骤2]
-            **预防建议**: [建议]
-
-            注意：
-            - 如果有截图，结合截图中的代码/报错信息分析
-            - 给出可执行的具体命令或代码片段
-            - 如果需要更多上下文，请明确指出需要什么信息
-            """;
-    }
-
-    private static string GetInspectProjectPrompt()
-    {
-        return """
-            你是一个专业的项目结构分析助手。你的任务是分析项目目录结构，给出诊断和改进建议。
-
-            分析维度：
-            1. **项目概览**：技术栈、项目类型、规模
-            2. **目录结构**：是否符合最佳实践
-            3. **依赖管理**：依赖是否合理、是否有冗余
-            4. **代码质量**：文件组织、命名规范
-            5. **潜在问题**：缺失文件、配置问题、安全隐患
-            6. **改进建议**：具体可执行的优化步骤
-
-            回答格式：
-            **项目类型**: [类型]
-            **技术栈**: [技术栈]
-            **项目规模**: [规模评估]
-            **目录结构评价**: [评价]
-            **发现的问题**:
-            - [问题1]
-            - [问题2]
-            **改进建议**:
-            1. [建议1]
-            2. [建议2]
-
-            注意：
-            - 如果有截图，结合截图中的目录结构分析
-            - 建议要具体可执行
-            - 按优先级排序建议
-            """;
-    }
-
-    private static string GetSolveProblemPrompt()
-    {
-        return """
-            你是一个专业的解题助手。你的任务是帮助用户理解和解答各种题目。
-
-            解题步骤：
-            1. **理解题意**：准确理解题目要求
-            2. **分析思路**：确定解题方向和方法
-            3. **详细解答**：给出完整的解题过程
-            4. **验证答案**：检查答案是否正确
-            5. **扩展思考**：相关知识点和类似题型
-
-            回答格式：
-            **题目理解**: [用自己的话复述题目]
-            **解题思路**: [用什么方法解决]
-            **详细解答**:
-            [完整的解题步骤，包括公式、代码、推理过程]
-            **答案**: [最终答案]
-            **知识点**: [涉及的核心概念]
-            **类似题型**: [举一反三]
-
-            注意：
-            - 如果有截图，仔细阅读题目内容
-            - 解题过程要详细，让用户能理解每一步
-            - 如果有多种解法，都列出来
-            - 代码题要给出可运行的代码
-            """;
-    }
-
-    private static string GetChatPrompt()
-    {
-        return """
-            你是一个友善、专业的 AI 助手。你的任务是帮助用户解决各种问题。
-
-            回答原则：
-            1. **准确**：确保信息准确，不确定时如实说明
-            2. **简洁**：回答要简洁明了，避免冗余
-            3. **有用**：给出具体可执行的建议
-            4. **友善**：保持友善耐心的态度
-
-            回答格式：
-            - 直接回答用户问题，不需要固定格式
-            - 如果问题需要步骤，用有序列表
-            - 如果是代码问题，给出代码示例
-            - 如果是概念解释，用通俗易懂的语言
-
-            注意：
-            - 如果有截图，结合截图内容回答
-            - 不确定的信息要标注
-            - 复杂问题可以分步骤回答
-            """;
-    }
-
-    private static string GetWriteFilePrompt()
-    {
-        return """
-            你是一个专业的文件生成助手。你的任务是帮助用户生成各种文件内容。
-
-            生成原则：
-            1. **完整**：生成完整的文件内容，不要省略
-            2. **规范**：遵循语言/格式的最佳实践
-            3. **可运行**：代码要能直接运行
-            4. **有注释**：关键代码添加注释
-
-            回答格式：
-            **文件类型**: [类型]
-            **文件名**: [建议文件名]
-            **内容**:
-            ```
-            [完整的文件内容]
-            ```
-
-            注意：
-            - 如果有截图，结合截图中的需求生成
-            - 代码要完整，不要用 ... 省略
-            - 如果需要多个文件，分别列出
-            - 说明文件的用途和使用方法
-            """;
-    }
-
-    private static string GetRunCommandPrompt()
-    {
-        return """
-            你是一个专业的命令执行助手。你的任务是帮助用户生成和解释各种命令。
-
-            回答原则：
-            1. **安全**：提醒用户注意命令风险
-            2. **准确**：确保命令语法正确
-            3. **解释**：说明命令的作用和参数含义
-            4. **替代**：提供更安全的替代方案
-
-            回答格式：
-            **命令**: [完整命令]
-            **作用**: [命令做什么]
-            **参数说明**:
-            - [参数1]: [含义]
-            - [参数2]: [含义]
-            **风险提示**: [如果有风险]
-            **注意事项**: [使用前需要知道的]
-
-            注意：
-            - 危险命令（rm -rf, DROP TABLE 等）要特别提醒
-            - 给出命令的可复制版本
-            - 如果有截图，结合截图中的上下文
-            """;
-    }
+    private static string GetAnalyzeErrorPrompt() => Prompts.AnalyzeError;
+    private static string GetInspectProjectPrompt() => Prompts.InspectProject;
+    private static string GetSolveProblemPrompt() => Prompts.SolveProblem;
+    private static string GetChatPrompt() => Prompts.Chat;
+    private static string GetWriteFilePrompt() => Prompts.WriteFile;
+    private static string GetRunCommandPrompt() => Prompts.RunCommand;
 
     /// <summary>
     /// 流式执行任务 - 实时推送 LLM 输出

@@ -33,12 +33,14 @@ public class ComputerUseIntegrationTests
         var registry = new ToolRegistry();
         var cuOrchestrator = new ComputerUseOrchestrator(mockLlm.Object, _mockEventBus.Object, _mockCuLogger.Object);
 
-        var orchestrator = new AgentOrchestrator(
-            mockLlm.Object,
-            registry,
-            _mockEventBus.Object,
-            _mockLogger.Object,
-            computerUseOrchestrator: cuOrchestrator);
+        var orchestrator = new AgentOrchestrator(new AgentOrchestratorOptions
+        {
+            LlmProvider = mockLlm.Object,
+            ToolRegistry = registry,
+            EventBus = _mockEventBus.Object,
+            Logger = _mockLogger.Object,
+            ComputerUseOrchestrator = cuOrchestrator
+        });
 
         var task = new AgentTask
         {
@@ -60,12 +62,14 @@ public class ComputerUseIntegrationTests
         var mockLlm = new Mock<ILlmProvider>();
         var registry = new ToolRegistry();
 
-        var orchestrator = new AgentOrchestrator(
-            mockLlm.Object,
-            registry,
-            _mockEventBus.Object,
-            _mockLogger.Object,
-            computerUseOrchestrator: null);
+        var orchestrator = new AgentOrchestrator(new AgentOrchestratorOptions
+        {
+            LlmProvider = mockLlm.Object,
+            ToolRegistry = registry,
+            EventBus = _mockEventBus.Object,
+            Logger = _mockLogger.Object,
+            ComputerUseOrchestrator = null
+        });
 
         var task = new AgentTask
         {

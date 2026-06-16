@@ -62,9 +62,9 @@ public class TaskRouter : ITaskRouter
         }
         catch (OperationCanceledException)
         {
-            // 任务被取消
+            // 任务被取消 - 使用 None 确保状态归位不因令牌取消而跳过
             _stateMachine.TryTransition(MascotState.Error, "任务已取消");
-            await Task.Delay(500);
+            await Task.Delay(500, CancellationToken.None);
             _stateMachine.TryTransition(MascotState.Idle, "空闲");
 
             return TaskResult.Failed(task.Id, "任务已取消");

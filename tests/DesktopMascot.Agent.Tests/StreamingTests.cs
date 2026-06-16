@@ -59,9 +59,12 @@ public class StreamingTests
                 It.IsAny<CancellationToken>()))
             .Returns(ToAsyncEnumerable(new[] { "响应" }));
 
-        var orchestrator = new AgentOrchestrator(
-            mockLlm.Object, new ToolRegistry(), _mockEventBus.Object, _mockLogger.Object,
-            memoryService: memoryService);
+        var orchestrator = new AgentOrchestrator(new AgentOrchestratorOptions
+        {
+            LlmProvider = mockLlm.Object, ToolRegistry = new ToolRegistry(),
+            EventBus = _mockEventBus.Object, Logger = _mockLogger.Object,
+            MemoryService = memoryService
+        });
 
         var task = new AgentTask { Title = "记忆测试", Input = "测试", Type = TaskType.Chat };
         var results = new List<string>();

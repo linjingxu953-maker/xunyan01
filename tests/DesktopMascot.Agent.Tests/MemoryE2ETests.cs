@@ -44,9 +44,12 @@ public class MemoryE2ETests
         var mockLlm = new Mock<ILlmProvider>();
         var registry = new ToolRegistry();
 
-        var orchestrator = new AgentOrchestrator(
-            mockLlm.Object, registry, _mockEventBus.Object, _mockLogger.Object,
-            maxIterations: 3, memoryService: memoryService);
+        var orchestrator = new AgentOrchestrator(new AgentOrchestratorOptions
+        {
+            LlmProvider = mockLlm.Object, ToolRegistry = registry,
+            EventBus = _mockEventBus.Object, Logger = _mockLogger.Object,
+            MaxIterations = 3, MemoryService = memoryService
+        });
 
         var capturedMessages = new List<LlmMessage>();
         mockLlm.Setup(x => x.ChatAsync(
@@ -109,9 +112,12 @@ public class MemoryE2ETests
         var mockLlm = new Mock<ILlmProvider>();
         var registry = new ToolRegistry();
 
-        var orchestrator = new AgentOrchestrator(
-            mockLlm.Object, registry, _mockEventBus.Object, _mockLogger.Object,
-            maxIterations: 3, memoryService: memoryService);
+        var orchestrator = new AgentOrchestrator(new AgentOrchestratorOptions
+        {
+            LlmProvider = mockLlm.Object, ToolRegistry = registry,
+            EventBus = _mockEventBus.Object, Logger = _mockLogger.Object,
+            MaxIterations = 3, MemoryService = memoryService
+        });
 
         mockLlm.Setup(x => x.ChatAsync(
                 It.IsAny<IEnumerable<LlmMessage>>(),
@@ -160,9 +166,12 @@ public class MemoryE2ETests
         var mockLlm = new Mock<ILlmProvider>();
         var registry = new ToolRegistry();
 
-        var orchestrator = new AgentOrchestrator(
-            mockLlm.Object, registry, _mockEventBus.Object, _mockLogger.Object,
-            maxIterations: 3, memoryService: memoryService);
+        var orchestrator = new AgentOrchestrator(new AgentOrchestratorOptions
+        {
+            LlmProvider = mockLlm.Object, ToolRegistry = registry,
+            EventBus = _mockEventBus.Object, Logger = _mockLogger.Object,
+            MaxIterations = 3, MemoryService = memoryService
+        });
 
         var capturedMessages = new List<LlmMessage>();
         mockLlm.Setup(x => x.ChatAsync(
@@ -198,9 +207,12 @@ public class MemoryE2ETests
         var mockLlm = new Mock<ILlmProvider>();
         var registry = new ToolRegistry();
 
-        var orchestrator = new AgentOrchestrator(
-            mockLlm.Object, registry, _mockEventBus.Object, _mockLogger.Object,
-            maxIterations: 3, memoryService: null);
+        var orchestrator = new AgentOrchestrator(new AgentOrchestratorOptions
+        {
+            LlmProvider = mockLlm.Object, ToolRegistry = registry,
+            EventBus = _mockEventBus.Object, Logger = _mockLogger.Object,
+            MaxIterations = 3, MemoryService = null
+        });
 
         mockLlm.Setup(x => x.ChatAsync(
                 It.IsAny<IEnumerable<LlmMessage>>(),
