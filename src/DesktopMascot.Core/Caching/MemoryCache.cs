@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+
 namespace DesktopMascot.Core.Caching;
 
 /// <summary>
@@ -28,19 +30,23 @@ public interface ICache
     
     /// <summary>按标签移除</summary>
     int RemoveByTag(string tag);
+    
+    /// <summary>批量获取</summary>
+    Dictionary<string, T?> GetBatch<T>(IEnumerable<string> keys);
+    
+    /// <summary>批量设置</summary>
+    void SetBatch<T>(IEnumerable<KeyValuePair<string, T>> items, CacheExpiration expiration = CacheExpiration.Sliding, TimeSpan? expirationTime = null);
 }
 
 /// <summary>
-/// 内存缓存实现
+/// 内存缓存实现（LRU 驱逐策略）
 /// </summary>
 public class MemoryCache : ICache
 {
-    private readonly Dictionary<string, object> _cache = new();
-    private readonly Dictionary<string, CacheEntry<object>> _metadata = new();
+    private readonly ConcurrentDictionary<string, CacheEntry<object>> _cache = new();
     private readonly CacheOptions _options;
-    private readonly object _lock = new();
-    private int _hits;
-    private int _misses;
+    private long _hits;
+    private long _misses;
 
     public MemoryCache(CacheOptions? options = null)
     {
@@ -49,154 +55,140 @@ public class MemoryCache : ICache
 
     public T? Get<T>(string key)
     {
-        lock (_lock)
+        if (!_cache.TryGetValue(key, out var entry))
         {
-            if (!_cache.ContainsKey(key))
-            {
-                _misses++;
-                return default;
-            }
-
-            var entry = _metadata[key];
-            
-            // 检查是否过期
-            if (IsExpired(entry))
-            {
-                Remove(key);
-                _misses++;
-                return default;
-            }
-
-            // 更新访问信息
-            entry.LastAccessedAt = DateTime.UtcNow;
-            entry.AccessCount++;
-            _hits++;
-
-            if (entry.Expiration == CacheExpiration.Sliding && entry.SlidingExpiration.HasValue)
-            {
-                entry.ExpiresAt = DateTime.UtcNow.Add(entry.SlidingExpiration.Value);
-            }
-
-            return (T)_cache[key];
+            Interlocked.Increment(ref _misses);
+            return default;
         }
+
+        if (IsExpired(entry))
+        {
+            _cache.TryRemove(key, out _);
+            Interlocked.Increment(ref _misses);
+            return default;
+        }
+
+        entry.LastAccessedAt = DateTime.UtcNow;
+        Interlocked.Increment(ref entry.AccessCount);
+        Interlocked.Increment(ref _hits);
+
+        if (entry.Expiration == CacheExpiration.Sliding && entry.SlidingExpiration.HasValue)
+        {
+            entry.ExpiresAt = DateTime.UtcNow.Add(entry.SlidingExpiration.Value);
+        }
+
+        return (T)entry.Value;
     }
 
     public void Set<T>(string key, T value, CacheExpiration expiration = CacheExpiration.Sliding, TimeSpan? expirationTime = null)
     {
-        lock (_lock)
+        if (_cache.Count >= _options.MaxEntries)
         {
-            // 检查容量
-            if (_cache.Count >= _options.MaxEntries)
-            {
-                EvictOldest();
-            }
-
-            var effectiveExpiration = expirationTime ?? _options.DefaultExpiration;
-            
-            _cache[key] = value!;
-            _metadata[key] = new CacheEntry<object>
-            {
-                Key = key,
-                Value = value,
-                CreatedAt = DateTime.UtcNow,
-                LastAccessedAt = DateTime.UtcNow,
-                Expiration = expiration,
-                SlidingExpiration = effectiveExpiration,
-                ExpiresAt = expiration == CacheExpiration.Absolute 
-                    ? DateTime.UtcNow.Add(effectiveExpiration ?? TimeSpan.FromMinutes(30))
-                    : null,
-                SizeBytes = CalculateSize(value)
-            };
+            EvictLRU();
         }
+
+        var effectiveExpiration = expirationTime ?? _options.DefaultExpiration;
+        
+        _cache[key] = new CacheEntry<object>
+        {
+            Key = key,
+            Value = value!,
+            CreatedAt = DateTime.UtcNow,
+            LastAccessedAt = DateTime.UtcNow,
+            Expiration = expiration,
+            SlidingExpiration = effectiveExpiration,
+            ExpiresAt = expiration == CacheExpiration.Absolute 
+                ? DateTime.UtcNow.Add(effectiveExpiration ?? TimeSpan.FromMinutes(30))
+                : null,
+            SizeBytes = CalculateSize(value)
+        };
     }
 
     public bool Remove(string key)
     {
-        lock (_lock)
-        {
-            _metadata.Remove(key);
-            return _cache.Remove(key);
-        }
+        return _cache.TryRemove(key, out _);
     }
 
     public void Clear()
     {
-        lock (_lock)
-        {
-            _cache.Clear();
-            _metadata.Clear();
-            _hits = 0;
-            _misses = 0;
-        }
+        _cache.Clear();
+        Interlocked.Exchange(ref _hits, 0);
+        Interlocked.Exchange(ref _misses, 0);
     }
 
     public bool Contains(string key)
     {
-        lock (_lock)
+        if (!_cache.TryGetValue(key, out var entry))
+            return false;
+
+        if (IsExpired(entry))
         {
-            if (!_cache.ContainsKey(key))
-                return false;
-
-            var entry = _metadata[key];
-            if (IsExpired(entry))
-            {
-                Remove(key);
-                return false;
-            }
-
-            return true;
+            _cache.TryRemove(key, out _);
+            return false;
         }
+
+        return true;
     }
 
     public CacheStatistics GetStatistics()
     {
-        lock (_lock)
+        var entries = _cache.Values.ToList();
+        return new CacheStatistics
         {
-            return new CacheStatistics
-            {
-                TotalEntries = _cache.Count,
-                TotalHits = _hits,
-                TotalMisses = _misses,
-                TotalSizeBytes = _metadata.Values.Sum(e => e.SizeBytes),
-                OldestEntry = _metadata.Values.Any() ? _metadata.Values.Min(e => e.CreatedAt) : null,
-                NewestEntry = _metadata.Values.Any() ? _metadata.Values.Max(e => e.CreatedAt) : null
-            };
-        }
+            TotalEntries = entries.Count,
+            TotalHits = Interlocked.Read(ref _hits),
+            TotalMisses = Interlocked.Read(ref _misses),
+            TotalSizeBytes = entries.Sum(e => e.SizeBytes),
+            OldestEntry = entries.Any() ? entries.Min(e => e.CreatedAt) : null,
+            NewestEntry = entries.Any() ? entries.Max(e => e.CreatedAt) : null
+        };
     }
 
     public int Cleanup()
     {
-        lock (_lock)
+        var expiredKeys = _cache
+            .Where(kvp => IsExpired(kvp.Value))
+            .Select(kvp => kvp.Key)
+            .ToList();
+
+        foreach (var key in expiredKeys)
         {
-            var expiredKeys = _metadata
-                .Where(kvp => IsExpired(kvp.Value))
-                .Select(kvp => kvp.Key)
-                .ToList();
-
-            foreach (var key in expiredKeys)
-            {
-                Remove(key);
-            }
-
-            return expiredKeys.Count;
+            _cache.TryRemove(key, out _);
         }
+
+        return expiredKeys.Count;
     }
 
     public int RemoveByTag(string tag)
     {
-        lock (_lock)
+        var keysToRemove = _cache
+            .Where(kvp => kvp.Value.Tags != null && kvp.Value.Tags.Contains(tag))
+            .Select(kvp => kvp.Key)
+            .ToList();
+
+        foreach (var key in keysToRemove)
         {
-            var keysToRemove = _metadata
-                .Where(kvp => kvp.Value.Tags != null && kvp.Value.Tags.Contains(tag))
-                .Select(kvp => kvp.Key)
-                .ToList();
+            _cache.TryRemove(key, out _);
+        }
 
-            foreach (var key in keysToRemove)
-            {
-                Remove(key);
-            }
+        return keysToRemove.Count;
+    }
 
-            return keysToRemove.Count;
+    public Dictionary<string, T?> GetBatch<T>(IEnumerable<string> keys)
+    {
+        var result = new Dictionary<string, T?>();
+        foreach (var key in keys)
+        {
+            result[key] = Get<T>(key);
+        }
+        return result;
+    }
+
+    public void SetBatch<T>(IEnumerable<KeyValuePair<string, T>> items, CacheExpiration expiration = CacheExpiration.Sliding, TimeSpan? expirationTime = null)
+    {
+        foreach (var item in items)
+        {
+            Set(item.Key, item.Value, expiration, expirationTime);
         }
     }
 
@@ -211,18 +203,36 @@ public class MemoryCache : ICache
         return false;
     }
 
-    private void EvictOldest()
+    private void EvictLRU()
     {
-        if (_metadata.Count == 0)
-            return;
+        if (_cache.IsEmpty) return;
 
-        var oldest = _metadata.OrderBy(kvp => kvp.Value.LastAccessedAt).First();
-        Remove(oldest.Key);
+        var oldest = _cache.OrderBy(kvp => kvp.Value.LastAccessedAt).FirstOrDefault();
+        if (!oldest.Equals(default(KeyValuePair<string, CacheEntry<object>>)))
+        {
+            _cache.TryRemove(oldest.Key, out _);
+        }
     }
 
     private long CalculateSize(object value)
     {
-        // 简化的大小估算
-        return System.Text.Json.JsonSerializer.Serialize(value).Length;
+        try
+        {
+            return System.Text.Json.JsonSerializer.Serialize(value).Length;
+        }
+        catch
+        {
+            return 0;
+        }
     }
+}
+
+/// <summary>
+/// 分布式缓存接口（用于未来扩展）
+/// </summary>
+public interface IDistributedCache
+{
+    Task<T?> GetAsync<T>(string key, CancellationToken ct = default);
+    Task SetAsync<T>(string key, T value, TimeSpan? expiration = null, CancellationToken ct = default);
+    Task<bool> RemoveAsync(string key, CancellationToken ct = default);
 }
