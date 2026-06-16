@@ -13,7 +13,7 @@ public interface ILogger
     void Critical(string message, string? source = null, Exception? exception = null);
     
     /// <summary>带结构化数据的日志</summary>
-    void Log(LogLevel level, string message, Dictionary<string, string>? properties = null, string? source = null, Exception? exception = null);
+    void Log(LogLevel level, string message, Dictionary<string, object>? properties = null, string? source = null, Exception? exception = null);
     
     Task FlushAsync(CancellationToken ct = default);
 }
@@ -64,7 +64,7 @@ public class LogManager : ILogger
     public void Critical(string message, string? source = null, Exception? exception = null)
         => Log(LogLevel.Critical, message, null, source, exception);
 
-    public void Log(LogLevel level, string message, Dictionary<string, string>? properties = null, string? source = null, Exception? exception = null)
+    public void Log(LogLevel level, string message, Dictionary<string, object>? properties = null, string? source = null, Exception? exception = null)
     {
         if (level < _minimumLevel)
             return;
@@ -78,7 +78,7 @@ public class LogManager : ILogger
             Message = message,
             Source = source,
             Exception = exception,
-            Properties = properties
+            Properties = properties ?? new Dictionary<string, object>()
         };
 
         lock (_bufferLock)
@@ -135,19 +135,15 @@ public class LogManager : ILogger
         {
             return new LogStatistics
             {
-                TotalLogs = _totalLogs,
-                LevelCounts = new Dictionary<LogLevel, int>(_levelCounts),
-                BufferSize = _buffer.Count,
-                EnabledSources = _enabledSources.ToList()
+                TotalCount = _totalLogs,
+                TraceCount = _levelCounts.GetValueOrDefault(LogLevel.Trace, 0),
+                DebugCount = _levelCounts.GetValueOrDefault(LogLevel.Debug, 0),
+                InformationCount = _levelCounts.GetValueOrDefault(LogLevel.Information, 0),
+                WarningCount = _levelCounts.GetValueOrDefault(LogLevel.Warning, 0),
+                ErrorCount = _levelCounts.GetValueOrDefault(LogLevel.Error, 0),
+                CriticalCount = _levelCounts.GetValueOrDefault(LogLevel.Critical, 0)
             };
         }
-    }
-
-    /// <summary>按级别过滤日志</summary>
-    public void SetMinimumLevel(LogLevel level)
-    {
-        // 注意：运行时修改最小级别可能影响性能
-        // 建议在初始化时设置
     }
 
     public void Dispose()
@@ -155,41 +151,4 @@ public class LogManager : ILogger
         _flushTimer?.Dispose();
         FlushAsync().Wait();
     }
-}
-
-/// <summary>
-/// 日志级别
-/// </summary>
-public enum LogLevel
-{
-    Trace = 0,
-    Debug = 1,
-    Information = 2,
-    Warning = 3,
-    Error = 4,
-    Critical = 5
-}
-
-/// <summary>
-/// 日志条目
-/// </summary>
-public class LogEntry
-{
-    public LogLevel Level { get; set; }
-    public string Message { get; set; } = string.Empty;
-    public string? Source { get; set; }
-    public Exception? Exception { get; set; }
-    public Dictionary<string, string>? Properties { get; set; }
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
-}
-
-/// <summary>
-/// 日志统计
-/// </summary>
-public class LogStatistics
-{
-    public int TotalLogs { get; set; }
-    public Dictionary<LogLevel, int> LevelCounts { get; set; } = new();
-    public int BufferSize { get; set; }
-    public List<string> EnabledSources { get; set; } = new();
 }
