@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using DesktopMascot.Core.Enums;
+using DesktopMascot.Core.Storage;
 
 namespace DesktopMascot.Core.Learning;
 
@@ -165,6 +167,115 @@ public class LearningEngine
         return total == 0 ? 0f : (float)successCount / total;
     }
 
+    /// <summary>记录工具使用</summary>
+    public void RecordToolUsage(string toolName, bool success)
+    {
+        var key = $"tool_{toolName}_{(success ? "success" : "failure")}";
+        _taskPatterns.AddOrUpdate(key, 1, (_, c) => c + 1);
+    }
+
+    /// <summary>记录任务耗时</summary>
+    public void RecordTaskDuration(string taskType, TimeSpan duration)
+    {
+        var key = $"duration_{taskType}";
+        _taskPatterns.AddOrUpdate(key, (int)duration.TotalSeconds, (_, c) => (c + (int)duration.TotalSeconds) / 2);
+    }
+
+    /// <summary>记录用户活跃时间</summary>
+    public void RecordActiveTime(DateTime time)
+    {
+        var hour = time.Hour;
+        var key = $"active_hour_{hour}";
+        _taskPatterns.AddOrUpdate(key, 1, (_, c) => c + 1);
+    }
+
+    /// <summary>从任务历史自动生成 Skill</summary>
+    public List<GeneratedSkill> GenerateSkillsFromHistory(List<TaskHistoryRecord> history)
+    {
+        var skills = new List<GeneratedSkill>();
+        var taskGroups = history.GroupBy(h => h.Type).ToList();
+
+        foreach (var group in taskGroups)
+        {
+            if (group.Count() < 3) continue; // 至少3次才生成技能
+
+            var successCount = group.Count(h => h.Status == AppTaskStatus.Completed);
+            var successRate = (float)successCount / group.Count();
+
+            if (successRate < 0.5f) continue; // 成功率太低不生成
+
+            var avgDuration = group.Where(h => h.CompletedAt.HasValue && h.CreatedAt != default)
+                .Select(h => (h.CompletedAt!.Value - h.CreatedAt).TotalSeconds)
+                .DefaultIfEmpty(0)
+                .Average();
+
+            var skill = new GeneratedSkill
+            {
+                TaskType = group.Key.ToString(),
+                Name = $"{group.Key}技能",
+                Description = $"自动从 {group.Count()} 次任务历史中生成",
+                SuccessRate = successRate,
+                AverageDurationSeconds = avgDuration,
+                GeneratedFrom = "task_history",
+                TaskCount = group.Count()
+            };
+
+            skills.Add(skill);
+
+            _evolutionHistory.Add(new EvolutionRecord
+            {
+                Type = "skill_generated",
+                Description = $"自动生成 {group.Key} 技能（基于 {group.Count()} 次任务，成功率 {successRate:P0}）",
+                ImpactScore = 0.8f
+            });
+        }
+
+        return skills;
+    }
+
+    /// <summary>学习用户行为模式</summary>
+    public UserBehaviorPattern AnalyzeBehaviorPattern(List<TaskHistoryRecord> history)
+    {
+        var pattern = new UserBehaviorPattern();
+
+        // 分析常用工具
+        var toolUsage = history
+            .SelectMany(h => h.ToolCalls)
+            .GroupBy(t => t.ToolName)
+            .OrderByDescending(g => g.Count())
+            .Take(5)
+            .ToList();
+
+        pattern.MostUsedTools = toolUsage.Select(g => g.Key).ToList();
+
+        // 分析常用任务类型
+        var taskTypeUsage = history
+            .GroupBy(h => h.Type)
+            .OrderByDescending(g => g.Count())
+            .Take(5)
+            .ToList();
+
+        pattern.MostFrequentTasks = taskTypeUsage.Select(g => g.Key.ToString()).ToList();
+
+        // 分析活跃时间段
+        var hourGroups = history
+            .GroupBy(h => h.CreatedAt.Hour)
+            .OrderByDescending(g => g.Count())
+            .Take(3)
+            .ToList();
+
+        pattern.PeakHours = hourGroups.Select(g => g.Key).ToList();
+
+        // 分析平均任务耗时
+        pattern.AverageTaskDurationSeconds = history
+            .Where(h => h.CompletedAt.HasValue && h.CreatedAt != default)
+            .Select(h => (h.CompletedAt!.Value - h.CreatedAt).TotalSeconds)
+            .DefaultIfEmpty(0)
+            .Average();
+
+        return pattern;
+    }
+
     /// <summary>生成进化报告</summary>
     public EvolutionReport GenerateReport()
     {
@@ -221,4 +332,30 @@ public class EvolutionReport
     public List<EvolutionRecord> RecentEvolutions { get; set; } = new();
     public Dictionary<string, string> SkillSuggestions { get; set; } = new();
     public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// 自动生成的技能
+/// </summary>
+public class GeneratedSkill
+{
+    public string TaskType { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public float SuccessRate { get; set; }
+    public double AverageDurationSeconds { get; set; }
+    public string GeneratedFrom { get; set; } = string.Empty;
+    public int TaskCount { get; set; }
+    public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// 用户行为模式
+/// </summary>
+public class UserBehaviorPattern
+{
+    public List<string> MostUsedTools { get; set; } = new();
+    public List<string> MostFrequentTasks { get; set; } = new();
+    public List<int> PeakHours { get; set; } = new();
+    public double AverageTaskDurationSeconds { get; set; }
 }

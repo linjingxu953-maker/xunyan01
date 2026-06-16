@@ -4,7 +4,38 @@
              x:Class="DesktopMascot.UI.Views.Controls.ComputerUsePanel"
              x:DataType="vm:FloatingWindowViewModel">
     <Border Classes="computerUsePanel">
-        <StackPanel Spacing="9">
+        <Grid ColumnDefinitions="210,*"
+              ColumnSpacing="12">
+            <Border Classes="computerUsePreview">
+                <Grid>
+                    <Image Source="{Binding ComputerUseScreenshotImage}"
+                           Stretch="UniformToFill"
+                           IsVisible="{Binding HasComputerUseScreenshot}"/>
+                    <StackPanel HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Width="150"
+                                Spacing="6"
+                                IsVisible="{Binding HasNoComputerUseScreenshot}">
+                        <TextBlock Text="屏幕目标"
+                                   Classes="computerUseSubTitle"
+                                   TextAlignment="Center"/>
+                        <TextBlock Text="{Binding ComputerUseScreenshotStatus}"
+                                   Classes="computerUseCaption"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <Border Classes="computerUsePreviewBadge"
+                            VerticalAlignment="Bottom"
+                            HorizontalAlignment="Left">
+                        <TextBlock Text="{Binding ComputerUseTargetText}"
+                                   Classes="computerUseCaption"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <StackPanel Grid.Column="1"
+                        Spacing="9">
             <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Spacing="2">
                     <TextBlock Text="Computer Use"
@@ -45,6 +76,9 @@
                             Classes="computerUsePrimaryButton"
                             Command="{Binding TakeOverComputerUseCommand}"
                             Padding="10,5"/>
+                    <Button Content="权限"
+                            Classes="computerUseButton"
+                            Command="{Binding OpenComputerUsePermissionCommand}"/>
                     <Button Content="停止"
                             Classes="computerUseDangerButton"
                             Command="{Binding StopComputerUseCommand}"/>
@@ -66,6 +100,7 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:ComputerUseActionItem">
                             <Border Classes="computerUseActionRow"
+                                    Classes.current="{Binding IsCurrent}"
                                     Margin="0,0,0,7">
                                 <Grid ColumnDefinitions="*,Auto"
                                       RowDefinitions="Auto,Auto,Auto"
@@ -105,6 +140,7 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </ScrollViewer>
-        </StackPanel>
+            </StackPanel>
+        </Grid>
     </Border>
 </UserControl>

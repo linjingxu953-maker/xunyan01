@@ -20,7 +20,18 @@ public sealed class MascotCharacterProfile
     public string Name { get; set; } = "妍";
     public string Role { get; set; } = "寻研桌面助手";
     public string AvatarText { get; set; } = "妍";
+    public string Description { get; set; } = "主动理解屏幕与任务上下文，清晰地给出下一步。";
     public string Personality { get; set; } = "沉稳可靠";
+    public string ToneStyle { get; set; } = "友善";
+    public string LanguageStyle { get; set; } = "标准";
+    public string ReplyLength { get; set; } = "平衡";
+    public bool UseEmoji { get; set; }
+    public string SystemPromptSuffix { get; set; } = string.Empty;
+    public List<string> PersonalityTraits { get; set; } =
+    [
+        "可靠",
+        "主动"
+    ];
     public string Catchphrase { get; set; } = "我在桌面待命，随时可以接任务。";
     public string AccentColor { get; set; } = "#2563EB";
     public string BackgroundColor { get; set; } = "#EEF6FF";
@@ -33,7 +44,14 @@ public sealed class MascotCharacterProfile
         Name = Name,
         Role = Role,
         AvatarText = AvatarText,
+        Description = Description,
         Personality = Personality,
+        ToneStyle = ToneStyle,
+        LanguageStyle = LanguageStyle,
+        ReplyLength = ReplyLength,
+        UseEmoji = UseEmoji,
+        SystemPromptSuffix = SystemPromptSuffix,
+        PersonalityTraits = [..PersonalityTraits],
         Catchphrase = Catchphrase,
         AccentColor = AccentColor,
         BackgroundColor = BackgroundColor,
@@ -55,6 +73,7 @@ public sealed class MascotCharacterProfile
         }
 
         StateImages ??= new Dictionary<string, string>();
+        PersonalityTraits ??= [];
 
         foreach (var item in DefaultStateImages)
         {

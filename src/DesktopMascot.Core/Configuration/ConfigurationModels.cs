@@ -29,6 +29,12 @@ public class AppSettings
     /// <summary>记忆功能启用</summary>
     public bool MemoryEnabled { get; set; } = true;
 
+    /// <summary>TTS 语音</summary>
+    public string TtsVoice { get; set; } = "默认女声";
+
+    /// <summary>语音识别语言</summary>
+    public string SpeechRecognitionLanguage { get; set; } = "zh-CN";
+
     /// <summary>Mimo Code 接入启用</summary>
     public bool MimoCodeEnabled { get; set; } = false;
 

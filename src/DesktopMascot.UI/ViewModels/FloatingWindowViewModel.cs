@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -38,6 +39,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     private string _pendingConfirmationInput = string.Empty;
     private string _lastUserMessage = string.Empty;
     private Dictionary<string, string> _characterStateImages = new();
+    private List<string> _characterPersonalityTraits = ["可靠", "主动"];
     private bool _isApplyingCharacterProfile;
     private bool _hasLoadedInlineSettings;
     private Window? _inlineSettingsOwner;
@@ -79,6 +81,11 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _computerUseStatusText = "等待 Computer Use 事件";
     [ObservableProperty] private string _computerUseTargetText = "暂无目标";
     [ObservableProperty] private string _computerUseControlStatus = "等待 MiMo Computer Use 接入事件流。";
+    [ObservableProperty] private string _computerUseScreenshotStatus = "等待屏幕观察截图。";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasComputerUseScreenshot))]
+    [NotifyPropertyChangedFor(nameof(HasNoComputerUseScreenshot))]
+    private IImage? _computerUseScreenshotImage;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanRetryCurrentTask))]
     private bool _canRetryTask = false;
@@ -98,10 +105,20 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanSendMessage))]
     private string _inputText = string.Empty;
+    [ObservableProperty] private bool _isVoiceRecording;
+    [ObservableProperty] private string _voiceInputStatus = "语音输入待命";
+    [ObservableProperty] private bool _isVoiceReplyPlaying;
+    [ObservableProperty] private string _voiceReplyStatus = "语音回复待命";
     [ObservableProperty] private string _characterName = "妍";
     [ObservableProperty] private string _characterRole = "寻研桌面助手";
     [ObservableProperty] private string _characterAvatarText = "妍";
+    [ObservableProperty] private string _characterDescription = "主动理解屏幕与任务上下文，清晰地给出下一步。";
     [ObservableProperty] private string _characterPersonality = "沉稳可靠";
+    [ObservableProperty] private string _characterToneStyle = "友善";
+    [ObservableProperty] private string _characterLanguageStyle = "标准";
+    [ObservableProperty] private string _characterReplyLength = "平衡";
+    [ObservableProperty] private bool _characterUseEmoji;
+    [ObservableProperty] private string _characterSystemPromptSuffix = string.Empty;
     [ObservableProperty] private string _characterCatchphrase = "我在桌面待命，随时可以接任务。";
     [ObservableProperty] private string _characterAccentColor = "#2563EB";
     [ObservableProperty] private string _characterBackgroundColor = "#EEF6FF";
@@ -150,6 +167,8 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     public bool HasNoToolCallRecords => !HasToolCallRecords;
     public bool HasComputerUseActions => ComputerUseActions.Count > 0;
     public bool HasNoComputerUseActions => !HasComputerUseActions;
+    public bool HasComputerUseScreenshot => ComputerUseScreenshotImage is not null;
+    public bool HasNoComputerUseScreenshot => !HasComputerUseScreenshot;
     public bool HasMessages => MessageItems.Count > 0;
     public bool HasNoMessages => !HasMessages;
     public bool HasTaskHistory => TaskHistory.Count > 0;
@@ -519,6 +538,44 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         PrimeComputerUsePanel("停止请求", "当前任务", "已请求", "已请求停止 Computer Use 自动操作。");
         ComputerUseModeText = "停止中";
         TryCancelComputerUseTask("已请求停止 Computer Use 自动操作。");
+    }
+
+    [RelayCommand]
+    private void ToggleVoiceInput()
+    {
+        IsVoiceRecording = !IsVoiceRecording;
+        VoiceInputStatus = IsVoiceRecording
+            ? "录音中，点击麦克风结束。"
+            : "录音已结束，等待语音识别服务接入后自动转写并发送。";
+    }
+
+    [RelayCommand]
+    private void StopVoiceReply()
+    {
+        IsVoiceReplyPlaying = false;
+        VoiceReplyStatus = "语音播放已停止。";
+    }
+
+    public void PlayMessageAudio(string? content)
+    {
+        var text = CleanText(content, "当前消息", 60);
+        IsVoiceReplyPlaying = true;
+        VoiceReplyStatus = $"准备朗读：{text}";
+    }
+
+    [RelayCommand]
+    private void OpenComputerUsePermission()
+    {
+        PrimeComputerUsePanel("权限入口", "权限确认", "已打开", "已定位到当前 Computer Use 权限状态。");
+        if (IsWaitingForUserConfirmation)
+        {
+            ComputerUseControlStatus = $"等待用户处理：{PendingConfirmationTitle} / {PendingConfirmationRiskText}。";
+            return;
+        }
+
+        OpenSettingsPanel();
+        SelectInlineSettingsSection("permission");
+        ComputerUseControlStatus = "当前没有待确认权限，已打开权限设置页。";
     }
 
     private void TryCancelComputerUseTask(string requestedStatus)
@@ -1198,6 +1255,8 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         ComputerUseModeText = isVisible ? "待执行" : "未接入";
         ComputerUseStatusText = isVisible ? "等待动作事件" : "等待 Computer Use 事件";
         ComputerUseTargetText = isVisible ? "当前桌面" : "暂无目标";
+        ComputerUseScreenshotImage = null;
+        ComputerUseScreenshotStatus = isVisible ? "等待屏幕观察截图。" : "等待 Computer Use 事件。";
         ComputerUseControlStatus = isVisible
             ? "Computer Use 控制入口已准备。"
             : "等待 MiMo Computer Use 接入事件流。";
@@ -1227,6 +1286,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         ComputerUseStatusText = CleanText(message, GetEventStepText(taskEvent), 80);
         ComputerUseTargetText = ResolveComputerUseTarget(taskEvent, ComputerUseTargetText);
         ComputerUseControlStatus = ResolveComputerUseControlStatus(taskEvent, message);
+        UpdateComputerUseScreenshot(taskEvent);
 
         if (isComputerUseEvent)
         {
@@ -1246,12 +1306,21 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
 
     private void AddComputerUseActionRecord(string actionName, string target, string statusText, string detail, DateTime createdAt)
     {
-        ComputerUseActions.Add(new ComputerUseActionItem(
+        foreach (var item in ComputerUseActions)
+        {
+            item.IsCurrent = false;
+        }
+
+        var actionItem = new ComputerUseActionItem(
             CleanText(actionName, "桌面动作", 24),
             CleanText(target, "当前桌面", 48),
             CleanText(statusText, "进行中", 12),
             CleanText(detail, "等待事件详情", 120),
-            createdAt));
+            createdAt)
+        {
+            IsCurrent = true
+        };
+        ComputerUseActions.Add(actionItem);
 
         while (ComputerUseActions.Count > 8)
         {
@@ -1259,6 +1328,36 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         }
 
         NotifyComputerUseActionStateChanged();
+    }
+
+    private void UpdateComputerUseScreenshot(TaskEvent taskEvent)
+    {
+        var path = GetFirstMetadataString(
+            taskEvent,
+            "screenshotPath",
+            "screenPath",
+            "imagePath",
+            "capturePath",
+            "previewPath");
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        try
+        {
+            if (!File.Exists(path))
+            {
+                ComputerUseScreenshotStatus = $"截图文件不存在：{path}";
+                return;
+            }
+
+            ComputerUseScreenshotImage = new Bitmap(path);
+            ComputerUseScreenshotStatus = $"屏幕截图：{Path.GetFileName(path)}";
+        }
+        catch (Exception ex)
+        {
+            ComputerUseScreenshotImage = null;
+            ComputerUseScreenshotStatus = $"截图加载失败：{ex.Message}";
+        }
     }
 
     private void NotifyComputerUseActionStateChanged()
@@ -2064,13 +2163,22 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
             CharacterName = CleanText(profile.Name, "妍", 12);
             CharacterRole = CleanText(profile.Role, "寻研桌面助手", 24);
             CharacterAvatarText = CleanText(profile.AvatarText, "妍", 4);
+            CharacterDescription = CleanText(profile.Description, "主动理解屏幕与任务上下文，清晰地给出下一步。", 120);
             CharacterPersonality = CleanText(profile.Personality, "沉稳可靠", 12);
+            CharacterToneStyle = CleanText(profile.ToneStyle, "友善", 12);
+            CharacterLanguageStyle = CleanText(profile.LanguageStyle, "标准", 12);
+            CharacterReplyLength = CleanText(profile.ReplyLength, "平衡", 12);
+            CharacterUseEmoji = profile.UseEmoji;
+            CharacterSystemPromptSuffix = CleanText(profile.SystemPromptSuffix, string.Empty, 500);
             CharacterCatchphrase = CleanText(profile.Catchphrase, "我在桌面待命，随时可以接任务。", 40);
             CharacterAccentColor = NormalizeHexColor(profile.AccentColor, "#2563EB");
             CharacterBackgroundColor = NormalizeHexColor(profile.BackgroundColor, "#EEF6FF");
             CharacterImageFolder = CleanPathText(profile.ImageFolder, "assets/characters/default", 160);
             CharacterAvatarImage = CleanPathText(profile.AvatarImage, "avatar.png", 80);
             _characterStateImages = new Dictionary<string, string>(profile.StateImages);
+            _characterPersonalityTraits = profile.PersonalityTraits.Count == 0
+                ? ["可靠", "主动"]
+                : [..profile.PersonalityTraits];
             RefreshCharacterBrushes();
             RefreshCharacterImage();
         }
@@ -2095,7 +2203,14 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         Name = CleanText(CharacterName, "妍", 12),
         Role = CleanText(CharacterRole, "寻研桌面助手", 24),
         AvatarText = CleanText(CharacterAvatarText, "妍", 4),
+        Description = CleanText(CharacterDescription, "主动理解屏幕与任务上下文，清晰地给出下一步。", 120),
         Personality = CleanText(CharacterPersonality, "沉稳可靠", 12),
+        ToneStyle = CleanText(CharacterToneStyle, "友善", 12),
+        LanguageStyle = CleanText(CharacterLanguageStyle, "标准", 12),
+        ReplyLength = CleanText(CharacterReplyLength, "平衡", 12),
+        UseEmoji = CharacterUseEmoji,
+        SystemPromptSuffix = CleanText(CharacterSystemPromptSuffix, string.Empty, 500),
+        PersonalityTraits = [.._characterPersonalityTraits],
         Catchphrase = CleanText(CharacterCatchphrase, "我在桌面待命，随时可以接任务。", 40),
         AccentColor = NormalizeHexColor(CharacterAccentColor, "#2563EB"),
         BackgroundColor = NormalizeHexColor(CharacterBackgroundColor, "#EEF6FF"),
@@ -2205,6 +2320,7 @@ public class MessageItem
 {
     public string Role { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
+    public bool IsAssistant => Role != "user";
     public string RoleText => Role == "user" ? "你" : "妍";
     public HorizontalAlignment BubbleAlignment => Role == "user" ? HorizontalAlignment.Right : HorizontalAlignment.Left;
     public CornerRadius BubbleCornerRadius => Role == "user"

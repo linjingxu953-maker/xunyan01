@@ -9,8 +9,8 @@
         Height="240"
         MinWidth="180"
         MinHeight="240"
-        MaxWidth="820"
-        MaxHeight="560"
+        MaxWidth="980"
+        MaxHeight="660"
         WindowStartupLocation="Manual"
         Background="Transparent"
         Topmost="True"
@@ -31,7 +31,7 @@
                 PointerPressed="MascotIcon_PointerPressed"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Bottom"
-                Panel.ZIndex="2"
+                ZIndex="2"
                 Margin="0,0,4,4">
             <Grid>
                 <Border x:Name="MascotHalo"
@@ -66,7 +66,7 @@
                 IsHitTestVisible="{Binding IsChatDialogHitTestVisible}"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Bottom"
-                Panel.ZIndex="1">
+                ZIndex="1">
             <Grid RowDefinitions="52,*">
                 <Border Grid.Row="0"
                         Classes="dialogTitleBar"
@@ -182,7 +182,7 @@
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="vm:MessageItem">
                                                 <StackPanel HorizontalAlignment="{Binding BubbleAlignment}"
-                                                            MaxWidth="360"
+                                                            MaxWidth="520"
                                                             Margin="18,7">
                                                     <TextBlock Text="{Binding RoleText}"
                                                                Classes="messageRole"
@@ -191,9 +191,17 @@
                                                     <Border Classes="messageBubble"
                                                             Background="{Binding BubbleBackground}"
                                                             CornerRadius="{Binding BubbleCornerRadius}">
-                                                        <TextBlock Text="{Binding Content}"
-                                                                   Classes="messageContent"
-                                                                   Foreground="{Binding ContentBrush}"/>
+                                                        <StackPanel Spacing="8">
+                                                            <TextBlock Text="{Binding Content}"
+                                                                       Classes="messageContent"
+                                                                       Foreground="{Binding ContentBrush}"/>
+                                                            <Button Content="朗读"
+                                                                    Classes="bubbleAudioButton"
+                                                                    Click="PlayMessageButton_Click"
+                                                                    Tag="{Binding Content}"
+                                                                    IsVisible="{Binding IsAssistant}"
+                                                                    HorizontalAlignment="Left"/>
+                                                        </StackPanel>
                                                     </Border>
                                                 </StackPanel>
                                             </DataTemplate>
@@ -233,21 +241,42 @@
 
                         <Border Grid.Row="3"
                                 Classes="inputArea">
-                            <Grid ColumnDefinitions="*,Auto"
-                                  Margin="14,12">
-                                <TextBox Grid.Column="0"
-                                         x:Name="InputBox"
-                                         Text="{Binding InputText}"
-                                         PlaceholderText="输入任务或问题..."
-                                         Classes="chatInput"
-                                         KeyDown="InputBox_KeyDown"/>
-                                <Button Grid.Column="1"
-                                        Content="发送"
-                                        Classes="sendButton"
-                                        Command="{Binding SendMessageCommand}"
-                                        IsEnabled="{Binding CanSendMessage}"
-                                        Margin="10,0,0,0"/>
-                            </Grid>
+                            <StackPanel Margin="14,12"
+                                        Spacing="8">
+                                <Grid ColumnDefinitions="Auto,*,Auto,Auto"
+                                      ColumnSpacing="10">
+                                    <Button Grid.Column="0"
+                                            Content="麦克风"
+                                            Classes="voiceButton"
+                                            Command="{Binding ToggleVoiceInputCommand}"/>
+                                    <TextBox Grid.Column="1"
+                                             x:Name="InputBox"
+                                             Text="{Binding InputText}"
+                                             PlaceholderText="输入任务或问题..."
+                                             Classes="chatInput"
+                                             KeyDown="InputBox_KeyDown"/>
+                                    <Button Grid.Column="2"
+                                            Content="停止朗读"
+                                            Classes="voiceButton"
+                                            Command="{Binding StopVoiceReplyCommand}"/>
+                                    <Button Grid.Column="3"
+                                            Content="发送"
+                                            Classes="sendButton"
+                                            Command="{Binding SendMessageCommand}"
+                                            IsEnabled="{Binding CanSendMessage}"/>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,*"
+                                      ColumnSpacing="10">
+                                    <TextBlock Text="{Binding VoiceInputStatus}"
+                                               Classes="voiceStatusText"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding VoiceReplyStatus}"
+                                               Classes="voiceStatusText"
+                                               TextTrimming="CharacterEllipsis"
+                                               HorizontalAlignment="Right"/>
+                                </Grid>
+                            </StackPanel>
                         </Border>
                     </Grid>
 
@@ -329,6 +358,17 @@
                                                 <TextBox Text="{Binding InlineSettings.ModelName}"
                                                          PlaceholderText="模型名"/>
                                                 <TextBlock Text="{Binding InlineSettings.ModelSettingsStatus}"
+                                                           Classes="inlineSettingsBody"
+                                                           TextWrapping="Wrap"/>
+                                                <Grid ColumnDefinitions="*,*"
+                                                      ColumnSpacing="8">
+                                                    <ComboBox ItemsSource="{Binding InlineSettings.TtsVoiceOptions}"
+                                                              SelectedItem="{Binding InlineSettings.TtsVoice}"/>
+                                                    <ComboBox Grid.Column="1"
+                                                              ItemsSource="{Binding InlineSettings.SpeechRecognitionLanguageOptions}"
+                                                              SelectedItem="{Binding InlineSettings.SpeechRecognitionLanguage}"/>
+                                                </Grid>
+                                                <TextBlock Text="{Binding InlineSettings.VoiceSettingsStatus}"
                                                            Classes="inlineSettingsBody"
                                                            TextWrapping="Wrap"/>
                                                 <Grid ColumnDefinitions="*,Auto,Auto,Auto">
@@ -616,8 +656,12 @@
                                                   ColumnSpacing="14">
                                                 <Border Width="134"
                                                         Height="188"
+                                                        Classes="characterDropZone"
                                                         Background="Transparent"
-                                                        ClipToBounds="False">
+                                                        ClipToBounds="False"
+                                                        DragDrop.AllowDrop="True"
+                                                        DragDrop.DragOver="InlineCharacterAssetDropZone_DragOver"
+                                                        DragDrop.Drop="InlineCharacterAssetDropZone_Drop">
                                                     <Grid>
                                                         <Image Source="{Binding InlineSettings.CharacterImageSource}"
                                                                Stretch="Uniform"
@@ -631,12 +675,20 @@
                                                                    HorizontalAlignment="Center"
                                                                    VerticalAlignment="Center"
                                                                    IsVisible="{Binding InlineSettings.HasNoCharacterImage}"/>
+                                                        <Border Classes="characterDropHint"
+                                                                HorizontalAlignment="Center"
+                                                                VerticalAlignment="Bottom"
+                                                                Margin="8"
+                                                                IsHitTestVisible="False">
+                                                            <TextBlock Text="拖入图片"
+                                                                       Classes="captionText"/>
+                                                        </Border>
                                                     </Grid>
                                                 </Border>
                                                 <StackPanel Grid.Column="1"
                                                             Spacing="9">
                                                     <Grid ColumnDefinitions="*,*"
-                                                          RowDefinitions="Auto,Auto,Auto"
+                                                          RowDefinitions="Auto,Auto,Auto,Auto"
                                                           ColumnSpacing="8"
                                                           RowSpacing="8">
                                                         <TextBox Text="{Binding InlineSettings.CharacterName}"
@@ -653,9 +705,61 @@
                                                                  PlaceholderText="气质"/>
                                                         <TextBox Grid.Row="2"
                                                                  Grid.ColumnSpan="2"
+                                                                 Text="{Binding InlineSettings.CharacterDescription}"
+                                                                 PlaceholderText="角色描述"/>
+                                                        <TextBox Grid.Row="3"
+                                                                 Grid.ColumnSpan="2"
                                                                  Text="{Binding InlineSettings.CharacterCatchphrase}"
                                                                  PlaceholderText="口头禅"/>
                                                     </Grid>
+                                                    <Border Classes="inlineSettingsInnerCard">
+                                                        <StackPanel Spacing="9">
+                                                            <Grid ColumnDefinitions="*,*,*"
+                                                                  ColumnSpacing="8">
+                                                                <ComboBox ItemsSource="{Binding InlineSettings.CharacterToneStyleOptions}"
+                                                                          SelectedItem="{Binding InlineSettings.CharacterToneStyle}"/>
+                                                                <ComboBox Grid.Column="1"
+                                                                          ItemsSource="{Binding InlineSettings.CharacterLanguageStyleOptions}"
+                                                                          SelectedItem="{Binding InlineSettings.CharacterLanguageStyle}"/>
+                                                                <ComboBox Grid.Column="2"
+                                                                          ItemsSource="{Binding InlineSettings.CharacterReplyLengthOptions}"
+                                                                          SelectedItem="{Binding InlineSettings.CharacterReplyLength}"/>
+                                                            </Grid>
+                                                            <ItemsControl ItemsSource="{Binding InlineSettings.CharacterTraitOptions}">
+                                                                <ItemsControl.ItemsPanel>
+                                                                    <ItemsPanelTemplate>
+                                                                        <WrapPanel/>
+                                                                    </ItemsPanelTemplate>
+                                                                </ItemsControl.ItemsPanel>
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate x:DataType="vm:CharacterTraitOption">
+                                                                        <CheckBox Content="{Binding Title}"
+                                                                                  IsChecked="{Binding IsSelected}"
+                                                                                  Margin="0,0,10,6"/>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                            <CheckBox Content="允许少量 emoji"
+                                                                      IsChecked="{Binding InlineSettings.CharacterUseEmoji}"/>
+                                                            <TextBox Text="{Binding InlineSettings.CharacterSystemPromptSuffix}"
+                                                                     PlaceholderText="自定义系统提示词后缀（高级）"
+                                                                     AcceptsReturn="True"
+                                                                     TextWrapping="Wrap"
+                                                                     MinHeight="62"
+                                                                     MaxLength="500"/>
+                                                            <Grid ColumnDefinitions="*,Auto">
+                                                                <TextBlock Text="{Binding InlineSettings.CharacterStylePreview}"
+                                                                           Classes="inlineSettingsBody"
+                                                                           TextWrapping="Wrap"
+                                                                           VerticalAlignment="Center"/>
+                                                                <Button Grid.Column="1"
+                                                                        Content="预览"
+                                                                        Classes="inlineSettingsBackButton"
+                                                                        Command="{Binding InlineSettings.PreviewCharacterStyleCommand}"
+                                                                        Margin="8,0,0,0"/>
+                                                            </Grid>
+                                                        </StackPanel>
+                                                    </Border>
                                                     <Grid ColumnDefinitions="*,Auto"
                                                           RowDefinitions="Auto,Auto"
                                                           ColumnSpacing="8"

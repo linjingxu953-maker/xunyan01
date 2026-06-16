@@ -71,6 +71,18 @@
         <Setter Property="Padding" Value="10"/>
     </Style>
 
+    <Style Selector="Border.characterDropZone">
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+
+    <Style Selector="Border.characterDropHint">
+        <Setter Property="Background" Value="#DDF9FAFB"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="8,3"/>
+    </Style>
+
     <Style Selector="Border.confirmationCard">
         <Setter Property="Background" Value="{StaticResource Brush.Warning.Surface}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Brush.Warning.Border}"/>
@@ -225,10 +237,10 @@
     </Style>
 
     <Style Selector="Border.chatDialog">
-        <Setter Property="Width" Value="620"/>
-        <Setter Property="Height" Value="540"/>
+        <Setter Property="Width" Value="780"/>
+        <Setter Property="Height" Value="640"/>
         <Setter Property="CornerRadius" Value="18"/>
-        <Setter Property="Background" Value="#8F0B0D12"/>
+        <Setter Property="Background" Value="#960B0D12"/>
         <Setter Property="BorderBrush" Value="#38FFFFFF"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="BoxShadow" Value="0 18 42 0 #38000000"/>
@@ -342,7 +354,7 @@
 
     <Style Selector="Border.messageBubble">
         <Setter Property="Padding" Value="12,10"/>
-        <Setter Property="MaxWidth" Value="360"/>
+        <Setter Property="MaxWidth" Value="500"/>
         <Setter Property="BoxShadow" Value="0 8 18 0 #22000000"/>
     </Style>
 
@@ -356,6 +368,16 @@
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="LineHeight" Value="20"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <Style Selector="Button.bubbleAudioButton">
+        <Setter Property="Padding" Value="9,4"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Background" Value="#140F172A"/>
+        <Setter Property="BorderBrush" Value="#1F0F172A"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="#334155"/>
+        <Setter Property="FontSize" Value="11"/>
     </Style>
 
     <Style Selector="Border.statusBar">
@@ -397,6 +419,21 @@
 
     <Style Selector="Button.sendButton:pointerover">
         <Setter Property="Background" Value="#1D4ED8"/>
+    </Style>
+
+    <Style Selector="Button.voiceButton">
+        <Setter Property="Padding" Value="12,10"/>
+        <Setter Property="CornerRadius" Value="13"/>
+        <Setter Property="Background" Value="#18FFFFFF"/>
+        <Setter Property="BorderBrush" Value="#24FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="#E5E7EB"/>
+        <Setter Property="FontSize" Value="12"/>
+    </Style>
+
+    <Style Selector="TextBlock.voiceStatusText">
+        <Setter Property="Foreground" Value="#94A3B8"/>
+        <Setter Property="FontSize" Value="10"/>
     </Style>
 
     <Style Selector="Border.inlineSettingsHeader">
@@ -456,6 +493,14 @@
         <Setter Property="Padding" Value="14"/>
     </Style>
 
+    <Style Selector="Border.inlineSettingsInnerCard">
+        <Setter Property="Background" Value="#0FFFFFFF"/>
+        <Setter Property="BorderBrush" Value="#18FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="9"/>
+        <Setter Property="Padding" Value="10"/>
+    </Style>
+
     <Style Selector="Border.inlineSettingsBusyOverlay">
         <Setter Property="Background" Value="#9A05070B"/>
         <Setter Property="CornerRadius" Value="0"/>
@@ -471,12 +516,29 @@
     </Style>
 
     <Style Selector="Border.computerUsePanel">
-        <Setter Property="Background" Value="#C50B1220"/>
+        <Setter Property="Background" Value="#B80B1220"/>
         <Setter Property="BorderBrush" Value="#2EFFFFFF"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="12"/>
         <Setter Property="Padding" Value="12"/>
         <Setter Property="BoxShadow" Value="0 12 28 0 #36000000"/>
+    </Style>
+
+    <Style Selector="Border.computerUsePreview">
+        <Setter Property="Height" Value="176"/>
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Background" Value="#18000000"/>
+        <Setter Property="BorderBrush" Value="#22FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+    </Style>
+
+    <Style Selector="Border.computerUsePreviewBadge">
+        <Setter Property="MaxWidth" Value="188"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Background" Value="#C20B1220"/>
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="Margin" Value="8"/>
     </Style>
 
     <Style Selector="Border.computerUseModeBadge">
@@ -491,6 +553,11 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Padding" Value="8"/>
+    </Style>
+
+    <Style Selector="Border.computerUseActionRow.current">
+        <Setter Property="Background" Value="#223B82F6"/>
+        <Setter Property="BorderBrush" Value="#60A5FA"/>
     </Style>
 
     <Style Selector="TextBlock.computerUseTitle">

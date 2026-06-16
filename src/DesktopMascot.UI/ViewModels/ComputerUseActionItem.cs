@@ -1,8 +1,9 @@
 using Avalonia.Media;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace DesktopMascot.UI.ViewModels;
 
-public sealed class ComputerUseActionItem
+public sealed partial class ComputerUseActionItem : ObservableObject
 {
     public ComputerUseActionItem(string actionName, string target, string statusText, string detail, DateTime createdAt)
     {
@@ -18,6 +19,9 @@ public sealed class ComputerUseActionItem
     public string StatusText { get; }
     public string Detail { get; }
     public string TimeText { get; }
+
+    [ObservableProperty]
+    private bool _isCurrent;
 
     public IBrush StatusBrush => StatusText switch
     {

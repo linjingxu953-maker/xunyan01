@@ -4,13 +4,19 @@
         x:Class="DesktopMascot.UI.Views.SettingsWindow"
         x:DataType="vm:SettingsWindowViewModel"
         Title="寻研 设置"
-        Width="840"
-        Height="620"
-        MinWidth="680"
-        MinHeight="460"
+        Width="1080"
+        Height="760"
+        MinWidth="900"
+        MinHeight="620"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
         WindowStartupLocation="CenterOwner">
-    <Border Background="{StaticResource Brush.Surface.Panel}">
-        <Grid ColumnDefinitions="210,*">
+    <Border Background="#F2FFFFFF"
+            BorderBrush="#66FFFFFF"
+            BorderThickness="1"
+            CornerRadius="14"
+            ClipToBounds="True">
+        <Grid ColumnDefinitions="230,*">
             <Border Grid.Column="0"
                     Background="{StaticResource Brush.Surface.Subtle}"
                     BorderBrush="{StaticResource Brush.Border.Subtle}"
@@ -152,6 +158,47 @@
                                            Classes="sectionTitle"/>
                                 <TextBlock Text="测试连接会用当前表单发送一次最小 OpenAI-compatible 请求。API Key 只用于本次请求和本机保存，不会随应用内置。"
                                            Classes="bodyText"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Classes="toolCard">
+                            <StackPanel Spacing="14">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="语音"
+                                               Classes="sectionTitle"/>
+                                    <TextBlock Text="配置语音回复和语音输入的默认选项，真实录音/播放服务接入后会直接读取。"
+                                               Classes="bodyText"/>
+                                </StackPanel>
+                                <Grid ColumnDefinitions="150,*,150,*"
+                                      RowDefinitions="Auto,Auto"
+                                      ColumnSpacing="14"
+                                      RowSpacing="12">
+                                    <TextBlock Text="TTS 语音"
+                                               Classes="sectionTitle"
+                                               VerticalAlignment="Center"/>
+                                    <ComboBox Grid.Column="1"
+                                              ItemsSource="{Binding TtsVoiceOptions}"
+                                              SelectedItem="{Binding TtsVoice}"/>
+                                    <TextBlock Grid.Column="2"
+                                               Text="识别语言"
+                                               Classes="sectionTitle"
+                                               VerticalAlignment="Center"/>
+                                    <ComboBox Grid.Column="3"
+                                              ItemsSource="{Binding SpeechRecognitionLanguageOptions}"
+                                              SelectedItem="{Binding SpeechRecognitionLanguage}"/>
+                                    <TextBlock Grid.Row="1"
+                                               Grid.ColumnSpan="3"
+                                               Text="{Binding VoiceSettingsStatus}"
+                                               Classes="captionText"
+                                               TextWrapping="Wrap"
+                                               VerticalAlignment="Center"/>
+                                    <Button Grid.Row="1"
+                                            Grid.Column="3"
+                                            Content="预览试听"
+                                            Classes="secondaryAction"
+                                            Command="{Binding PreviewTtsVoiceCommand}"
+                                            HorizontalAlignment="Right"/>
+                                </Grid>
                             </StackPanel>
                         </Border>
 
@@ -931,21 +978,27 @@
                             <Grid ColumnDefinitions="190,*"
                                   ColumnSpacing="18">
                                 <StackPanel Spacing="12">
-                                    <TextBlock Text="角色外观"
+                                    <TextBlock Text="角色设定"
                                                Foreground="{StaticResource Brush.Text.Primary}"
                                                FontSize="22"
                                                FontWeight="SemiBold"/>
                                     <Border Width="160"
                                             Height="210"
+                                            Classes="characterDropZone"
                                             Background="{Binding CharacterBackgroundBrush}"
                                             BorderBrush="{Binding CharacterAccentBrush}"
                                             BorderThickness="2"
                                             ClipToBounds="True"
                                             CornerRadius="8"
-                                            HorizontalAlignment="Left">
+                                            HorizontalAlignment="Left"
+                                            DragDrop.AllowDrop="True"
+                                            DragDrop.DragOver="CharacterAssetDropZone_DragOver"
+                                            DragDrop.Drop="CharacterAssetDropZone_Drop">
                                         <Grid>
                                             <Image Source="{Binding CharacterImageSource}"
                                                    Stretch="Uniform"
+                                                   UseLayoutRounding="True"
+                                                   RenderOptions.BitmapInterpolationMode="HighQuality"
                                                    IsVisible="{Binding HasCharacterImage}"/>
                                             <TextBlock Text="{Binding CharacterAvatarText}"
                                                        HorizontalAlignment="Center"
@@ -955,6 +1008,14 @@
                                                        FontSize="30"
                                                        TextAlignment="Center"
                                                        IsVisible="{Binding HasNoCharacterImage}"/>
+                                            <Border Classes="characterDropHint"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Bottom"
+                                                    Margin="8"
+                                                    IsHitTestVisible="False">
+                                                <TextBlock Text="拖入图片"
+                                                           Classes="captionText"/>
+                                            </Border>
                                         </Grid>
                                     </Border>
                                     <ComboBox ItemsSource="{Binding CharacterStateImageItems}"
@@ -1076,8 +1137,8 @@
 
                                 <StackPanel Grid.Column="1"
                                             Spacing="14">
-                                    <Grid ColumnDefinitions="*,*"
-                                          RowDefinitions="Auto,Auto,Auto"
+                                     <Grid ColumnDefinitions="*,*"
+                                          RowDefinitions="Auto,Auto,Auto,Auto"
                                           ColumnSpacing="10"
                                           RowSpacing="10">
                                         <TextBox Grid.Row="0"
@@ -1101,16 +1162,89 @@
                                         <TextBox Grid.Row="1"
                                                  Grid.Column="1"
                                                  Classes="formInput"
-                                                 PlaceholderText="气质"
+                                                 PlaceholderText="简短气质，例如沉稳可靠"
                                                  Text="{Binding CharacterPersonality}"
                                                  MaxLength="12"/>
                                         <TextBox Grid.Row="2"
+                                                 Grid.ColumnSpan="2"
+                                                 Classes="formInput"
+                                                 PlaceholderText="角色描述"
+                                                 Text="{Binding CharacterDescription}"
+                                                 MaxLength="120"/>
+                                        <TextBox Grid.Row="3"
                                                  Grid.ColumnSpan="2"
                                                  Classes="formInput"
                                                  PlaceholderText="口头禅"
                                                  Text="{Binding CharacterCatchphrase}"
                                                  MaxLength="40"/>
                                     </Grid>
+
+                                    <Border Classes="inlineCard">
+                                        <StackPanel Spacing="12">
+                                            <Grid ColumnDefinitions="*,*,*"
+                                                  ColumnSpacing="10">
+                                                <StackPanel Spacing="6">
+                                                    <TextBlock Text="语气风格"
+                                                               Classes="sectionTitle"/>
+                                                    <ComboBox ItemsSource="{Binding CharacterToneStyleOptions}"
+                                                              SelectedItem="{Binding CharacterToneStyle}"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1"
+                                                            Spacing="6">
+                                                    <TextBlock Text="语言风格"
+                                                               Classes="sectionTitle"/>
+                                                    <ComboBox ItemsSource="{Binding CharacterLanguageStyleOptions}"
+                                                              SelectedItem="{Binding CharacterLanguageStyle}"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="2"
+                                                            Spacing="6">
+                                                    <TextBlock Text="回复长度"
+                                                               Classes="sectionTitle"/>
+                                                    <ComboBox ItemsSource="{Binding CharacterReplyLengthOptions}"
+                                                              SelectedItem="{Binding CharacterReplyLength}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                            <StackPanel Spacing="7">
+                                                <TextBlock Text="性格特征"
+                                                           Classes="sectionTitle"/>
+                                                <ItemsControl ItemsSource="{Binding CharacterTraitOptions}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:CharacterTraitOption">
+                                                            <CheckBox Content="{Binding Title}"
+                                                                      IsChecked="{Binding IsSelected}"
+                                                                      Margin="0,0,12,6"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                            <CheckBox Content="回复中允许少量使用 emoji"
+                                                      IsChecked="{Binding CharacterUseEmoji}"/>
+                                            <TextBox Classes="formInput"
+                                                     PlaceholderText="自定义系统提示词后缀（高级，可留空）"
+                                                     Text="{Binding CharacterSystemPromptSuffix}"
+                                                     AcceptsReturn="True"
+                                                     TextWrapping="Wrap"
+                                                     MinHeight="72"
+                                                     MaxLength="500"/>
+                                            <Grid ColumnDefinitions="*,Auto"
+                                                  ColumnSpacing="10">
+                                                <TextBlock Text="{Binding CharacterStylePreview}"
+                                                           Classes="bodyText"
+                                                           TextWrapping="Wrap"
+                                                           VerticalAlignment="Center"/>
+                                                <Button Grid.Column="1"
+                                                        Content="预览回复风格"
+                                                        Classes="secondaryAction"
+                                                        Command="{Binding PreviewCharacterStyleCommand}"
+                                                        VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
 
                                     <Grid ColumnDefinitions="120,*,Auto"
                                           RowDefinitions="Auto,Auto"

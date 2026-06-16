@@ -14,8 +14,8 @@ public partial class FloatingWindow : Window
 {
     private const double CollapsedWidth = 180;
     private const double CollapsedHeight = 240;
-    private const double ExpandedWidth = 820;
-    private const double ExpandedHeight = 560;
+    private const double ExpandedWidth = 980;
+    private const double ExpandedHeight = 660;
 
     private readonly DispatcherTimer _animationTimer;
     private readonly DateTime _animationStart = DateTime.UtcNow;
@@ -200,6 +200,25 @@ public partial class FloatingWindow : Window
             return;
 
         _viewModel?.SendMessageCommand.Execute(null);
+        e.Handled = true;
+    }
+
+    private void PlayMessageButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string content })
+        {
+            _viewModel?.PlayMessageAudio(content);
+        }
+    }
+
+    private void InlineCharacterAssetDropZone_DragOver(object? sender, DragEventArgs e)
+    {
+        CharacterAssetDropHelper.SetDragEffect(e);
+    }
+
+    private void InlineCharacterAssetDropZone_Drop(object? sender, DragEventArgs e)
+    {
+        _viewModel?.InlineSettings.ApplyDroppedCharacterImageFiles(CharacterAssetDropHelper.GetImageFilePaths(e));
         e.Handled = true;
     }
 

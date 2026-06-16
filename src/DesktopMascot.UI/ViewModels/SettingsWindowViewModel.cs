@@ -94,6 +94,9 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [ObservableProperty] private string _screenSelectionHotkeyText = string.Empty;
     [ObservableProperty] private string _dataSettingsStatus = "本机数据目录用于配置、日志、记忆、任务历史和角色资源。";
     [ObservableProperty] private string _dataStorageSummary = "正在等待刷新。";
+    [ObservableProperty] private string _ttsVoice = "默认女声";
+    [ObservableProperty] private string _speechRecognitionLanguage = "zh-CN";
+    [ObservableProperty] private string _voiceSettingsStatus = "语音配置会保存到本机，录音和播放服务接入后会直接读取。";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPendingMemoryReviewSelected))]
@@ -117,7 +120,14 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [ObservableProperty] private string _characterName = "妍";
     [ObservableProperty] private string _characterRole = "寻研桌面助手";
     [ObservableProperty] private string _characterAvatarText = "妍";
+    [ObservableProperty] private string _characterDescription = "主动理解屏幕与任务上下文，清晰地给出下一步。";
     [ObservableProperty] private string _characterPersonality = "沉稳可靠";
+    [ObservableProperty] private string _characterToneStyle = "友善";
+    [ObservableProperty] private string _characterLanguageStyle = "标准";
+    [ObservableProperty] private string _characterReplyLength = "平衡";
+    [ObservableProperty] private bool _characterUseEmoji;
+    [ObservableProperty] private string _characterSystemPromptSuffix = string.Empty;
+    [ObservableProperty] private string _characterStylePreview = "点击预览后会用当前角色设定生成一段示例回复。";
     [ObservableProperty] private string _characterCatchphrase = "我在桌面待命，随时可以接任务。";
     [ObservableProperty] private string _characterAccentColor = "#2563EB";
     [ObservableProperty] private string _characterBackgroundColor = "#EEF6FF";
@@ -187,6 +197,20 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         ];
 
         Providers = new ObservableCollection<ModelProviderOption>(ModelProviderCatalog.CreateDefaults());
+        CharacterToneStyleOptions = ["友善", "专业", "轻松", "可爱", "沉稳", "讽刺"];
+        CharacterLanguageStyleOptions = ["标准", "简洁", "详细", "技术", "口语"];
+        CharacterReplyLengthOptions = ["短", "平衡", "详细"];
+        TtsVoiceOptions = ["默认女声", "温柔女声", "清晰男声", "沉稳旁白", "活泼少女"];
+        SpeechRecognitionLanguageOptions = ["zh-CN", "zh-HK", "en-US", "ja-JP", "ko-KR"];
+        CharacterTraitOptions =
+        [
+            new CharacterTraitOption("reliable", "可靠", "优先给出可执行结论", true),
+            new CharacterTraitOption("proactive", "主动", "会补充下一步建议", true),
+            new CharacterTraitOption("patient", "耐心", "解释更照顾上下文"),
+            new CharacterTraitOption("strict", "严谨", "更重视验证和边界"),
+            new CharacterTraitOption("warm", "温和", "语气更柔和"),
+            new CharacterTraitOption("direct", "直接", "减少铺垫，直达结论")
+        ];
 
         PermissionAutoApproveLevels =
         [
@@ -256,6 +280,12 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     public ObservableCollection<SettingsSectionItem> Sections { get; }
     public ObservableCollection<ModelProviderOption> Providers { get; }
     public ObservableCollection<PermissionLevelOption> PermissionAutoApproveLevels { get; }
+    public ObservableCollection<string> CharacterToneStyleOptions { get; }
+    public ObservableCollection<string> CharacterLanguageStyleOptions { get; }
+    public ObservableCollection<string> CharacterReplyLengthOptions { get; }
+    public ObservableCollection<string> TtsVoiceOptions { get; }
+    public ObservableCollection<string> SpeechRecognitionLanguageOptions { get; }
+    public ObservableCollection<CharacterTraitOption> CharacterTraitOptions { get; }
     public ObservableCollection<SettingsListItem> MimoCodeReadinessItems { get; }
     public ObservableCollection<SettingsListItem> PermissionReadinessItems { get; }
     public ObservableCollection<SettingsListItem> PermissionRequestTypeItems { get; }
@@ -305,6 +335,10 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
                 ? "AppProvider"
                 : _settings.MimoCodeModelConfigMode;
             IsMemoryEnabled = _settings.MemoryEnabled;
+            TtsVoice = string.IsNullOrWhiteSpace(_settings.TtsVoice) ? "默认女声" : _settings.TtsVoice;
+            SpeechRecognitionLanguage = string.IsNullOrWhiteSpace(_settings.SpeechRecognitionLanguage)
+                ? "zh-CN"
+                : _settings.SpeechRecognitionLanguage;
 
             _permissionSettings = await _configurationManager.GetPermissionSettingsAsync(ct);
             SelectedAutoApproveLevel =
@@ -316,6 +350,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             MimoCodeStatus = "已加载 Mimo Code 接入配置。模型调用不会使用内置 Key。";
             PermissionSettingsStatus = "已加载本机权限策略。正在读取权限审计数据。";
             MemorySettingsStatus = "已加载本机记忆开关。正在读取记忆统计。";
+            VoiceSettingsStatus = "已加载本机语音配置。";
             ApplyCharacterProfile(_characterStore.Load(), save: false);
             CharacterSaveStatus = "已加载本机角色外观配置。";
             RefreshCharacterProfiles();
@@ -384,16 +419,25 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             _settings.ApiKey = ApiKey.Trim();
             _settings.ApiEndpoint = ApiEndpoint.Trim();
             _settings.ModelName = ModelName.Trim();
+            _settings.TtsVoice = CleanText(TtsVoice, "默认女声", 32);
+            _settings.SpeechRecognitionLanguage = CleanText(SpeechRecognitionLanguage, "zh-CN", 16);
             await _configurationManager.SaveAppSettingsAsync(_settings);
 
             ModelSettingsStatus = string.IsNullOrWhiteSpace(_settings.ApiKey)
                 ? "已保存模型配置，但 API Key 为空。"
                 : $"已保存 {_settings.ProviderName} / {_settings.ModelName}。";
+            VoiceSettingsStatus = $"已保存语音配置：{_settings.TtsVoice} / {_settings.SpeechRecognitionLanguage}。";
         }
         finally
         {
             IsBusy = false;
         }
+    }
+
+    [RelayCommand]
+    private void PreviewTtsVoice()
+    {
+        VoiceSettingsStatus = $"试听入口已就绪：{CleanText(TtsVoice, "默认女声", 32)}。TTS 服务接入后会播放当前角色预览文案。";
     }
 
     [RelayCommand]
@@ -906,7 +950,24 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         var profile = BuildCurrentCharacterProfile();
         ApplyCharacterProfile(profile, save: true);
         RefreshCharacterProfiles();
-        CharacterSaveStatus = $"已保存 {CharacterName} 的角色外观配置。";
+        CharacterSaveStatus = $"已保存 {CharacterName} 的角色外观和语气设定。";
+    }
+
+    [RelayCommand]
+    private void PreviewCharacterStyle()
+    {
+        var traits = GetSelectedCharacterTraitText();
+        var lengthHint = CharacterReplyLength switch
+        {
+            "短" => "我会直接给你最短可执行结论。",
+            "详细" => "我会补齐背景、步骤、风险和验证方式。",
+            _ => "我会先给结论，再列出必要步骤。"
+        };
+        var emojiHint = CharacterUseEmoji ? "需要时我会少量使用 emoji。" : "我会避免使用 emoji。";
+
+        CharacterStylePreview =
+            $"{CharacterName}：收到。我会用{CharacterToneStyle}、{CharacterLanguageStyle}的方式回应你，保持{traits}的性格。{lengthHint}{emojiHint}";
+        CharacterSaveStatus = "已生成当前角色语气预览。";
     }
 
     [RelayCommand]
@@ -1184,6 +1245,59 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         CharacterSaveStatus = appliedCount == 0 && !appliedAvatar
             ? "没有可应用的新图片匹配。"
             : $"已应用 {appliedCount} 个状态图匹配{(appliedAvatar ? "，并更新头像图片" : string.Empty)}，点击保存后生效。";
+    }
+
+    public static bool IsSupportedCharacterImageFile(string? filePath)
+    {
+        return !string.IsNullOrWhiteSpace(filePath) &&
+               File.Exists(filePath) &&
+               SupportedCharacterImageExtensions.Contains(Path.GetExtension(filePath));
+    }
+
+    public void ApplyDroppedCharacterImageFiles(IEnumerable<string>? filePaths)
+    {
+        var files = NormalizeDroppedCharacterImageFiles(filePaths);
+        if (files.Count == 0)
+        {
+            CharacterSaveStatus = "拖入的文件里没有可用图片。支持 png、jpg、jpeg、bmp、webp。";
+            return;
+        }
+
+        if (files.Count == 1)
+        {
+            var file = files[0];
+            var selectedState = SelectedCharacterStateImage;
+            if (selectedState is null)
+            {
+                ApplyPickedImageFile(file, fileName => CharacterAvatarImage = fileName);
+                CharacterSaveStatus = "已拖入图片并应用为头像，点击保存后生效。";
+            }
+            else
+            {
+                ApplyPickedImageFile(file, fileName => selectedState.FileName = fileName);
+                CharacterSaveStatus = $"已拖入图片并应用到 {selectedState.DisplayName}，点击保存后生效。";
+            }
+
+            RefreshCharacterAssetSuggestions();
+            return;
+        }
+
+        var directories = files
+            .Select(Path.GetDirectoryName)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (directories.Length == 1)
+        {
+            CharacterImageFolder = directories[0]!;
+            RefreshCharacterImagePreview();
+            RefreshCharacterAssetSuggestions();
+            CharacterSaveStatus = $"已接收 {files.Count} 张角色图片，已切换到拖入目录并生成匹配建议。";
+            return;
+        }
+
+        CharacterSaveStatus = $"已接收 {files.Count} 张图片，但来自多个目录。请先放到同一目录后再拖入。";
     }
 
     [RelayCommand]
@@ -2099,8 +2213,16 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             CharacterName = CleanText(profile.Name, "妍", 12);
             CharacterRole = CleanText(profile.Role, "寻研桌面助手", 24);
             CharacterAvatarText = CleanText(profile.AvatarText, "妍", 4);
+            CharacterDescription = CleanText(profile.Description, "主动理解屏幕与任务上下文，清晰地给出下一步。", 120);
             CharacterPersonality = CleanText(profile.Personality, "沉稳可靠", 12);
+            CharacterToneStyle = SelectExistingOption(CharacterToneStyleOptions, profile.ToneStyle, "友善");
+            CharacterLanguageStyle = SelectExistingOption(CharacterLanguageStyleOptions, profile.LanguageStyle, "标准");
+            CharacterReplyLength = SelectExistingOption(CharacterReplyLengthOptions, profile.ReplyLength, "平衡");
+            CharacterUseEmoji = profile.UseEmoji;
+            CharacterSystemPromptSuffix = CleanText(profile.SystemPromptSuffix, string.Empty, 500);
+            ApplyCharacterTraitSelection(profile.PersonalityTraits);
             CharacterCatchphrase = CleanText(profile.Catchphrase, "我在桌面待命，随时可以接任务。", 40);
+            PreviewCharacterStyle();
             CharacterAccentColor = NormalizeHexColor(profile.AccentColor, "#2563EB");
             CharacterBackgroundColor = NormalizeHexColor(profile.BackgroundColor, "#EEF6FF");
             CharacterImageFolder = CleanPathText(profile.ImageFolder, "assets/characters/default", 260);
@@ -2133,7 +2255,17 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         Name = CleanText(CharacterName, "妍", 12),
         Role = CleanText(CharacterRole, "寻研桌面助手", 24),
         AvatarText = CleanText(CharacterAvatarText, "妍", 4),
+        Description = CleanText(CharacterDescription, "主动理解屏幕与任务上下文，清晰地给出下一步。", 120),
         Personality = CleanText(CharacterPersonality, "沉稳可靠", 12),
+        ToneStyle = SelectExistingOption(CharacterToneStyleOptions, CharacterToneStyle, "友善"),
+        LanguageStyle = SelectExistingOption(CharacterLanguageStyleOptions, CharacterLanguageStyle, "标准"),
+        ReplyLength = SelectExistingOption(CharacterReplyLengthOptions, CharacterReplyLength, "平衡"),
+        UseEmoji = CharacterUseEmoji,
+        SystemPromptSuffix = CleanText(CharacterSystemPromptSuffix, string.Empty, 500),
+        PersonalityTraits = CharacterTraitOptions
+            .Where(item => item.IsSelected)
+            .Select(item => item.Title)
+            .ToList(),
         Catchphrase = CleanText(CharacterCatchphrase, "我在桌面待命，随时可以接任务。", 40),
         AccentColor = NormalizeHexColor(CharacterAccentColor, "#2563EB"),
         BackgroundColor = NormalizeHexColor(CharacterBackgroundColor, "#EEF6FF"),
@@ -2169,6 +2301,29 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         RefreshCharacterImagePreview();
     }
 
+    private static IReadOnlyList<string> NormalizeDroppedCharacterImageFiles(IEnumerable<string>? filePaths)
+    {
+        var result = new List<string>();
+        foreach (var filePath in filePaths ?? [])
+        {
+            if (!IsSupportedCharacterImageFile(filePath))
+                continue;
+
+            try
+            {
+                result.Add(Path.GetFullPath(filePath));
+            }
+            catch
+            {
+                result.Add(filePath);
+            }
+        }
+
+        return result
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
     private void RefreshCharacterBrushes()
     {
         CharacterAccentBrush = BrushFrom(CharacterAccentColor);
@@ -2191,6 +2346,40 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         CharacterImageStatus = result.Message;
         RefreshCharacterAssetWarnings(profile);
         RefreshCharacterStatePreviews(profile);
+    }
+
+    private void ApplyCharacterTraitSelection(IEnumerable<string>? traits)
+    {
+        var selected = new HashSet<string>(traits ?? [], StringComparer.OrdinalIgnoreCase);
+        if (selected.Count == 0)
+        {
+            selected.Add("可靠");
+            selected.Add("主动");
+        }
+
+        foreach (var option in CharacterTraitOptions)
+        {
+            option.IsSelected = selected.Contains(option.Id) || selected.Contains(option.Title);
+        }
+    }
+
+    private string GetSelectedCharacterTraitText()
+    {
+        var selected = CharacterTraitOptions
+            .Where(item => item.IsSelected)
+            .Select(item => item.Title)
+            .ToArray();
+
+        return selected.Length == 0 ? "稳定" : string.Join("、", selected);
+    }
+
+    private static string SelectExistingOption(IEnumerable<string> options, string? value, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return fallback;
+
+        return options.FirstOrDefault(option => string.Equals(option, value.Trim(), StringComparison.OrdinalIgnoreCase))
+               ?? fallback;
     }
 
     private void RefreshCharacterStatePreviews(MascotCharacterProfile profile)
