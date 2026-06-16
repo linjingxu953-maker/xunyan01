@@ -1851,6 +1851,30 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         ResetMemoryClearConfirmation();
     }
 
+    partial void OnSelectedTaskHistoryBrowserItemChanged(TaskHistoryBrowserItem? value)
+    {
+        PopulateSelectedTaskHistoryDetails();
+
+        if (value is not null)
+        {
+            TaskHistorySettingsStatus = $"已选中任务历史：{value.Title}。";
+        }
+    }
+
+    partial void OnTaskHistorySearchTextChanged(string value)
+    {
+        ResetTaskHistoryCleanupConfirmation();
+    }
+
+    partial void OnSelectedTaskHistoryStatusFilterChanged(string value)
+    {
+        if (_isTaskHistoryCleanupConfirmationPending &&
+            !string.Equals(value, _selectedTaskHistoryCleanupFilter, StringComparison.Ordinal))
+        {
+            ResetTaskHistoryCleanupConfirmation();
+        }
+    }
+
     partial void OnSelectedCharacterProfileChanged(CharacterProfileListItem? value)
     {
         CharacterProfileNameDraft = value?.Name ?? CharacterName;
@@ -2701,6 +2725,35 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         }
     }
 
+    private void RefreshTaskHistoryCards()
+    {
+        TaskHistoryStatsItems.Clear();
+
+        if (_taskHistoryStatistics is null)
+        {
+            TaskHistoryStatsItems.Add(new SettingsListItem("历史存储", _taskHistoryStore is null ? "未注入" : "已接入", "等待 ITaskHistoryStore.GetStatisticsAsync。"));
+            TaskHistoryStatsItems.Add(new SettingsListItem("当前列表", $"{TaskHistoryBrowserItems.Count} 条", "搜索或筛选后会刷新当前列表。"));
+            return;
+        }
+
+        TaskHistoryStatsItems.Add(new SettingsListItem("全部任务", $"{_taskHistoryStatistics.TotalTasks}", "ITaskHistoryStore 中记录的任务总数。"));
+        TaskHistoryStatsItems.Add(new SettingsListItem("已完成", $"{_taskHistoryStatistics.CompletedTasks}", "成功结束的任务。"));
+        TaskHistoryStatsItems.Add(new SettingsListItem("失败", $"{_taskHistoryStatistics.FailedTasks}", "执行失败或异常结束的任务。"));
+        TaskHistoryStatsItems.Add(new SettingsListItem("进行中", $"{_taskHistoryStatistics.RunningTasks}", "仍处于 Created/Running 的任务。"));
+        TaskHistoryStatsItems.Add(new SettingsListItem("工具调用", $"{_taskHistoryStatistics.TotalToolCalls}", "历史任务中记录的工具调用总数。"));
+        TaskHistoryStatsItems.Add(new SettingsListItem("平均耗时", FormatDuration(TimeSpan.FromSeconds(_taskHistoryStatistics.AverageDurationSeconds)), "按已完成任务统计的平均耗时。"));
+
+        foreach (var group in _taskHistoryStatistics.TaskTypeCounts
+                     .OrderByDescending(item => item.Value)
+                     .Take(4))
+        {
+            TaskHistoryStatsItems.Add(new SettingsListItem(
+                FormatTaskType(group.Key),
+                $"{group.Value} 条",
+                "按任务类型统计的历史记录。"));
+        }
+    }
+
     private void RefreshCharacterAssetSuggestions()
     {
         CharacterAssetSuggestions.Clear();
@@ -3427,10 +3480,37 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(HasNoMemoryBrowserItems));
     }
 
+    private void RefreshTaskHistoryBrowserState()
+    {
+        if (SelectedTaskHistoryBrowserItem is not null &&
+            TaskHistoryBrowserItems.All(x => x.Id != SelectedTaskHistoryBrowserItem.Id))
+        {
+            SelectedTaskHistoryBrowserItem = null;
+        }
+
+        OnPropertyChanged(nameof(HasTaskHistoryBrowserItems));
+        OnPropertyChanged(nameof(HasNoTaskHistoryBrowserItems));
+    }
+
+    private void RefreshTaskHistoryDetailState()
+    {
+        OnPropertyChanged(nameof(HasTaskHistoryEvents));
+        OnPropertyChanged(nameof(HasNoTaskHistoryEvents));
+        OnPropertyChanged(nameof(HasTaskHistoryToolCalls));
+        OnPropertyChanged(nameof(HasNoTaskHistoryToolCalls));
+    }
+
     private void ResetMemoryClearConfirmation()
     {
         _pendingMemoryClearIds.Clear();
         _isMemoryClearConfirmationPending = false;
         MemoryClearButtonText = "清理";
+    }
+
+    private void ResetTaskHistoryCleanupConfirmation()
+    {
+        _selectedTaskHistoryCleanupFilter = SelectedTaskHistoryStatusFilter;
+        _isTaskHistoryCleanupConfirmationPending = false;
+        TaskHistoryCleanupButtonText = "清理旧记录";
     }
 }

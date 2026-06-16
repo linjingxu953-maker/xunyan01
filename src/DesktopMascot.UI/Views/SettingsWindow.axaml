@@ -51,6 +51,10 @@
                                 Classes="settingsNavButton"
                                 Command="{Binding SelectSectionCommand}"
                                 CommandParameter="memory"/>
+                        <Button Content="任务历史"
+                                Classes="settingsNavButton"
+                                Command="{Binding SelectSectionCommand}"
+                                CommandParameter="history"/>
                         <Button Content="快捷键"
                                 Classes="settingsNavButton"
                                 Command="{Binding SelectSectionCommand}"
@@ -945,6 +949,331 @@
                                             Content="{Binding MemoryClearButtonText}"
                                             Classes="secondaryAction"
                                             Command="{Binding ClearMemoryCommand}"
+                                            Margin="8,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Spacing="14"
+                                IsVisible="{Binding IsTaskHistorySectionSelected}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="任务历史"
+                                       Foreground="{StaticResource Brush.Text.Primary}"
+                                       FontSize="22"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="查看寻研执行过的任务、结果、事件流和工具调用记录。"
+                                       Classes="bodyText"/>
+                        </StackPanel>
+
+                        <Border Classes="toolCard">
+                            <StackPanel Spacing="12">
+                                <Grid ColumnDefinitions="*,Auto,Auto"
+                                      ColumnSpacing="8">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="历史状态"
+                                                   Classes="sectionTitle"/>
+                                        <TextBlock Text="{Binding TaskHistorySettingsStatus}"
+                                                   Classes="bodyText"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1"
+                                            Content="刷新"
+                                            Classes="secondaryAction"
+                                            Command="{Binding RefreshTaskHistoryStatusCommand}"
+                                            VerticalAlignment="Center"/>
+                                    <Button Grid.Column="2"
+                                            Content="导出全部"
+                                            Classes="secondaryAction"
+                                            Command="{Binding ExportTaskHistoryCommand}"
+                                            VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <ItemsControl ItemsSource="{Binding TaskHistoryStatsItems}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:SettingsListItem">
+                                            <Border Classes="inlineCard"
+                                                    Margin="0,0,0,8">
+                                                <Grid ColumnDefinitions="150,90,*"
+                                                      ColumnSpacing="12">
+                                                    <TextBlock Text="{Binding Title}"
+                                                               Classes="sectionTitle"/>
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding Value}"
+                                                               Classes="captionText"/>
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="{Binding Description}"
+                                                               Classes="bodyText"
+                                                               TextWrapping="Wrap"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Classes="toolCard">
+                            <StackPanel Spacing="12">
+                                <Grid ColumnDefinitions="*,160,Auto,Auto"
+                                      ColumnSpacing="10">
+                                    <TextBox Text="{Binding TaskHistorySearchText}"
+                                             PlaceholderText="搜索任务标题、输入或结果"
+                                             Classes="formInput"/>
+                                    <ComboBox Grid.Column="1"
+                                              ItemsSource="{Binding TaskHistoryStatusFilterOptions}"
+                                              SelectedItem="{Binding SelectedTaskHistoryStatusFilter}"/>
+                                    <Button Grid.Column="2"
+                                            Content="搜索"
+                                            Classes="secondaryAction"
+                                            Command="{Binding SearchTaskHistoryBrowserCommand}"/>
+                                    <Button Grid.Column="3"
+                                            Content="重置"
+                                            Classes="secondaryAction"
+                                            Command="{Binding ResetTaskHistoryBrowserCommand}"/>
+                                </Grid>
+
+                                <Grid ColumnDefinitions="300,*"
+                                      ColumnSpacing="12">
+                                    <Border Classes="inlineCard">
+                                        <Grid>
+                                            <TextBlock Text="当前没有可浏览的任务历史。"
+                                                       Classes="bodyText"
+                                                       IsVisible="{Binding HasNoTaskHistoryBrowserItems}"
+                                                       VerticalAlignment="Center"
+                                                       HorizontalAlignment="Center"
+                                                       TextAlignment="Center"
+                                                       Margin="10"/>
+
+                                            <ListBox ItemsSource="{Binding TaskHistoryBrowserItems}"
+                                                     SelectedItem="{Binding SelectedTaskHistoryBrowserItem}"
+                                                     IsVisible="{Binding HasTaskHistoryBrowserItems}"
+                                                     MinHeight="300"
+                                                     MaxHeight="430">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:TaskHistoryBrowserItem">
+                                                        <StackPanel Spacing="5"
+                                                                    Margin="0,5">
+                                                            <Grid ColumnDefinitions="*,Auto"
+                                                                  ColumnSpacing="8">
+                                                                <TextBlock Text="{Binding Title}"
+                                                                           Classes="sectionTitle"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Grid.Column="1"
+                                                                           Text="{Binding Status}"
+                                                                           Classes="captionText"/>
+                                                            </Grid>
+                                                            <TextBlock Text="{Binding Input}"
+                                                                       Classes="bodyText"
+                                                                       MaxLines="2"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                            <Grid ColumnDefinitions="*,Auto">
+                                                                <TextBlock Text="{Binding Type}"
+                                                                           Classes="captionText"/>
+                                                                <TextBlock Grid.Column="1"
+                                                                           Text="{Binding CreatedAt}"
+                                                                           Classes="captionText"/>
+                                                            </Grid>
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </Grid>
+                                    </Border>
+
+                                    <Border Grid.Column="1"
+                                            Classes="inlineCard">
+                                        <Grid>
+                                            <TextBlock Text="选择一条任务后查看详情。"
+                                                       Classes="bodyText"
+                                                       IsVisible="{Binding HasNoTaskHistoryBrowserItemSelected}"
+                                                       VerticalAlignment="Center"
+                                                       HorizontalAlignment="Center"
+                                                       TextAlignment="Center"
+                                                       Margin="10"/>
+
+                                            <StackPanel Spacing="12"
+                                                        IsVisible="{Binding IsTaskHistoryBrowserItemSelected}">
+                                                <Grid ColumnDefinitions="96,*,80,*"
+                                                      RowDefinitions="Auto,Auto,Auto"
+                                                      RowSpacing="7"
+                                                      ColumnSpacing="10">
+                                                    <TextBlock Text="类型"
+                                                               Classes="captionText"/>
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding SelectedTaskHistoryBrowserItem.Type}"
+                                                               Classes="sectionTitle"/>
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="状态"
+                                                               Classes="captionText"/>
+                                                    <TextBlock Grid.Column="3"
+                                                               Text="{Binding SelectedTaskHistoryBrowserItem.Status}"
+                                                               Classes="sectionTitle"/>
+
+                                                    <TextBlock Grid.Row="1"
+                                                               Text="创建"
+                                                               Classes="captionText"/>
+                                                    <TextBlock Grid.Row="1"
+                                                               Grid.Column="1"
+                                                               Text="{Binding SelectedTaskHistoryBrowserItem.CreatedAt}"
+                                                               Classes="bodyText"/>
+                                                    <TextBlock Grid.Row="1"
+                                                               Grid.Column="2"
+                                                               Text="耗时"
+                                                               Classes="captionText"/>
+                                                    <TextBlock Grid.Row="1"
+                                                               Grid.Column="3"
+                                                               Text="{Binding SelectedTaskHistoryBrowserItem.Duration}"
+                                                               Classes="bodyText"/>
+
+                                                    <TextBlock Grid.Row="2"
+                                                               Text="事件"
+                                                               Classes="captionText"/>
+                                                    <TextBlock Grid.Row="2"
+                                                               Grid.Column="1"
+                                                               Text="{Binding SelectedTaskHistoryBrowserItem.EventCount}"
+                                                               Classes="bodyText"/>
+                                                    <TextBlock Grid.Row="2"
+                                                               Grid.Column="2"
+                                                               Text="工具"
+                                                               Classes="captionText"/>
+                                                    <TextBlock Grid.Row="2"
+                                                               Grid.Column="3"
+                                                               Text="{Binding SelectedTaskHistoryBrowserItem.ToolCallCount}"
+                                                               Classes="bodyText"/>
+                                                </Grid>
+
+                                                <StackPanel Spacing="6">
+                                                    <TextBlock Text="输入"
+                                                               Classes="sectionTitle"/>
+                                                    <TextBox Text="{Binding SelectedTaskHistoryBrowserItem.Input, Mode=OneWay}"
+                                                             IsReadOnly="True"
+                                                             AcceptsReturn="True"
+                                                             TextWrapping="Wrap"
+                                                             MinHeight="64"
+                                                             MaxHeight="110"
+                                                             Classes="formInput"/>
+                                                </StackPanel>
+
+                                                <StackPanel Spacing="6">
+                                                    <TextBlock Text="结果"
+                                                               Classes="sectionTitle"/>
+                                                    <TextBox Text="{Binding SelectedTaskHistoryBrowserItem.Result, Mode=OneWay}"
+                                                             IsReadOnly="True"
+                                                             AcceptsReturn="True"
+                                                             TextWrapping="Wrap"
+                                                             MinHeight="90"
+                                                             MaxHeight="150"
+                                                             Classes="formInput"/>
+                                                </StackPanel>
+
+                                                <StackPanel Spacing="6">
+                                                    <TextBlock Text="对话与事件摘要"
+                                                               Classes="sectionTitle"/>
+                                                    <TextBox Text="{Binding SelectedTaskHistoryBrowserItem.Transcript, Mode=OneWay}"
+                                                             IsReadOnly="True"
+                                                             AcceptsReturn="True"
+                                                             TextWrapping="Wrap"
+                                                             MinHeight="80"
+                                                             MaxHeight="140"
+                                                             Classes="formInput"/>
+                                                </StackPanel>
+
+                                                <Grid ColumnDefinitions="*,*"
+                                                      ColumnSpacing="12">
+                                                    <StackPanel Spacing="8">
+                                                        <TextBlock Text="最近事件"
+                                                                   Classes="sectionTitle"/>
+                                                        <TextBlock Text="暂无事件记录。"
+                                                                   Classes="captionText"
+                                                                   IsVisible="{Binding HasNoTaskHistoryEvents}"/>
+                                                        <ItemsControl ItemsSource="{Binding TaskHistoryEventItems}"
+                                                                      IsVisible="{Binding HasTaskHistoryEvents}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:SettingsListItem">
+                                                                    <Grid ColumnDefinitions="72,72,*"
+                                                                          ColumnSpacing="8"
+                                                                          Margin="0,0,0,7">
+                                                                        <TextBlock Text="{Binding Title}"
+                                                                                   Classes="captionText"/>
+                                                                        <TextBlock Grid.Column="1"
+                                                                                   Text="{Binding Value}"
+                                                                                   Classes="captionText"/>
+                                                                        <TextBlock Grid.Column="2"
+                                                                                   Text="{Binding Description}"
+                                                                                   Classes="bodyText"
+                                                                                   MaxLines="2"
+                                                                                   TextTrimming="CharacterEllipsis"/>
+                                                                    </Grid>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+
+                                                    <StackPanel Grid.Column="1"
+                                                                Spacing="8">
+                                                        <TextBlock Text="工具调用"
+                                                                   Classes="sectionTitle"/>
+                                                        <TextBlock Text="暂无工具调用记录。"
+                                                                   Classes="captionText"
+                                                                   IsVisible="{Binding HasNoTaskHistoryToolCalls}"/>
+                                                        <ItemsControl ItemsSource="{Binding TaskHistoryToolCallItems}"
+                                                                      IsVisible="{Binding HasTaskHistoryToolCalls}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:SettingsListItem">
+                                                                    <Grid ColumnDefinitions="*,58"
+                                                                          RowDefinitions="Auto,Auto"
+                                                                          ColumnSpacing="8"
+                                                                          Margin="0,0,0,7">
+                                                                        <TextBlock Text="{Binding Title}"
+                                                                                   Classes="sectionTitle"
+                                                                                   TextTrimming="CharacterEllipsis"/>
+                                                                        <TextBlock Grid.Column="1"
+                                                                                   Text="{Binding Value}"
+                                                                                   Classes="captionText"
+                                                                                   HorizontalAlignment="Right"/>
+                                                                        <TextBlock Grid.Row="1"
+                                                                                   Grid.ColumnSpan="2"
+                                                                                   Text="{Binding Description}"
+                                                                                   Classes="bodyText"
+                                                                                   MaxLines="2"
+                                                                                   TextTrimming="CharacterEllipsis"/>
+                                                                    </Grid>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+                                                </Grid>
+
+                                                <Grid ColumnDefinitions="*,Auto,Auto"
+                                                      ColumnSpacing="8">
+                                                    <TextBlock Text="保存结果会写入本机 Exports；删除只影响当前选中的历史记录。"
+                                                               Classes="captionText"
+                                                               VerticalAlignment="Center"
+                                                               TextWrapping="Wrap"/>
+                                                    <Button Grid.Column="1"
+                                                            Content="保存结果"
+                                                            Classes="secondaryAction"
+                                                            Command="{Binding SaveSelectedTaskResultCommand}"/>
+                                                    <Button Grid.Column="2"
+                                                            Content="删除记录"
+                                                            Classes="secondaryAction"
+                                                            Command="{Binding DeleteSelectedTaskHistoryCommand}"/>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="旧记录清理有二次确认，只清理 30 天以前的历史。"
+                                               Classes="captionText"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap"/>
+                                    <Button Grid.Column="1"
+                                            Content="{Binding TaskHistoryCleanupButtonText}"
+                                            Classes="secondaryAction"
+                                            Command="{Binding CleanupOldTaskHistoryCommand}"
                                             Margin="8,0,0,0"/>
                                 </Grid>
                             </StackPanel>

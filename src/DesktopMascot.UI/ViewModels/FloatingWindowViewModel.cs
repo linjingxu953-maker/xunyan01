@@ -46,7 +46,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         InlineSettings = new SettingsWindowViewModel(configurationManager, settingsDiagnosticsService,
             onboardingWindowService, characterStore, characterImageService, characterAssetImportService,
             new CharacterAssetPickerService(() => _inlineSettingsOwner), hotkeyService,
-            permissionManager, auditLogStore, memoryStore);
+            permissionManager, auditLogStore, memoryStore, taskHistoryStore);
         InlineSettings.PropertyChanged += OnInlineSettingsPropertyChanged;
 
         _characterStore.ProfileChanged += OnCharacterProfileChanged;
@@ -180,6 +180,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
             "mimoCode" => ("Mimo Code", "接入本机 Mimo Code，模型调用仍使用用户自己的 API 配置。", "Mimo Code 接入配置会保存到本机配置目录。"),
             "permission" => ("权限", "查看文件写入、命令执行和高风险工具的确认策略。", "权限确认仍走当前独立确认弹窗体系。"),
             "memory" => ("记忆", "管理待确认记忆、已保存记忆和自动学习策略。", "记忆确认仍走当前 M30 回调入口。"),
+            "history" => ("任务历史", "查看任务记录、结果、事件和工具调用。", "任务历史会从 ITaskHistoryStore 读取。"),
             "hotkey" => ("快捷键", "配置唤起输入和屏幕圈选快捷键。", "快捷键保存会继续做冲突检测和失败回滚。"),
             "data" => ("日志/数据", "查看本机配置、日志、缓存和数据目录。", "可打开目录、刷新占用并清理本地缓存。"),
             "appearance" => ("角色外观", "管理人物图片、状态图映射、角色名、颜色和预设。", "角色图片仍优先导入到本机稳定资源目录。"),
@@ -199,6 +200,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         propertyName is nameof(SettingsWindowViewModel.SelectedSectionId) or nameof(SettingsWindowViewModel.IsBusy)
             or nameof(SettingsWindowViewModel.ModelSettingsStatus) or nameof(SettingsWindowViewModel.MimoCodeStatus)
             or nameof(SettingsWindowViewModel.PermissionSettingsStatus) or nameof(SettingsWindowViewModel.MemorySettingsStatus)
+            or nameof(SettingsWindowViewModel.TaskHistorySettingsStatus)
             or nameof(SettingsWindowViewModel.HotkeySettingsStatus) or nameof(SettingsWindowViewModel.DataSettingsStatus)
             or nameof(SettingsWindowViewModel.DataStorageSummary) or nameof(SettingsWindowViewModel.CharacterSaveStatus)
             or nameof(SettingsWindowViewModel.CharacterAssetSuggestionStatus) or nameof(SettingsWindowViewModel.CharacterStatePreviewStatus)
@@ -213,6 +215,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         {
             "model" => InlineSettings.ModelSettingsStatus, "mimoCode" => InlineSettings.MimoCodeStatus,
             "permission" => InlineSettings.PermissionSettingsStatus, "memory" => InlineSettings.MemorySettingsStatus,
+            "history" => InlineSettings.TaskHistorySettingsStatus,
             "hotkey" => InlineSettings.HotkeySettingsStatus, "data" => $"{InlineSettings.DataSettingsStatus} {InlineSettings.DataStorageSummary}",
             "appearance" => string.Join(" ", new[] { InlineSettings.CharacterSaveStatus, InlineSettings.CharacterImageStatus, InlineSettings.CharacterAssetSuggestionStatus, InlineSettings.CharacterStatePreviewStatus }.Where(t => !string.IsNullOrWhiteSpace(t))),
             _ => fallback

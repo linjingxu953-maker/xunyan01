@@ -4,6 +4,7 @@ using Avalonia.Threading;
 using DesktopMascot.Core.Configuration;
 using DesktopMascot.Core.Memory;
 using DesktopMascot.Core.Security;
+using DesktopMascot.Core.Storage;
 using DesktopMascot.UI.ViewModels;
 using DesktopMascot.UI.Views;
 
@@ -21,6 +22,7 @@ public sealed class SettingsWindowService : ISettingsWindowService
     private readonly IPermissionManager _permissionManager;
     private readonly IAuditLogStore _auditLogStore;
     private readonly IMemoryStore _memoryStore;
+    private readonly ITaskHistoryStore _taskHistoryStore;
     private SettingsWindow? _window;
 
     public SettingsWindowService(
@@ -33,7 +35,8 @@ public sealed class SettingsWindowService : ISettingsWindowService
         IGlobalHotkeyService hotkeyService,
         IPermissionManager permissionManager,
         IAuditLogStore auditLogStore,
-        IMemoryStore memoryStore)
+        IMemoryStore memoryStore,
+        ITaskHistoryStore taskHistoryStore)
     {
         _configurationManager = configurationManager;
         _diagnosticsService = diagnosticsService;
@@ -45,6 +48,7 @@ public sealed class SettingsWindowService : ISettingsWindowService
         _permissionManager = permissionManager;
         _auditLogStore = auditLogStore;
         _memoryStore = memoryStore;
+        _taskHistoryStore = taskHistoryStore;
     }
 
     public void ShowSettingsWindow(string? sectionId = null)
@@ -75,7 +79,8 @@ public sealed class SettingsWindowService : ISettingsWindowService
             _hotkeyService,
             _permissionManager,
             _auditLogStore,
-            _memoryStore);
+            _memoryStore,
+            _taskHistoryStore);
         _window = window;
         _window.DataContext = viewModel;
         SelectSection(viewModel, sectionId);
