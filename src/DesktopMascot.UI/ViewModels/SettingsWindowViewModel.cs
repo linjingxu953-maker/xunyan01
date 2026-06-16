@@ -9,6 +9,7 @@ using DesktopMascot.Core.Configuration;
 using DesktopMascot.Core.Enums;
 using DesktopMascot.Core.Memory;
 using DesktopMascot.Core.Security;
+using DesktopMascot.Core.Storage;
 using DesktopMascot.UI.Services;
 
 namespace DesktopMascot.UI.ViewModels;
@@ -63,6 +64,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private readonly IPermissionManager? _permissionManager;
     private readonly IAuditLogStore? _auditLogStore;
     private readonly IMemoryStore? _memoryStore;
+    private readonly ITaskHistoryStore? _taskHistoryStore;
     private bool _isApplyingProvider;
     private bool _isApplyingCharacterProfile;
     private AppSettings _settings = new();
@@ -72,6 +74,12 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private MemoryStatistics? _memoryStatistics;
     private List<MemoryEntry> _recentMemoryEntries = [];
     private List<MemoryEntry> _memoryBrowserEntries = [];
+    private readonly List<string> _pendingMemoryClearIds = [];
+    private bool _isMemoryClearConfirmationPending;
+    private TaskHistoryStatistics? _taskHistoryStatistics;
+    private List<TaskHistoryRecord> _taskHistoryBrowserRecords = [];
+    private string _selectedTaskHistoryCleanupFilter = "全部";
+    private bool _isTaskHistoryCleanupConfirmationPending;
 
     [ObservableProperty] private string _selectedSectionId = "model";
     [ObservableProperty] private ModelProviderOption? _selectedProvider;
@@ -92,6 +100,11 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [ObservableProperty] private string _pendingMemoryDraftContent = string.Empty;
     [ObservableProperty] private string _memorySearchText = string.Empty;
     [ObservableProperty] private string _selectedMemoryFilter = "全部";
+    [ObservableProperty] private string _memoryClearButtonText = "清理";
+    [ObservableProperty] private string _taskHistorySettingsStatus = "任务历史会从 ITaskHistoryStore 读取，支持搜索、导出和删除。";
+    [ObservableProperty] private string _taskHistorySearchText = string.Empty;
+    [ObservableProperty] private string _selectedTaskHistoryStatusFilter = "全部";
+    [ObservableProperty] private string _taskHistoryCleanupButtonText = "清理旧记录";
     [ObservableProperty] private string _hotkeySettingsStatus = "快捷键状态会在应用启动后显示。";
     [ObservableProperty] private string _chatHotkeyText = string.Empty;
     [ObservableProperty] private string _screenSelectionHotkeyText = string.Empty;
@@ -112,6 +125,11 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private MemoryBrowserItem? _selectedMemoryBrowserItem;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsTaskHistoryBrowserItemSelected))]
+    [NotifyPropertyChangedFor(nameof(HasNoTaskHistoryBrowserItemSelected))]
+    private TaskHistoryBrowserItem? _selectedTaskHistoryBrowserItem;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNotBusy))]
     private bool _isBusy;
 
@@ -122,6 +140,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [ObservableProperty] private bool _isMimoCodeSectionSelected;
     [ObservableProperty] private bool _isPermissionSectionSelected;
     [ObservableProperty] private bool _isMemorySectionSelected;
+    [ObservableProperty] private bool _isTaskHistorySectionSelected;
     [ObservableProperty] private bool _isHotkeySectionSelected;
     [ObservableProperty] private bool _isDataSectionSelected;
     [ObservableProperty] private bool _isAppearanceSectionSelected;
@@ -179,7 +198,8 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         IGlobalHotkeyService hotkeyService,
         IPermissionManager? permissionManager = null,
         IAuditLogStore? auditLogStore = null,
-        IMemoryStore? memoryStore = null)
+        IMemoryStore? memoryStore = null,
+        ITaskHistoryStore? taskHistoryStore = null)
     {
         _configurationManager = configurationManager;
         _diagnosticsService = diagnosticsService;
@@ -192,6 +212,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         _permissionManager = permissionManager;
         _auditLogStore = auditLogStore;
         _memoryStore = memoryStore;
+        _taskHistoryStore = taskHistoryStore;
 
         Sections =
         [
@@ -199,6 +220,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             new SettingsSectionItem("mimoCode", "Mimo Code", "本机代码能力接入"),
             new SettingsSectionItem("permission", "权限", "确认策略与审计"),
             new SettingsSectionItem("memory", "记忆", "记忆保存与检索"),
+            new SettingsSectionItem("history", "任务历史", "记录、结果与工具调用"),
             new SettingsSectionItem("hotkey", "快捷键", "唤起与桌面操作"),
             new SettingsSectionItem("data", "日志/数据", "本地目录与日志"),
             new SettingsSectionItem("appearance", "角色外观", "小人形象与主题")
@@ -206,6 +228,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
 
         Providers = new ObservableCollection<ModelProviderOption>(ModelProviderCatalog.CreateDefaults());
         MemoryFilterOptions = ["全部", "用户偏好", "项目信息", "技能流程", "任务历史", "仅待确认"];
+        TaskHistoryStatusFilterOptions = ["全部", "已完成", "失败", "已取消", "进行中"];
         CharacterToneStyleOptions = ["友善", "专业", "轻松", "可爱", "沉稳", "讽刺"];
         CharacterLanguageStyleOptions = ["标准", "简洁", "详细", "技术", "口语"];
         CharacterReplyLengthOptions = ["短", "平衡", "详细"];
@@ -240,6 +263,10 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         MemoryStatsItems = [];
         MemoryActionItems = [];
         MemoryBrowserItems = [];
+        TaskHistoryStatsItems = [];
+        TaskHistoryBrowserItems = [];
+        TaskHistoryEventItems = [];
+        TaskHistoryToolCallItems = [];
         HotkeyItems = [];
         DataDirectoryItems = [];
         PendingMemoryReviews = [];
@@ -271,6 +298,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             RefreshMemoryCards();
         };
         MemoryBrowserItems.CollectionChanged += (_, _) => RefreshMemoryBrowserState();
+        TaskHistoryBrowserItems.CollectionChanged += (_, _) => RefreshTaskHistoryBrowserState();
         CharacterProfiles.CollectionChanged += (_, _) => RefreshCharacterProfileState();
         CharacterAssetSuggestions.CollectionChanged += (_, _) => RefreshCharacterAssetSuggestionState();
 
@@ -284,6 +312,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         RefreshMimoCodeCards();
         RefreshPermissionCards();
         RefreshMemoryCards();
+        RefreshTaskHistoryCards();
         RefreshHotkeyCards();
         RefreshDataDirectoryItems();
     }
@@ -291,6 +320,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     public ObservableCollection<SettingsSectionItem> Sections { get; }
     public ObservableCollection<ModelProviderOption> Providers { get; }
     public ObservableCollection<string> MemoryFilterOptions { get; }
+    public ObservableCollection<string> TaskHistoryStatusFilterOptions { get; }
     public ObservableCollection<PermissionLevelOption> PermissionAutoApproveLevels { get; }
     public ObservableCollection<string> CharacterToneStyleOptions { get; }
     public ObservableCollection<string> CharacterLanguageStyleOptions { get; }
@@ -306,6 +336,10 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     public ObservableCollection<SettingsListItem> MemoryStatsItems { get; }
     public ObservableCollection<SettingsListItem> MemoryActionItems { get; }
     public ObservableCollection<MemoryBrowserItem> MemoryBrowserItems { get; }
+    public ObservableCollection<SettingsListItem> TaskHistoryStatsItems { get; }
+    public ObservableCollection<TaskHistoryBrowserItem> TaskHistoryBrowserItems { get; }
+    public ObservableCollection<SettingsListItem> TaskHistoryEventItems { get; }
+    public ObservableCollection<SettingsListItem> TaskHistoryToolCallItems { get; }
     public ObservableCollection<SettingsListItem> HotkeyItems { get; }
     public ObservableCollection<DataDirectoryItem> DataDirectoryItems { get; }
     public ObservableCollection<PendingMemoryReviewItem> PendingMemoryReviews { get; }
@@ -322,6 +356,14 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     public bool HasNoMemoryBrowserItems => !HasMemoryBrowserItems;
     public bool IsMemoryBrowserItemSelected => SelectedMemoryBrowserItem is not null;
     public bool HasNoMemoryBrowserItemSelected => !IsMemoryBrowserItemSelected;
+    public bool HasTaskHistoryBrowserItems => TaskHistoryBrowserItems.Count > 0;
+    public bool HasNoTaskHistoryBrowserItems => !HasTaskHistoryBrowserItems;
+    public bool IsTaskHistoryBrowserItemSelected => SelectedTaskHistoryBrowserItem is not null;
+    public bool HasNoTaskHistoryBrowserItemSelected => !IsTaskHistoryBrowserItemSelected;
+    public bool HasTaskHistoryEvents => TaskHistoryEventItems.Count > 0;
+    public bool HasNoTaskHistoryEvents => !HasTaskHistoryEvents;
+    public bool HasTaskHistoryToolCalls => TaskHistoryToolCallItems.Count > 0;
+    public bool HasNoTaskHistoryToolCalls => !HasTaskHistoryToolCalls;
     public bool HasNoCharacterImage => !HasCharacterImage;
     public bool HasCharacterProfiles => CharacterProfiles.Count > 0;
     public bool HasNoCharacterProfiles => !HasCharacterProfiles;
@@ -375,6 +417,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             RefreshMimoCodeCards();
             await RefreshPermissionSnapshotAsync(ct);
             await RefreshMemorySnapshotAsync(ct);
+            await RefreshTaskHistorySnapshotAsync(ct);
             RefreshHotkeyCards();
             RefreshDataDirectoryItems();
         }
@@ -400,6 +443,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         IsMimoCodeSectionSelected = sectionId == "mimoCode";
         IsPermissionSectionSelected = sectionId == "permission";
         IsMemorySectionSelected = sectionId == "memory";
+        IsTaskHistorySectionSelected = sectionId == "history";
         IsHotkeySectionSelected = sectionId == "hotkey";
         IsDataSectionSelected = sectionId == "data";
         IsAppearanceSectionSelected = sectionId == "appearance";
@@ -824,6 +868,8 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task SearchMemoryBrowser()
     {
+        ResetMemoryClearConfirmation();
+
         if (_memoryStore is null)
         {
             MemorySettingsStatus = "IMemoryStore 未注入，暂时无法搜索记忆。";
@@ -856,6 +902,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task ResetMemoryBrowser()
     {
+        ResetMemoryClearConfirmation();
         MemorySearchText = string.Empty;
         SelectedMemoryFilter = "全部";
 
@@ -900,20 +947,133 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ImportMemory()
+    private async Task ImportMemory()
     {
-        MemorySettingsStatus = "导入需要文件选择入口；当前先保留状态提示，避免误读剪贴板或草稿内容。";
+        ResetMemoryClearConfirmation();
+
+        if (_memoryStore is null)
+        {
+            MemorySettingsStatus = "IMemoryStore 未注入，暂时无法导入记忆。";
+            return;
+        }
+
+        var filePath = await _characterAssetPickerService.PickMemoryImportFileAsync();
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            MemorySettingsStatus = "已取消记忆导入。";
+            return;
+        }
+
+        if (!File.Exists(filePath))
+        {
+            MemorySettingsStatus = $"导入文件不存在：{filePath}";
+            return;
+        }
+
+        IsBusy = true;
+
+        try
+        {
+            var data = await File.ReadAllTextAsync(filePath);
+            if (string.IsNullOrWhiteSpace(data))
+            {
+                MemorySettingsStatus = "导入文件为空，未写入记忆。";
+                return;
+            }
+
+            var imported = await _memoryStore.ImportAsync(data);
+            await RefreshMemorySnapshotAsync();
+            MemorySettingsStatus = imported == 0
+                ? $"导入完成，但文件中没有新增记忆：{filePath}"
+                : $"已导入 {imported} 条记忆：{filePath}";
+        }
+        catch (Exception ex)
+        {
+            MemorySettingsStatus = $"记忆导入失败：{CleanText(ex.Message, "未知错误", 120)}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
-    private void ClearMemory()
+    private async Task ClearMemory()
     {
-        MemorySettingsStatus = "清理记忆是高风险操作，当前不直接删除；后续接二次确认和审计后再开放。";
+        if (_memoryStore is null)
+        {
+            MemorySettingsStatus = "IMemoryStore 未注入，暂时无法清理记忆。";
+            return;
+        }
+
+        if (!_isMemoryClearConfirmationPending)
+        {
+            _pendingMemoryClearIds.Clear();
+            _pendingMemoryClearIds.AddRange(MemoryBrowserItems.Select(item => item.Id));
+
+            if (_pendingMemoryClearIds.Count == 0)
+            {
+                MemorySettingsStatus = "当前记忆浏览器里没有可清理条目。";
+                return;
+            }
+
+            _isMemoryClearConfirmationPending = true;
+            MemoryClearButtonText = "确认清理";
+            MemorySettingsStatus =
+                $"再次点击“确认清理”会删除当前浏览器中的 {_pendingMemoryClearIds.Count} 条记忆。切换搜索或重置会取消本次确认。";
+            return;
+        }
+
+        var ids = _pendingMemoryClearIds.Distinct(StringComparer.Ordinal).ToList();
+        if (ids.Count == 0)
+        {
+            ResetMemoryClearConfirmation();
+            MemorySettingsStatus = "没有可清理的记忆条目。";
+            return;
+        }
+
+        IsBusy = true;
+        var deleted = 0;
+        var failed = 0;
+
+        try
+        {
+            foreach (var id in ids)
+            {
+                try
+                {
+                    if (await _memoryStore.DeleteAsync(id))
+                    {
+                        deleted++;
+                    }
+                    else
+                    {
+                        failed++;
+                    }
+                }
+                catch
+                {
+                    failed++;
+                }
+            }
+
+            await RefreshMemorySnapshotAsync();
+            MemorySettingsStatus = failed == 0
+                ? $"已清理 {deleted} 条记忆。"
+                : $"已清理 {deleted} 条记忆，{failed} 条未能删除。";
+        }
+        finally
+        {
+            ResetMemoryClearConfirmation();
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
     private async Task DeleteSelectedMemory()
     {
+        ResetMemoryClearConfirmation();
+
         if (SelectedMemoryBrowserItem is null)
         {
             MemorySettingsStatus = "请先选择一条记忆。";
@@ -940,6 +1100,204 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             {
                 await SearchMemoryBrowser();
             }
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task RefreshTaskHistoryStatus()
+    {
+        ResetTaskHistoryCleanupConfirmation();
+        IsBusy = true;
+
+        try
+        {
+            await RefreshTaskHistorySnapshotAsync();
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task SearchTaskHistoryBrowser()
+    {
+        ResetTaskHistoryCleanupConfirmation();
+
+        if (_taskHistoryStore is null)
+        {
+            TaskHistorySettingsStatus = "ITaskHistoryStore 未注入，暂时无法搜索任务历史。";
+            return;
+        }
+
+        IsBusy = true;
+
+        try
+        {
+            var query = TaskHistorySearchText.Trim();
+            var records = string.IsNullOrWhiteSpace(query)
+                ? await _taskHistoryStore.GetRecentTasksAsync(120)
+                : (await _taskHistoryStore.SearchTasksAsync(query, 120)).Records;
+            var filtered = ApplyTaskHistoryStatusFilter(records, SelectedTaskHistoryStatusFilter)
+                .OrderByDescending(item => item.CreatedAt)
+                .Take(120)
+                .ToList();
+
+            PopulateTaskHistoryBrowserItems(filtered);
+            TaskHistorySettingsStatus = filtered.Count == 0
+                ? "没有找到匹配的任务历史。"
+                : $"已匹配 {filtered.Count} 条任务历史。";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ResetTaskHistoryBrowser()
+    {
+        ResetTaskHistoryCleanupConfirmation();
+        TaskHistorySearchText = string.Empty;
+        SelectedTaskHistoryStatusFilter = "全部";
+
+        IsBusy = true;
+
+        try
+        {
+            await RefreshTaskHistorySnapshotAsync();
+            TaskHistorySettingsStatus = "已恢复默认任务历史视图。";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ExportTaskHistory()
+    {
+        if (_taskHistoryStore is null)
+        {
+            TaskHistorySettingsStatus = "ITaskHistoryStore 未注入，暂时无法导出任务历史。";
+            return;
+        }
+
+        IsBusy = true;
+
+        try
+        {
+            var data = await _taskHistoryStore.ExportAsync();
+            var exportDirectory = Path.Combine(GetLocalDataRoot(), "Exports");
+            Directory.CreateDirectory(exportDirectory);
+            var exportPath = Path.Combine(exportDirectory, $"task-history-{DateTime.Now:yyyyMMdd-HHmmss}.json");
+            await File.WriteAllTextAsync(exportPath, data);
+            TaskHistorySettingsStatus = $"已导出任务历史到 {exportPath}。";
+            await RefreshTaskHistorySnapshotAsync();
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task SaveSelectedTaskResult()
+    {
+        if (SelectedTaskHistoryBrowserItem is null)
+        {
+            TaskHistorySettingsStatus = "请先选择一条任务历史。";
+            return;
+        }
+
+        IsBusy = true;
+
+        try
+        {
+            var exportDirectory = Path.Combine(GetLocalDataRoot(), "Exports");
+            Directory.CreateDirectory(exportDirectory);
+            var safeTitle = SanitizeFileName(SelectedTaskHistoryBrowserItem.Title);
+            var exportPath = Path.Combine(exportDirectory, $"task-result-{safeTitle}-{DateTime.Now:yyyyMMdd-HHmmss}.txt");
+            await File.WriteAllTextAsync(exportPath, CreateTaskHistoryExportText(SelectedTaskHistoryBrowserItem));
+            TaskHistorySettingsStatus = $"已保存任务结果到 {exportPath}。";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteSelectedTaskHistory()
+    {
+        ResetTaskHistoryCleanupConfirmation();
+
+        if (SelectedTaskHistoryBrowserItem is null)
+        {
+            TaskHistorySettingsStatus = "请先选择一条任务历史。";
+            return;
+        }
+
+        if (_taskHistoryStore is null)
+        {
+            TaskHistorySettingsStatus = "ITaskHistoryStore 未注入，暂时无法删除任务历史。";
+            return;
+        }
+
+        IsBusy = true;
+
+        try
+        {
+            var title = SelectedTaskHistoryBrowserItem.Title;
+            var deleted = await _taskHistoryStore.DeleteTaskAsync(SelectedTaskHistoryBrowserItem.Id);
+            TaskHistorySettingsStatus = deleted
+                ? $"已删除任务历史：{title}。"
+                : $"没有找到任务历史：{title}。";
+            await RefreshTaskHistorySnapshotAsync();
+
+            if (!string.IsNullOrWhiteSpace(TaskHistorySearchText) || SelectedTaskHistoryStatusFilter != "全部")
+            {
+                await SearchTaskHistoryBrowser();
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task CleanupOldTaskHistory()
+    {
+        if (_taskHistoryStore is null)
+        {
+            TaskHistorySettingsStatus = "ITaskHistoryStore 未注入，暂时无法清理任务历史。";
+            return;
+        }
+
+        if (!_isTaskHistoryCleanupConfirmationPending)
+        {
+            _isTaskHistoryCleanupConfirmationPending = true;
+            _selectedTaskHistoryCleanupFilter = SelectedTaskHistoryStatusFilter;
+            TaskHistoryCleanupButtonText = "确认清理";
+            TaskHistorySettingsStatus = "再次点击“确认清理”会删除 30 天以前的任务历史。切换筛选或重置会取消本次确认。";
+            return;
+        }
+
+        IsBusy = true;
+
+        try
+        {
+            var removed = await _taskHistoryStore.CleanupAsync(30);
+            ResetTaskHistoryCleanupConfirmation();
+            await RefreshTaskHistorySnapshotAsync();
+            TaskHistorySettingsStatus = removed == 0
+                ? "没有需要清理的 30 天以前任务历史。"
+                : $"已清理 {removed} 条 30 天以前的任务历史。";
         }
         finally
         {
@@ -1483,6 +1841,16 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         MemorySettingsStatus = $"已选中记忆：{value.Key}。";
     }
 
+    partial void OnMemorySearchTextChanged(string value)
+    {
+        ResetMemoryClearConfirmation();
+    }
+
+    partial void OnSelectedMemoryFilterChanged(string value)
+    {
+        ResetMemoryClearConfirmation();
+    }
+
     partial void OnSelectedCharacterProfileChanged(CharacterProfileListItem? value)
     {
         CharacterProfileNameDraft = value?.Name ?? CharacterName;
@@ -1934,6 +2302,230 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         "任务历史" => MemoryType.History,
         _ => null
     };
+
+    private async Task RefreshTaskHistorySnapshotAsync(CancellationToken ct = default)
+    {
+        if (_taskHistoryStore is null)
+        {
+            _taskHistoryStatistics = null;
+            _taskHistoryBrowserRecords = [];
+            TaskHistoryStatsItems.Clear();
+            TaskHistoryBrowserItems.Clear();
+            TaskHistoryEventItems.Clear();
+            TaskHistoryToolCallItems.Clear();
+            TaskHistorySettingsStatus = "ITaskHistoryStore 未注入，当前无法读取任务历史。";
+            RefreshTaskHistoryCards();
+            RefreshTaskHistoryBrowserState();
+            RefreshTaskHistoryDetailState();
+            return;
+        }
+
+        _taskHistoryStatistics = await _taskHistoryStore.GetStatisticsAsync(ct);
+        var records = await _taskHistoryStore.GetRecentTasksAsync(120, ct);
+        var ordered = records
+            .OrderByDescending(item => item.CreatedAt)
+            .Take(80)
+            .ToList();
+
+        PopulateTaskHistoryBrowserItems(ordered);
+        TaskHistorySettingsStatus = _taskHistoryStatistics.TotalTasks == 0
+            ? "任务历史存储已连接，当前还没有任务记录。"
+            : $"已读取 {_taskHistoryStatistics.TotalTasks} 条任务历史，当前显示 {TaskHistoryBrowserItems.Count} 条。";
+        RefreshTaskHistoryCards();
+        RefreshTaskHistoryBrowserState();
+        RefreshTaskHistoryDetailState();
+    }
+
+    private void PopulateTaskHistoryBrowserItems(IEnumerable<TaskHistoryRecord> records)
+    {
+        var selectedId = SelectedTaskHistoryBrowserItem?.Id;
+        _taskHistoryBrowserRecords = records.ToList();
+        TaskHistoryBrowserItems.Clear();
+
+        foreach (var record in _taskHistoryBrowserRecords)
+        {
+            TaskHistoryBrowserItems.Add(CreateTaskHistoryBrowserItem(record));
+        }
+
+        SelectedTaskHistoryBrowserItem = !string.IsNullOrWhiteSpace(selectedId)
+            ? TaskHistoryBrowserItems.FirstOrDefault(item => item.Id == selectedId)
+            : TaskHistoryBrowserItems.FirstOrDefault();
+
+        PopulateSelectedTaskHistoryDetails();
+    }
+
+    private void PopulateSelectedTaskHistoryDetails()
+    {
+        TaskHistoryEventItems.Clear();
+        TaskHistoryToolCallItems.Clear();
+
+        if (SelectedTaskHistoryBrowserItem is null)
+        {
+            RefreshTaskHistoryDetailState();
+            return;
+        }
+
+        var record = _taskHistoryBrowserRecords.FirstOrDefault(item => item.Id == SelectedTaskHistoryBrowserItem.Id);
+        if (record is null)
+        {
+            RefreshTaskHistoryDetailState();
+            return;
+        }
+
+        foreach (var item in record.Events.OrderBy(item => item.Timestamp).TakeLast(40))
+        {
+            TaskHistoryEventItems.Add(new SettingsListItem(
+                FormatTime(item.Timestamp),
+                string.IsNullOrWhiteSpace(item.State) ? $"{item.Progress}%" : item.State,
+                CleanText(item.Message, "无事件内容", 180)));
+        }
+
+        foreach (var toolCall in record.ToolCalls.OrderByDescending(item => item.Timestamp).Take(30))
+        {
+            TaskHistoryToolCallItems.Add(new SettingsListItem(
+                toolCall.ToolName,
+                toolCall.Success ? "成功" : "失败",
+                CleanText(toolCall.Error ?? toolCall.Result ?? toolCall.Arguments, "无工具调用详情", 180)));
+        }
+
+        RefreshTaskHistoryDetailState();
+    }
+
+    private static TaskHistoryBrowserItem CreateTaskHistoryBrowserItem(TaskHistoryRecord record)
+    {
+        var transcript = CreateTaskTranscript(record);
+        return new TaskHistoryBrowserItem(
+            record.Id,
+            CleanText(record.Title, "未命名任务", 80),
+            FormatTaskType(record.Type),
+            FormatTaskStatus(record.Status),
+            FormatTime(record.CreatedAt),
+            FormatDuration(record.Duration),
+            CleanText(record.Input, "无输入", 400),
+            CleanText(record.Result, "无结果", 800),
+            CleanText(record.Error, "无", 500),
+            $"{record.Events.Count} 条",
+            $"{record.ToolCalls.Count} 次",
+            transcript);
+    }
+
+    private static IEnumerable<TaskHistoryRecord> ApplyTaskHistoryStatusFilter(
+        IEnumerable<TaskHistoryRecord> records,
+        string? filter)
+    {
+        return filter switch
+        {
+            "已完成" => records.Where(item => item.Status == AppTaskStatus.Completed),
+            "失败" => records.Where(item => item.Status == AppTaskStatus.Failed),
+            "已取消" => records.Where(item => item.Status == AppTaskStatus.Cancelled),
+            "进行中" => records.Where(item => item.Status is AppTaskStatus.Created or AppTaskStatus.Running),
+            _ => records
+        };
+    }
+
+    private static string CreateTaskTranscript(TaskHistoryRecord record)
+    {
+        var messages = record.Events
+            .Where(item => !string.IsNullOrWhiteSpace(item.Message))
+            .OrderBy(item => item.Timestamp)
+            .TakeLast(20)
+            .Select(item =>
+            {
+                var role = item.State switch
+                {
+                    "user" => "用户",
+                    "assistant" => "妍",
+                    _ => string.IsNullOrWhiteSpace(item.State) ? "事件" : item.State
+                };
+                return $"{FormatTime(item.Timestamp)} {role}: {item.Message.Trim()}";
+            })
+            .ToList();
+
+        if (messages.Count > 0)
+        {
+            return CleanText(string.Join(Environment.NewLine, messages), "无对话记录", 1200);
+        }
+
+        var fallback = string.Join(
+            Environment.NewLine,
+            new[]
+            {
+                $"用户: {CleanText(record.Input, "无输入", 500)}",
+                $"妍: {CleanText(record.Result ?? record.Error, "暂无结果", 700)}"
+            });
+        return CleanText(fallback, "无对话记录", 1200);
+    }
+
+    private static string CreateTaskHistoryExportText(TaskHistoryBrowserItem item)
+    {
+        return string.Join(
+            Environment.NewLine,
+            [
+                $"标题：{item.Title}",
+                $"类型：{item.Type}",
+                $"状态：{item.Status}",
+                $"创建时间：{item.CreatedAt}",
+                $"耗时：{item.Duration}",
+                string.Empty,
+                "用户输入：",
+                item.Input,
+                string.Empty,
+                "任务结果：",
+                item.Result,
+                string.Empty,
+                "错误：",
+                item.Error,
+                string.Empty,
+                "对话与事件：",
+                item.Transcript
+            ]);
+    }
+
+    private static string FormatTaskStatus(AppTaskStatus status) => status switch
+    {
+        AppTaskStatus.Created => "已创建",
+        AppTaskStatus.Running => "进行中",
+        AppTaskStatus.Completed => "已完成",
+        AppTaskStatus.Failed => "失败",
+        AppTaskStatus.Cancelled => "已取消",
+        _ => status.ToString()
+    };
+
+    private static string FormatTaskType(TaskType type) => type switch
+    {
+        TaskType.Chat => "普通问答",
+        TaskType.SummarizePage => "网页总结",
+        TaskType.AnalyzeError => "报错分析",
+        TaskType.InspectProject => "项目诊断",
+        TaskType.WriteFile => "写文件",
+        TaskType.RunCommand => "执行命令",
+        TaskType.UpdateMemory => "记忆更新",
+        TaskType.ScreenUnderstand => "屏幕理解",
+        TaskType.SolveProblem => "题目解答",
+        TaskType.ComputerUse => "Computer Use",
+        _ => type.ToString()
+    };
+
+    private static string FormatDuration(TimeSpan? duration)
+    {
+        if (!duration.HasValue)
+            return "未完成";
+
+        return duration.Value.TotalMinutes >= 1
+            ? $"{duration.Value.TotalMinutes:F1} 分钟"
+            : $"{Math.Max(1, duration.Value.TotalSeconds):F0} 秒";
+    }
+
+    private static string SanitizeFileName(string value)
+    {
+        var text = CleanText(value, "task", 40);
+        foreach (var invalid in Path.GetInvalidFileNameChars())
+        {
+            text = text.Replace(invalid, '-');
+        }
+
+        return string.IsNullOrWhiteSpace(text) ? "task" : text;
+    }
 
     private static string CreateAuditLogKey(AuditLogEntry entry)
     {
@@ -2833,5 +3425,12 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
 
         OnPropertyChanged(nameof(HasMemoryBrowserItems));
         OnPropertyChanged(nameof(HasNoMemoryBrowserItems));
+    }
+
+    private void ResetMemoryClearConfirmation()
+    {
+        _pendingMemoryClearIds.Clear();
+        _isMemoryClearConfirmationPending = false;
+        MemoryClearButtonText = "清理";
     }
 }

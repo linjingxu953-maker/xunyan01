@@ -11,6 +11,12 @@ public sealed class CharacterAssetPickerService : ICharacterAssetPickerService
         MimeTypes = ["image/png", "image/jpeg", "image/bmp", "image/webp"]
     };
 
+    private static readonly FilePickerFileType MemoryJsonFileType = new("记忆 JSON")
+    {
+        Patterns = ["*.json"],
+        MimeTypes = ["application/json", "text/json"]
+    };
+
     private readonly Func<Window?> _ownerFactory;
 
     public CharacterAssetPickerService(Func<Window?> ownerFactory)
@@ -49,6 +55,25 @@ public sealed class CharacterAssetPickerService : ICharacterAssetPickerService
             Title = "选择角色图片",
             AllowMultiple = false,
             FileTypeFilter = [ImageFileType]
+        });
+
+        ct.ThrowIfCancellationRequested();
+        return files.Count > 0 ? GetLocalPath(files[0]) : null;
+    }
+
+    public async Task<string?> PickMemoryImportFileAsync(CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        var owner = _ownerFactory();
+        if (owner is null)
+            return null;
+
+        var files = await owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "选择记忆导入文件",
+            AllowMultiple = false,
+            FileTypeFilter = [MemoryJsonFileType]
         });
 
         ct.ThrowIfCancellationRequested();

@@ -937,12 +937,12 @@
                                 </Grid>
 
                                 <Grid ColumnDefinitions="*,Auto">
-                                    <TextBlock Text="清理记忆会保留为高风险操作，真实删除前需要 M30 的二次确认弹窗。"
+                                    <TextBlock Text="清理会先进入确认态，第二次点击才会删除当前浏览器列表里的记忆。"
                                                Classes="captionText"
                                                VerticalAlignment="Center"
                                                TextWrapping="Wrap"/>
                                     <Button Grid.Column="1"
-                                            Content="清理"
+                                            Content="{Binding MemoryClearButtonText}"
                                             Classes="secondaryAction"
                                             Command="{Binding ClearMemoryCommand}"
                                             Margin="8,0,0,0"/>

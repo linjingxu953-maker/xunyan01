@@ -157,9 +157,8 @@ public class NotificationTool : ITool
     {
         try
         {
-            // 使用 PowerShell 显示 Windows 通知
-            var ps = System.Management.Automation.PowerShell.Create();
-            ps.AddScript($@"
+            // 使用 Process 启动 PowerShell 显示通知
+            var script = $@"
                 [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
                 [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime] | Out-Null
                 $template = '<toast><visual><binding template=""ToastText02""><text id=""1"">{title}</text><text id=""2"">{message}</text></binding></visual></toast>'
@@ -167,19 +166,30 @@ public class NotificationTool : ITool
                 $xml.LoadXml($template)
                 $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
                 [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('DesktopMascot').Show($toast)
-            ");
-            ps.Invoke();
-            ps.Dispose();
+            ";
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = $"-NoProfile -Command \"{script}\"",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+
+            var process = Process.Start(startInfo);
+            process?.WaitForExit(5000);
         }
         catch
         {
-            // 降级到 MessageBox
+            // 降级到简单消息
             try
             {
                 Process.Start(new ProcessStartInfo
                 {
-                    FileName = "cmd.exe",
-                    Arguments = $"/c msg * \"{title}: {message}\"",
+                    FileName = "msg.exe",
+                    Arguments = $"* \"{title}: {message}\"",
                     UseShellExecute = false,
                     CreateNoWindow = true
                 });
