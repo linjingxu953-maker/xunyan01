@@ -162,8 +162,8 @@ public class WorkflowEngine : IWorkflowEngine
             var arguments = ResolveArguments(step.ArgumentsTemplate, workflow.Variables);
             step.Input = arguments;
 
-            // 检查是否需要确认
-            if (step.RequiresApproval)
+            // 检查是否需要确认（已批准过的步骤不再重复请求确认，防止死循环）
+            if (step.RequiresApproval && !step.IsApproved)
             {
                 step.Status = StepStatus.WaitingForApproval;
                 RaiseEvent(workflow.Id, step.StepId, "waiting_approval", $"步骤 {step.Name} 等待确认");
@@ -261,6 +261,7 @@ public class WorkflowEngine : IWorkflowEngine
             throw new InvalidOperationException($"步骤 {step.Name} 不在等待审批状态");
 
         // 批准后继续执行该步骤
+        step.IsApproved = true;
         step.Status = StepStatus.Running;
         RaiseEvent(workflowId, stepId, "step_approved", $"步骤 {step.Name} 已批准");
 

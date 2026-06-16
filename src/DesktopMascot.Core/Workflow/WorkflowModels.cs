@@ -83,6 +83,8 @@ public class StepInstance
     /// <summary>工具参数模板（可含 {variable} 占位符）</summary>
     public string ArgumentsTemplate { get; set; } = "{}";
     public bool RequiresApproval { get; set; }
+    /// <summary>是否已被用户批准（防止 Approved→ExecuteStepAsync→再次 WaitingForApproval 死循环）</summary>
+    public bool IsApproved { get; set; }
     public List<string> OutputMappingKeys { get; set; } = new();
     public List<string> OutputMappingValues { get; set; } = new();
     public StepStatus Status { get; set; } = StepStatus.Pending;

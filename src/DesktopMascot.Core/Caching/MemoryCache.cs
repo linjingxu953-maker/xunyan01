@@ -136,8 +136,8 @@ public class MemoryCache : ICache
         return new CacheStatistics
         {
             TotalEntries = entries.Count,
-            TotalHits = Interlocked.Read(ref _hits),
-            TotalMisses = Interlocked.Read(ref _misses),
+            TotalHits = (int)Interlocked.Read(ref _hits),
+            TotalMisses = (int)Interlocked.Read(ref _misses),
             TotalSizeBytes = entries.Sum(e => e.SizeBytes),
             OldestEntry = entries.Any() ? entries.Min(e => e.CreatedAt) : null,
             NewestEntry = entries.Any() ? entries.Max(e => e.CreatedAt) : null
