@@ -46,7 +46,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         InlineSettings = new SettingsWindowViewModel(configurationManager, settingsDiagnosticsService,
             onboardingWindowService, characterStore, characterImageService, characterAssetImportService,
             new CharacterAssetPickerService(() => _inlineSettingsOwner), hotkeyService,
-            permissionManager, auditLogStore, memoryStore, taskHistoryStore);
+            permissionManager, auditLogStore, memoryStore, taskHistoryStore, taskResultActionService);
         InlineSettings.PropertyChanged += OnInlineSettingsPropertyChanged;
 
         _characterStore.ProfileChanged += OnCharacterProfileChanged;

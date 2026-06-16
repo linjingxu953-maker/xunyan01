@@ -23,6 +23,7 @@ public sealed class SettingsWindowService : ISettingsWindowService
     private readonly IAuditLogStore _auditLogStore;
     private readonly IMemoryStore _memoryStore;
     private readonly ITaskHistoryStore _taskHistoryStore;
+    private readonly ITaskResultActionService _taskResultActionService;
     private SettingsWindow? _window;
 
     public SettingsWindowService(
@@ -36,7 +37,8 @@ public sealed class SettingsWindowService : ISettingsWindowService
         IPermissionManager permissionManager,
         IAuditLogStore auditLogStore,
         IMemoryStore memoryStore,
-        ITaskHistoryStore taskHistoryStore)
+        ITaskHistoryStore taskHistoryStore,
+        ITaskResultActionService taskResultActionService)
     {
         _configurationManager = configurationManager;
         _diagnosticsService = diagnosticsService;
@@ -49,6 +51,7 @@ public sealed class SettingsWindowService : ISettingsWindowService
         _auditLogStore = auditLogStore;
         _memoryStore = memoryStore;
         _taskHistoryStore = taskHistoryStore;
+        _taskResultActionService = taskResultActionService;
     }
 
     public void ShowSettingsWindow(string? sectionId = null)
@@ -80,7 +83,8 @@ public sealed class SettingsWindowService : ISettingsWindowService
             _permissionManager,
             _auditLogStore,
             _memoryStore,
-            _taskHistoryStore);
+            _taskHistoryStore,
+            _taskResultActionService);
         _window = window;
         _window.DataContext = viewModel;
         SelectSection(viewModel, sectionId);

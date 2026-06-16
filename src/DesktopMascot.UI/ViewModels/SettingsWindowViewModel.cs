@@ -65,6 +65,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private readonly IAuditLogStore? _auditLogStore;
     private readonly IMemoryStore? _memoryStore;
     private readonly ITaskHistoryStore? _taskHistoryStore;
+    private readonly ITaskResultActionService? _taskResultActionService;
     private bool _isApplyingProvider;
     private bool _isApplyingCharacterProfile;
     private AppSettings _settings = new();
@@ -199,7 +200,8 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         IPermissionManager? permissionManager = null,
         IAuditLogStore? auditLogStore = null,
         IMemoryStore? memoryStore = null,
-        ITaskHistoryStore? taskHistoryStore = null)
+        ITaskHistoryStore? taskHistoryStore = null,
+        ITaskResultActionService? taskResultActionService = null)
     {
         _configurationManager = configurationManager;
         _diagnosticsService = diagnosticsService;
@@ -213,6 +215,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         _auditLogStore = auditLogStore;
         _memoryStore = memoryStore;
         _taskHistoryStore = taskHistoryStore;
+        _taskResultActionService = taskResultActionService;
 
         Sections =
         [
@@ -1206,6 +1209,48 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task CopySelectedTaskResult()
+    {
+        if (SelectedTaskHistoryBrowserItem is null)
+        {
+            TaskHistorySettingsStatus = "请先选择一条任务历史。";
+            return;
+        }
+
+        if (_taskResultActionService is null)
+        {
+            TaskHistorySettingsStatus = "结果动作服务未注入，暂时无法复制。";
+            return;
+        }
+
+        var copied = await _taskResultActionService.CopyToClipboardAsync(SelectedTaskHistoryBrowserItem.Result);
+        TaskHistorySettingsStatus = copied
+            ? $"已复制任务结果：{SelectedTaskHistoryBrowserItem.Title}。"
+            : "复制失败：当前没有可用剪贴板或结果为空。";
+    }
+
+    [RelayCommand]
+    private async Task CopySelectedTaskHistory()
+    {
+        if (SelectedTaskHistoryBrowserItem is null)
+        {
+            TaskHistorySettingsStatus = "请先选择一条任务历史。";
+            return;
+        }
+
+        if (_taskResultActionService is null)
+        {
+            TaskHistorySettingsStatus = "结果动作服务未注入，暂时无法复制。";
+            return;
+        }
+
+        var copied = await _taskResultActionService.CopyToClipboardAsync(CreateTaskHistoryExportText(SelectedTaskHistoryBrowserItem));
+        TaskHistorySettingsStatus = copied
+            ? $"已复制完整任务记录：{SelectedTaskHistoryBrowserItem.Title}。"
+            : "复制失败：当前没有可用剪贴板。";
+    }
+
+    [RelayCommand]
     private async Task SaveSelectedTaskResult()
     {
         if (SelectedTaskHistoryBrowserItem is null)
@@ -1214,15 +1259,19 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             return;
         }
 
+        if (_taskResultActionService is null)
+        {
+            TaskHistorySettingsStatus = "结果动作服务未注入，暂时无法保存任务结果。";
+            return;
+        }
+
         IsBusy = true;
 
         try
         {
-            var exportDirectory = Path.Combine(GetLocalDataRoot(), "Exports");
-            Directory.CreateDirectory(exportDirectory);
-            var safeTitle = SanitizeFileName(SelectedTaskHistoryBrowserItem.Title);
-            var exportPath = Path.Combine(exportDirectory, $"task-result-{safeTitle}-{DateTime.Now:yyyyMMdd-HHmmss}.txt");
-            await File.WriteAllTextAsync(exportPath, CreateTaskHistoryExportText(SelectedTaskHistoryBrowserItem));
+            var exportPath = await _taskResultActionService.SaveResultAsync(
+                SelectedTaskHistoryBrowserItem.Title,
+                CreateTaskHistoryExportText(SelectedTaskHistoryBrowserItem));
             TaskHistorySettingsStatus = $"已保存任务结果到 {exportPath}。";
         }
         finally
