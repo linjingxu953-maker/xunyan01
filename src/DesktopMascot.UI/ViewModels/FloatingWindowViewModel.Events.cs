@@ -161,18 +161,20 @@ public partial class FloatingWindowViewModel
     // ── Computer Use 事件 ──
     private void ResetComputerUsePanel(bool isVisible)
     {
-        ComputerUseActions.Clear(); IsComputerUsePanelVisible = isVisible;
+        ComputerUseActions.Clear(); ComputerUseLogItems.Clear(); IsComputerUsePanelVisible = isVisible;
         ComputerUseModeText = isVisible ? "待执行" : "未接入"; ComputerUseStatusText = isVisible ? "等待动作事件" : "等待 Computer Use 事件";
         ComputerUseTargetText = isVisible ? "当前桌面" : "暂无目标"; ComputerUseScreenshotImage = null;
         ComputerUseScreenshotStatus = isVisible ? "等待屏幕观察截图。" : "等待 Computer Use 事件。";
         ComputerUseControlStatus = isVisible ? "Computer Use 控制入口已准备。" : "等待 MiMo Computer Use 接入事件流。";
         NotifyComputerUseActionStateChanged();
+        NotifyComputerUseLogStateChanged();
     }
 
     private void PrimeComputerUsePanel(string actionName, string target, string statusText, string detail)
     {
         if (!IsComputerUsePanelVisible) { IsComputerUsePanelVisible = true; ComputerUseStatusText = "人工控制请求"; ComputerUseTargetText = target; }
         AddComputerUseActionRecord(actionName, target, statusText, detail, DateTime.UtcNow);
+        AddComputerUseLogRecord(actionName, detail, statusText, DateTime.UtcNow);
     }
 
     private void ApplyComputerUseStateFromEvent(TaskEvent taskEvent, string message)
@@ -183,7 +185,11 @@ public partial class FloatingWindowViewModel
         ComputerUseModeText = ResolveComputerUseModeText(taskEvent); ComputerUseStatusText = CleanText(message, GetEventStepText(taskEvent), 80);
         ComputerUseTargetText = ResolveComputerUseTarget(taskEvent, ComputerUseTargetText); ComputerUseControlStatus = ResolveComputerUseControlStatus(taskEvent, message);
         UpdateComputerUseScreenshot(taskEvent);
-        if (isCuEvent) AddComputerUseActionRecord(taskEvent, message);
+        if (isCuEvent)
+        {
+            AddComputerUseActionRecord(taskEvent, message);
+            AddComputerUseLogRecord(taskEvent, message);
+        }
     }
 
     private void AddComputerUseActionRecord(TaskEvent taskEvent, string message) => AddComputerUseActionRecord(ResolveComputerUseActionName(taskEvent), ResolveComputerUseTarget(taskEvent, ComputerUseTargetText), ResolveComputerUseActionStatus(taskEvent), ResolveComputerUseDetail(taskEvent, message), taskEvent.CreatedAt);
@@ -194,6 +200,16 @@ public partial class FloatingWindowViewModel
         ComputerUseActions.Add(new ComputerUseActionItem(CleanText(actionName, "桌面动作", 24), CleanText(target, "当前桌面", 48), CleanText(statusText, "进行中", 12), CleanText(detail, "等待事件详情", 120), createdAt) { IsCurrent = true });
         while (ComputerUseActions.Count > 8) ComputerUseActions.RemoveAt(0);
         NotifyComputerUseActionStateChanged();
+    }
+
+    private void AddComputerUseLogRecord(TaskEvent taskEvent, string message) =>
+        AddComputerUseLogRecord(ResolveComputerUseActionName(taskEvent), ResolveComputerUseDetail(taskEvent, message), ResolveComputerUseActionStatus(taskEvent), taskEvent.CreatedAt);
+
+    private void AddComputerUseLogRecord(string title, string detail, string statusText, DateTime createdAt)
+    {
+        ComputerUseLogItems.Insert(0, new ComputerUseLogItem(CleanText(title, "桌面事件", 28), CleanText(detail, "Computer Use 状态已更新。", 140), CleanText(statusText, "进行中", 12), createdAt));
+        while (ComputerUseLogItems.Count > 12) ComputerUseLogItems.RemoveAt(ComputerUseLogItems.Count - 1);
+        NotifyComputerUseLogStateChanged();
     }
 
     private void UpdateComputerUseScreenshot(TaskEvent taskEvent)
@@ -217,6 +233,7 @@ public partial class FloatingWindowViewModel
     }
 
     private void NotifyComputerUseActionStateChanged() { OnPropertyChanged(nameof(HasComputerUseActions)); OnPropertyChanged(nameof(HasNoComputerUseActions)); }
+    private void NotifyComputerUseLogStateChanged() { OnPropertyChanged(nameof(HasComputerUseLogItems)); OnPropertyChanged(nameof(HasNoComputerUseLogItems)); }
     private void NotifyMessageStateChanged() { OnPropertyChanged(nameof(HasMessages)); OnPropertyChanged(nameof(HasNoMessages)); }
     private void NotifyTaskHistoryStateChanged() { OnPropertyChanged(nameof(HasTaskHistory)); OnPropertyChanged(nameof(HasNoTaskHistory)); }
 

@@ -136,6 +136,7 @@ public partial class FloatingWindowViewModel
     public ObservableCollection<TaskTimelineItem> TaskTimeline { get; } = new();
     public ObservableCollection<TaskToolCallItem> TaskToolCalls { get; } = new();
     public ObservableCollection<ComputerUseActionItem> ComputerUseActions { get; } = new();
+    public ObservableCollection<ComputerUseLogItem> ComputerUseLogItems { get; } = new();
     public SettingsWindowViewModel InlineSettings { get; }
 
     // ── 计算属性 ──
@@ -146,6 +147,8 @@ public partial class FloatingWindowViewModel
     public bool HasNoToolCallRecords => !HasToolCallRecords;
     public bool HasComputerUseActions => ComputerUseActions.Count > 0;
     public bool HasNoComputerUseActions => !HasComputerUseActions;
+    public bool HasComputerUseLogItems => ComputerUseLogItems.Count > 0;
+    public bool HasNoComputerUseLogItems => !HasComputerUseLogItems;
     public bool HasComputerUseScreenshot => ComputerUseScreenshotImage is not null;
     public bool HasNoComputerUseScreenshot => !HasComputerUseScreenshot;
     public bool HasMessages => MessageItems.Count > 0;

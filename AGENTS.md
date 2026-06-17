@@ -108,6 +108,27 @@
 3. **依赖方向**：App → UI → Core，Agent → Core（UI和Agent不直接依赖）
 4. **接口优先**：跨层通信必须通过接口
 
+## 测试运行规则（2026-06-17）
+
+**所有 agent 跑解决方案全量测试时，必须使用安全脚本：**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run-full-tests-safe.ps1
+```
+
+**禁止直接裸跑：**
+
+```powershell
+dotnet test DesktopMascot.sln
+```
+
+原因：
+- Avalonia BuildServices 会写入 `%LOCALAPPDATA%\AvaloniaUI\BuildServices\buildtasks.log`，在受限环境下可能触发 `UnauthorizedAccessException`，安全脚本会设置 `AVALONIA_TELEMETRY_OPTOUT=1`。
+- 视频/外部进程类测试一旦卡住，裸跑不会给出清晰定位；安全脚本固定开启 `--blame-hang --blame-hang-timeout 90s --blame-hang-dump-type none`。
+- 安全脚本默认使用带时间戳的 `TestResults\artifacts-safe-full-*` 输出目录，避免被遗留 `testhost` 锁住默认 `bin/obj` 或上一次 artifacts。
+
+如果只跑模块级测试，可以直接跑对应测试项目；但涉及 Agent 视频处理、Computer Use、外部进程或解决方案级全量时，必须带 `--blame-hang` 或使用上述安全脚本。
+
 ---
 
 ## 当前进度

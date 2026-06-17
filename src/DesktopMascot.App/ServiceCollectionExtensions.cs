@@ -1,13 +1,16 @@
 using DesktopMascot.Agent.Context;
 using DesktopMascot.Agent.Engines;
 using DesktopMascot.Agent.Memory;
+using DesktopMascot.Agent.Models;
 using DesktopMascot.Agent.Providers;
 using DesktopMascot.Agent.Tools;
 using DesktopMascot.App.Services;
 using DesktopMascot.Core.Caching;
 using DesktopMascot.Core.Configuration;
+using DesktopMascot.Core.Conversation;
 using DesktopMascot.Core.ErrorHandling;
 using DesktopMascot.Core.Interfaces;
+using DesktopMascot.Core.Learning;
 using DesktopMascot.Core.Logging;
 using DesktopMascot.Core.Memory;
 using DesktopMascot.Core.Plugins;
@@ -64,6 +67,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<MemoryManager>();
         services.AddSingleton<MemoryIntegrationService>();
 
+        // 对话和学习
+        services.AddSingleton<ConversationManager>();
+        services.AddSingleton<LearningEngine>();
+
         // 权限
         services.AddSingleton<IPermissionManager, PermissionManager>();
         services.AddSingleton<IAuditLogStore>(sp =>
@@ -94,6 +101,9 @@ public static class ServiceCollectionExtensions
 
         // 错误处理
         services.AddSingleton<ErrorHandler>();
+
+        // Agent 人格
+        services.AddSingleton(new AgentPersonality());
 
         // Agent 层
         services.AddSingleton<IApiKeyStore, FileApiKeyStore>();

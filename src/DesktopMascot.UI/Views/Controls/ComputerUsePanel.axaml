@@ -140,6 +140,67 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </ScrollViewer>
+
+            <Grid ColumnDefinitions="*,Auto"
+                  Margin="0,2,0,0">
+                <TextBlock Text="操作日志"
+                           Classes="computerUseSubTitle"/>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding ComputerUseControlStatus}"
+                           Classes="computerUseCaption"
+                           TextTrimming="CharacterEllipsis"
+                           MaxWidth="260"/>
+            </Grid>
+
+            <TextBlock Text="暂无操作日志"
+                       Classes="computerUseCaption"
+                       IsVisible="{Binding HasNoComputerUseLogItems}"/>
+
+            <ScrollViewer MaxHeight="112"
+                          VerticalScrollBarVisibility="Auto"
+                          IsVisible="{Binding HasComputerUseLogItems}">
+                <ItemsControl ItemsSource="{Binding ComputerUseLogItems}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ComputerUseLogItem">
+                            <Grid ColumnDefinitions="18,*"
+                                  RowDefinitions="Auto,Auto"
+                                  Margin="0,0,0,8">
+                                <Ellipse Width="8"
+                                         Height="8"
+                                         Fill="{Binding DotBrush}"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Top"
+                                         Margin="0,4,0,0"/>
+                                <Border Grid.Column="1"
+                                        Grid.RowSpan="2"
+                                        Classes="computerUseLogRow">
+                                    <Grid ColumnDefinitions="*,Auto"
+                                          RowDefinitions="Auto,Auto"
+                                          ColumnSpacing="8">
+                                        <StackPanel Orientation="Horizontal"
+                                                    Spacing="6">
+                                            <TextBlock Text="{Binding Title}"
+                                                       Classes="computerUseActionTitle"/>
+                                            <TextBlock Text="{Binding StatusText}"
+                                                       Classes="computerUseCaption"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding TimeText}"
+                                                   Classes="computerUseCaption"/>
+                                        <TextBlock Grid.Row="1"
+                                                   Grid.ColumnSpan="2"
+                                                   Text="{Binding Detail}"
+                                                   Classes="computerUseBody"
+                                                   TextWrapping="Wrap"
+                                                   MaxLines="2"
+                                                   Margin="0,3,0,0"/>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
             </StackPanel>
         </Grid>
     </Border>

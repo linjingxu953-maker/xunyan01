@@ -591,6 +591,14 @@
         <Setter Property="BorderBrush" Value="#60A5FA"/>
     </Style>
 
+    <Style Selector="Border.computerUseLogRow">
+        <Setter Property="Background" Value="#0FFFFFFF"/>
+        <Setter Property="BorderBrush" Value="#16FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="8"/>
+    </Style>
+
     <Style Selector="TextBlock.computerUseTitle">
         <Setter Property="Foreground" Value="#F8FAFC"/>
         <Setter Property="FontSize" Value="13"/>
