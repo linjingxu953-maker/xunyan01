@@ -52,7 +52,9 @@ public partial class FloatingWindowViewModel
     [ObservableProperty] private string _taskActionStatus = "等待任务执行。";
 
     // ── Computer Use 面板 ──
-    [ObservableProperty] private bool _isComputerUsePanelVisible;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPendingComputerUseApproval))]
+    private bool _isComputerUsePanelVisible;
     [ObservableProperty] private string _computerUseModeText = "未接入";
     [ObservableProperty] private string _computerUseStatusText = "等待 Computer Use 事件";
     [ObservableProperty] private string _computerUseTargetText = "暂无目标";
@@ -69,10 +71,17 @@ public partial class FloatingWindowViewModel
     private bool _canRetryTask;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanRetryCurrentTask))]
+    [NotifyPropertyChangedFor(nameof(HasPendingComputerUseApproval))]
     private bool _isWaitingForUserConfirmation;
-    [ObservableProperty] private string _pendingConfirmationTitle = "等待确认";
-    [ObservableProperty] private string _pendingConfirmationDescription = "请确认后继续执行。";
-    [ObservableProperty] private string _pendingConfirmationRiskText = "低风险";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ComputerUseApproval))]
+    private string _pendingConfirmationTitle = "等待确认";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ComputerUseApproval))]
+    private string _pendingConfirmationDescription = "请确认后继续执行。";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ComputerUseApproval))]
+    private string _pendingConfirmationRiskText = "低风险";
     [ObservableProperty] private IBrush _stateAccentBrush = BrushFrom("#2563EB");
     [ObservableProperty] private IBrush _mascotBackgroundBrush = BrushFrom("#EEF6FF");
 
@@ -149,6 +158,8 @@ public partial class FloatingWindowViewModel
     public bool HasNoComputerUseActions => !HasComputerUseActions;
     public bool HasComputerUseLogItems => ComputerUseLogItems.Count > 0;
     public bool HasNoComputerUseLogItems => !HasComputerUseLogItems;
+    public bool HasPendingComputerUseApproval => IsComputerUsePanelVisible && IsWaitingForUserConfirmation;
+    public ComputerUseApprovalCardState ComputerUseApproval => ComputerUseApprovalCardState.From(PendingConfirmationTitle, PendingConfirmationDescription, PendingConfirmationRiskText);
     public bool HasComputerUseScreenshot => ComputerUseScreenshotImage is not null;
     public bool HasNoComputerUseScreenshot => !HasComputerUseScreenshot;
     public bool HasMessages => MessageItems.Count > 0;

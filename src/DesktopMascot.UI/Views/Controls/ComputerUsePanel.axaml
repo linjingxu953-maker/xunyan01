@@ -89,6 +89,49 @@
                        Classes="computerUseCaption"
                        TextWrapping="Wrap"/>
 
+            <Border Classes="computerUseApprovalCard"
+                    IsVisible="{Binding HasPendingComputerUseApproval}">
+                <Grid RowDefinitions="Auto,Auto,Auto"
+                      RowSpacing="8">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="{Binding ComputerUseApproval.Title}"
+                                       Classes="computerUseActionTitle"/>
+                            <TextBlock Text="需要你确认后，妍才会继续执行桌面动作。"
+                                       Classes="computerUseCaption"/>
+                        </StackPanel>
+                        <Border Grid.Column="1"
+                                Classes="computerUseApprovalRiskBadge"
+                                Background="{Binding ComputerUseApproval.RiskBrush}">
+                            <TextBlock Text="{Binding ComputerUseApproval.RiskText}"
+                                       Classes="computerUseApprovalRiskText"/>
+                        </Border>
+                    </Grid>
+
+                    <TextBlock Grid.Row="1"
+                               Text="{Binding ComputerUseApproval.Description}"
+                               Classes="computerUseBody"
+                               TextWrapping="Wrap"
+                               MaxLines="3"/>
+
+                    <StackPanel Grid.Row="2"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                Spacing="7">
+                        <Button Content="接管"
+                                Classes="computerUseButton"
+                                Command="{Binding TakeOverComputerUseCommand}"/>
+                        <Button Content="拒绝"
+                                Classes="computerUseDangerButton"
+                                Command="{Binding DenyPendingTaskCommand}"/>
+                        <Button Content="批准继续"
+                                Classes="computerUsePrimaryButton"
+                                Command="{Binding ApprovePendingTaskCommand}"
+                                Padding="12,5"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
             <TextBlock Text="暂无 Computer Use 动作"
                        Classes="computerUseCaption"
                        IsVisible="{Binding HasNoComputerUseActions}"/>
