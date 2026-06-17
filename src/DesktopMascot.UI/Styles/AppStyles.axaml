@@ -216,6 +216,11 @@
         <Setter Property="BoxShadow" Value="0 0 0 0 #00000000"/>
     </Style>
 
+    <Style Selector="Border.mascotIcon.completed Border.mascotHalo">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BoxShadow" Value="0 0 0 0 #00000000"/>
+    </Style>
+
     <Style Selector="Border.mascotPortrait">
         <Setter Property="Width" Value="164"/>
         <Setter Property="Height" Value="224"/>

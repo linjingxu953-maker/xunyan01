@@ -1,3 +1,4 @@
+using System.Text.Json;
 using DesktopMascot.Agent.Tools;
 
 namespace DesktopMascot.Agent.Tests;

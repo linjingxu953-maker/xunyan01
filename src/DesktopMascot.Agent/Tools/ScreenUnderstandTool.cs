@@ -1,3 +1,4 @@
+using DesktopMascot.Core.Tools;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using DesktopMascot.Agent.Context;

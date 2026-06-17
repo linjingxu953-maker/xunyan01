@@ -106,10 +106,26 @@ public partial class FloatingWindowViewModel
     }
 
     [RelayCommand]
-    private void ToggleVoiceInput() { IsVoiceRecording = !IsVoiceRecording; VoiceInputStatus = IsVoiceRecording ? "录音中，点击麦克风结束。" : "录音已结束，等待语音识别服务接入后自动转写并发送。"; }
+    private void ToggleVoiceInput()
+    {
+        IsVoiceRecording = !IsVoiceRecording;
+        VoiceInputStatus = IsVoiceRecording
+            ? $"录音状态：{InlineSettings.SpeechRecognitionLanguage}，点击结束录音。"
+            : "录音已结束；STT 服务接入后会自动转写并发送。";
+    }
 
     [RelayCommand]
-    private void StopVoiceReply() { IsVoiceReplyPlaying = false; VoiceReplyStatus = "语音播放已停止。"; }
+    private void StopVoiceReply()
+    {
+        if (!IsVoiceReplyPlaying)
+        {
+            VoiceReplyStatus = "当前没有正在朗读的回复。";
+            return;
+        }
+
+        IsVoiceReplyPlaying = false;
+        VoiceReplyStatus = "语音播放已停止。";
+    }
 
     [RelayCommand]
     private void OpenComputerUsePermission()

@@ -1,3 +1,4 @@
+using DesktopMascot.Core.Tools;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -193,7 +194,7 @@ public class ShortVideoMakerTool : ITool
         sb.AppendLine("  .bg-gradient { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(ellipse at 30% 50%, " + accentColor + "15, transparent 70%); pointer-events: none; }");
         sb.AppendLine("</style>");
         sb.AppendLine("</head>");
-        sb.AppendLine("<body>");
+        sb.AppendLine("<body data-composition-id=\"short-video-maker\">");
 
         for (int i = 0; i < segments.Count; i++)
         {
@@ -606,11 +607,11 @@ public class ShortVideoMakerTool : ITool
         var d = Math.Max(3, totalDuration / n);
         return new List<ScriptSegment>
         {
-            new() { TimeRange = $"00:00-00:{d:D2}", Scene = "开场", Narration = $"大家好，今天教你{title}", Visual = "标题动画", NeedImage = true },
-            new() { TimeRange = $"00:{d:D2}-00:{d * 2:D2}", Scene = "第一步", Narration = description.Length > 0 ? description : $"首先打开相关工具", Visual = "操作界面", NeedImage = true },
-            new() { TimeRange = $"00:{d * 2:D2}-00:{d * 3:D2}", Scene = "第二步", Narration = "然后按照以下步骤操作", Visual = "步骤演示", NeedVideo = true },
-            new() { TimeRange = $"00:{d * 3:D2}-00:{d * 4:D2}", Scene = "总结", Narration = "这样就完成了！", Visual = "完成效果", NeedImage = true },
-            new() { TimeRange = $"00:{d * 4:D2}-00:{totalDuration:D2}", Scene = "结尾", Narration = "喜欢的话记得点赞关注！", Visual = "关注动画", NeedImage = true }
+            new() { TimeRange = FormatTimeRange(0, d), Scene = "开场", Narration = $"大家好，今天教你{title}", Visual = "标题动画", NeedImage = true },
+            new() { TimeRange = FormatTimeRange(d, d * 2), Scene = "第一步", Narration = description.Length > 0 ? description : $"首先打开相关工具", Visual = "操作界面", NeedImage = true },
+            new() { TimeRange = FormatTimeRange(d * 2, d * 3), Scene = "第二步", Narration = "然后按照以下步骤操作", Visual = "步骤演示", NeedVideo = true },
+            new() { TimeRange = FormatTimeRange(d * 3, d * 4), Scene = "总结", Narration = "这样就完成了！", Visual = "完成效果", NeedImage = true },
+            new() { TimeRange = FormatTimeRange(d * 4, totalDuration), Scene = "结尾", Narration = "喜欢的话记得点赞关注！", Visual = "关注动画", NeedImage = true }
         };
     }
 
@@ -620,10 +621,10 @@ public class ShortVideoMakerTool : ITool
         var d = Math.Max(3, totalDuration / n);
         return new List<ScriptSegment>
         {
-            new() { TimeRange = $"00:00-00:{d:D2}", Scene = "开场", Narration = $"来看看{title}", Visual = "震撼开场", NeedImage = true },
-            new() { TimeRange = $"00:{d:D2}-00:{d * 2:D2}", Scene = "展示", Narration = description.Length > 0 ? description : "效果非常惊艳", Visual = "产品展示", NeedVideo = true },
-            new() { TimeRange = $"00:{d * 2:D2}-00:{d * 3:D2}", Scene = "细节", Narration = "注意看这些细节", Visual = "细节特写", NeedImage = true },
-            new() { TimeRange = $"00:{d * 3:D2}-00:{totalDuration:D2}", Scene = "结尾", Narration = "这就是魅力所在！", Visual = "品牌展示", NeedImage = true }
+            new() { TimeRange = FormatTimeRange(0, d), Scene = "开场", Narration = $"来看看{title}", Visual = "震撼开场", NeedImage = true },
+            new() { TimeRange = FormatTimeRange(d, d * 2), Scene = "展示", Narration = description.Length > 0 ? description : "效果非常惊艳", Visual = "产品展示", NeedVideo = true },
+            new() { TimeRange = FormatTimeRange(d * 2, d * 3), Scene = "细节", Narration = "注意看这些细节", Visual = "细节特写", NeedImage = true },
+            new() { TimeRange = FormatTimeRange(d * 3, totalDuration), Scene = "结尾", Narration = "这就是魅力所在！", Visual = "品牌展示", NeedImage = true }
         };
     }
 
@@ -633,9 +634,9 @@ public class ShortVideoMakerTool : ITool
         var d = Math.Max(5, totalDuration / n);
         return new List<ScriptSegment>
         {
-            new() { TimeRange = $"00:00-00:{d:D2}", Scene = "引入", Narration = $"今天聊一个有趣的话题：{title}", Visual = "背景画面", NeedImage = true },
-            new() { TimeRange = $"00:{d:D2}-00:{d * 2:D2}", Scene = "展开", Narration = description.Length > 0 ? description : "这个话题有很多值得探讨的地方", Visual = "相关图片", NeedImage = true },
-            new() { TimeRange = $"00:{d * 2:D2}-00:{totalDuration:D2}", Scene = "结尾", Narration = "你觉得呢？欢迎评论区讨论！", Visual = "互动引导", NeedImage = true }
+            new() { TimeRange = FormatTimeRange(0, d), Scene = "引入", Narration = $"今天聊一个有趣的话题：{title}", Visual = "背景画面", NeedImage = true },
+            new() { TimeRange = FormatTimeRange(d, d * 2), Scene = "展开", Narration = description.Length > 0 ? description : "这个话题有很多值得探讨的地方", Visual = "相关图片", NeedImage = true },
+            new() { TimeRange = FormatTimeRange(d * 2, totalDuration), Scene = "结尾", Narration = "你觉得呢？欢迎评论区讨论！", Visual = "互动引导", NeedImage = true }
         };
     }
 
@@ -645,10 +646,10 @@ public class ShortVideoMakerTool : ITool
         var d = Math.Max(3, totalDuration / n);
         return new List<ScriptSegment>
         {
-            new() { TimeRange = $"00:00-00:{d:D2}", Scene = "痛点", Narration = "你是否遇到过这个问题？", Visual = "痛点场景", NeedImage = true },
-            new() { TimeRange = $"00:{d:D2}-00:{d * 2:D2}", Scene = "方案", Narration = $"试试{title}吧！", Visual = "产品展示", NeedImage = true },
-            new() { TimeRange = $"00:{d * 2:D2}-00:{d * 3:D2}", Scene = "效果", Narration = description.Length > 0 ? description : "效果立竿见影", Visual = "效果对比", NeedVideo = true },
-            new() { TimeRange = $"00:{d * 3:D2}-00:{totalDuration:D2}", Scene = "行动", Narration = "立即试试吧！", Visual = "CTA按钮", NeedImage = true }
+            new() { TimeRange = FormatTimeRange(0, d), Scene = "痛点", Narration = "你是否遇到过这个问题？", Visual = "痛点场景", NeedImage = true },
+            new() { TimeRange = FormatTimeRange(d, d * 2), Scene = "方案", Narration = $"试试{title}吧！", Visual = "产品展示", NeedImage = true },
+            new() { TimeRange = FormatTimeRange(d * 2, d * 3), Scene = "效果", Narration = description.Length > 0 ? description : "效果立竿见影", Visual = "效果对比", NeedVideo = true },
+            new() { TimeRange = FormatTimeRange(d * 3, totalDuration), Scene = "行动", Narration = "立即试试吧！", Visual = "CTA按钮", NeedImage = true }
         };
     }
 
@@ -658,11 +659,20 @@ public class ShortVideoMakerTool : ITool
         var d = Math.Max(4, totalDuration / n);
         return new List<ScriptSegment>
         {
-            new() { TimeRange = $"00:00-00:{d:D2}", Scene = "介绍", Narration = $"来看看{title}怎么用", Visual = "界面截图", NeedImage = true },
-            new() { TimeRange = $"00:{d:D2}-00:{d * 2:D2}", Scene = "操作1", Narration = "第一步，点击这里", Visual = "操作演示", NeedVideo = true },
-            new() { TimeRange = $"00:{d * 2:D2}-00:{d * 3:D2}", Scene = "操作2", Narration = "第二步，输入内容", Visual = "输入演示", NeedVideo = true },
-            new() { TimeRange = $"00:{d * 3:D2}-00:{totalDuration:D2}", Scene = "结果", Narration = "看，这就完成了！", Visual = "结果展示", NeedImage = true }
+            new() { TimeRange = FormatTimeRange(0, d), Scene = "介绍", Narration = $"来看看{title}怎么用", Visual = "界面截图", NeedImage = true },
+            new() { TimeRange = FormatTimeRange(d, d * 2), Scene = "操作1", Narration = "第一步，点击这里", Visual = "操作演示", NeedVideo = true },
+            new() { TimeRange = FormatTimeRange(d * 2, d * 3), Scene = "操作2", Narration = "第二步，输入内容", Visual = "输入演示", NeedVideo = true },
+            new() { TimeRange = FormatTimeRange(d * 3, totalDuration), Scene = "结果", Narration = "看，这就完成了！", Visual = "结果展示", NeedImage = true }
         };
+    }
+
+    private static string FormatTimeRange(int startSeconds, int endSeconds) =>
+        $"{FormatTimestamp(startSeconds)}-{FormatTimestamp(endSeconds)}";
+
+    private static string FormatTimestamp(int totalSeconds)
+    {
+        var clamped = Math.Max(0, totalSeconds);
+        return $"{clamped / 60:D2}:{clamped % 60:D2}";
     }
 
     #endregion

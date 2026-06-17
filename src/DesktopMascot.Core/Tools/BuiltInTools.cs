@@ -3,19 +3,32 @@ using System.Text.Json;
 namespace DesktopMascot.Core.Tools;
 
 /// <summary>
-/// 工具基类
+/// 工具基类 — 从 ToolDefinition 自动派生 Name/Description/ParametersSchema。
+/// Core 内置工具继承此类，只需覆写 Definition 和 ExecuteAsync。
 /// </summary>
 public abstract class ToolBase : ITool
 {
+    /// <inheritdoc />
+    public string Name => Definition.Name;
+
+    /// <inheritdoc />
+    public string Description => Definition.Description;
+
+    /// <inheritdoc />
+    public string ParametersSchema => Definition.ParametersSchema;
+
+    /// <inheritdoc />
     public abstract ToolDefinition Definition { get; }
 
-    public abstract Task<ToolCallResponse> ExecuteAsync(ToolCallRequest request, CancellationToken ct = default);
+    /// <inheritdoc />
+    public abstract Task<ToolResult> ExecuteAsync(string arguments, CancellationToken ct = default);
 
+    /// <inheritdoc />
     public virtual Task<bool> ValidateArgumentsAsync(string arguments, CancellationToken ct = default)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(Definition.ParametersSchema) || Definition.ParametersSchema == "{}")
+            if (string.IsNullOrWhiteSpace(ParametersSchema) || ParametersSchema == "{}")
                 return Task.FromResult(true);
 
             JsonDocument.Parse(arguments);
@@ -27,26 +40,29 @@ public abstract class ToolBase : ITool
         }
     }
 
+    /// <summary>将 JSON 参数解析为指定类型</summary>
     protected T ParseArguments<T>(string arguments) where T : class
     {
         return JsonSerializer.Deserialize<T>(arguments) ?? throw new InvalidOperationException("参数解析失败");
     }
 
-    protected ToolCallResponse Success(string result)
+    /// <summary>构建成功结果</summary>
+    protected ToolResult Success(string content)
     {
-        return new ToolCallResponse
+        return new ToolResult
         {
-            ToolName = Definition.Name,
+            Name = Name,
             Success = true,
-            Result = result
+            Content = content
         };
     }
 
-    protected ToolCallResponse Fail(string error)
+    /// <summary>构建失败结果</summary>
+    protected ToolResult Fail(string error)
     {
-        return new ToolCallResponse
+        return new ToolResult
         {
-            ToolName = Definition.Name,
+            Name = Name,
             Success = false,
             Error = error
         };
@@ -67,7 +83,7 @@ public class GetCurrentTimeTool : ToolBase
         Tags = new() { "time", "system" }
     };
 
-    public override Task<ToolCallResponse> ExecuteAsync(ToolCallRequest request, CancellationToken ct = default)
+    public override Task<ToolResult> ExecuteAsync(string arguments, CancellationToken ct = default)
     {
         return Task.FromResult(Success(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
     }
@@ -98,11 +114,11 @@ public class CalculatorTool : ToolBase
         Tags = new() { "math", "calculator" }
     };
 
-    public override Task<ToolCallResponse> ExecuteAsync(ToolCallRequest request, CancellationToken ct = default)
+    public override Task<ToolResult> ExecuteAsync(string arguments, CancellationToken ct = default)
     {
         try
         {
-            var doc = JsonDocument.Parse(request.Arguments);
+            var doc = JsonDocument.Parse(arguments);
             var expression = doc.RootElement.GetProperty("expression").GetString() ?? "";
 
             var dt = new System.Data.DataTable();
@@ -140,7 +156,7 @@ public class GetRandomQuoteTool : ToolBase
         Tags = new() { "quote", "inspiration" }
     };
 
-    public override Task<ToolCallResponse> ExecuteAsync(ToolCallRequest request, CancellationToken ct = default)
+    public override Task<ToolResult> ExecuteAsync(string arguments, CancellationToken ct = default)
     {
         var random = new Random();
         var quote = Quotes[random.Next(Quotes.Count)];
@@ -173,11 +189,11 @@ public class GetWeatherTool : ToolBase
         Tags = new() { "weather", "api" }
     };
 
-    public override Task<ToolCallResponse> ExecuteAsync(ToolCallRequest request, CancellationToken ct = default)
+    public override Task<ToolResult> ExecuteAsync(string arguments, CancellationToken ct = default)
     {
         try
         {
-            var doc = JsonDocument.Parse(request.Arguments);
+            var doc = JsonDocument.Parse(arguments);
             var city = doc.RootElement.GetProperty("city").GetString() ?? "北京";
 
             var weather = new

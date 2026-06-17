@@ -1,3 +1,4 @@
+using DesktopMascot.Core.Tools;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -18,9 +19,15 @@ public class NetworkRequestTool : ITool
         ["Accept"] = "application/json"
     };
 
-    public NetworkRequestTool(HttpClient? httpClient = null)
+    /// <param name="handler">
+    /// 可注入 HttpMessageHandler，测试可传入 mock handler。传入 null 使用默认 HttpClient。
+    /// </param>
+    public NetworkRequestTool(HttpMessageHandler? handler = null)
     {
-        _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        _httpClient = new HttpClient(handler ?? new HttpClientHandler())
+        {
+            Timeout = TimeSpan.FromSeconds(30)
+        };
     }
 
     public string Name => "network_request";

@@ -5,23 +5,26 @@ namespace DesktopMascot.Core.Tests;
 
 public class SqliteTaskHistoryStoreTests
 {
-    private SqliteTaskHistoryStore CreateStore()
+    private async Task<SqliteTaskHistoryStore> CreateStoreAsync()
     {
         var dbPath = Path.Combine(Path.GetTempPath(), $"sqlite_test_{Guid.NewGuid():N}.db");
         var store = new SqliteTaskHistoryStore(dbPath);
-        
-        // 初始化数据库
-        using var context = new DatabaseContext($"Data Source={dbPath}");
-        var migrator = new DatabaseMigrator(context);
-        migrator.MigrateAsync().Wait();
-        
+
+        // 初始化数据库（用 Task.Run 避免同步上下文死锁）
+        await Task.Run(async () =>
+        {
+            using var context = new DatabaseContext($"Data Source={dbPath}");
+            var migrator = new DatabaseMigrator(context);
+            await migrator.MigrateAsync();
+        });
+
         return store;
     }
 
     [Fact]
     public async Task SaveAndGetTask_ShouldWork()
     {
-        var store = CreateStore();
+        var store = await CreateStoreAsync();
         var record = new TaskHistoryRecord
         {
             Id = "task-1",
@@ -41,7 +44,7 @@ public class SqliteTaskHistoryStoreTests
     [Fact]
     public async Task DeleteTask_ShouldWork()
     {
-        var store = CreateStore();
+        var store = await CreateStoreAsync();
         var record = new TaskHistoryRecord
         {
             Id = "task-2",
@@ -59,7 +62,7 @@ public class SqliteTaskHistoryStoreTests
     [Fact]
     public async Task SearchTasks_ShouldWork()
     {
-        var store = CreateStore();
+        var store = await CreateStoreAsync();
         await store.SaveTaskAsync(new TaskHistoryRecord
         {
             Id = "task-3",
@@ -75,7 +78,7 @@ public class SqliteTaskHistoryStoreTests
     [Fact]
     public async Task GetStatistics_ShouldWork()
     {
-        var store = CreateStore();
+        var store = await CreateStoreAsync();
         await store.SaveTaskAsync(new TaskHistoryRecord
         {
             Id = "s1",
@@ -91,7 +94,7 @@ public class SqliteTaskHistoryStoreTests
     [Fact]
     public async Task Cleanup_ShouldWork()
     {
-        var store = CreateStore();
+        var store = await CreateStoreAsync();
         await store.SaveTaskAsync(new TaskHistoryRecord
         {
             Id = "old",

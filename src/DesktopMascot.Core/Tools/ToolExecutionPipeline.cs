@@ -105,7 +105,16 @@ public class ToolExecutionPipeline
 
         try
         {
-            response = await tool.ExecuteAsync(request, ct);
+            var result = await tool.ExecuteAsync(request.Arguments, ct);
+            response = new ToolCallResponse
+            {
+                RequestId = request.RequestId ?? "",
+                ToolName = request.ToolName,
+                Success = result.Success,
+                Result = result.Content,
+                Error = result.Error,
+                Duration = stopwatch.Elapsed
+            };
         }
         catch (Exception ex)
         {

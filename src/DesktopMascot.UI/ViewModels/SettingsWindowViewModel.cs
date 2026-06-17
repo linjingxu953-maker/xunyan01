@@ -82,12 +82,25 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private string _selectedTaskHistoryCleanupFilter = "全部";
     private bool _isTaskHistoryCleanupConfirmationPending;
 
-    [ObservableProperty] private string _selectedSectionId = "model";
+    [ObservableProperty] private string _selectedSectionId = "overview";
     [ObservableProperty] private ModelProviderOption? _selectedProvider;
     [ObservableProperty] private string _apiKey = string.Empty;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsApiKeyHidden))]
+    [NotifyPropertyChangedFor(nameof(ApiKeyVisibilityButtonText))]
+    private bool _isApiKeyVisible;
     [ObservableProperty] private string _apiEndpoint = string.Empty;
     [ObservableProperty] private string _modelName = string.Empty;
     [ObservableProperty] private string _modelSettingsStatus = "模型配置会保存到本机配置目录。";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsModelConnectionFailed))]
+    private bool _hasModelConnectionResult;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsModelConnectionFailed))]
+    private bool _isModelConnectionSuccessful;
+    [ObservableProperty] private string _modelConnectionResultTitle = "尚未测试";
+    [ObservableProperty] private string _modelConnectionResultDetail = "填写 Provider、API Key、Base URL 和模型名后，可以先测试连接再保存。";
+    [ObservableProperty] private string _modelConnectionResultMeta = "等待测试";
     [ObservableProperty] private bool _isMimoCodeEnabled;
     [ObservableProperty] private string _mimoCodeExecutablePath = "mimo";
     [ObservableProperty] private string _mimoCodeWorkspacePath = string.Empty;
@@ -118,8 +131,16 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [ObservableProperty] private string _screenSelectionHotkeyText = string.Empty;
     [ObservableProperty] private string _dataSettingsStatus = "本机数据目录用于配置、日志、记忆、任务历史和角色资源。";
     [ObservableProperty] private string _dataStorageSummary = "正在等待刷新。";
-    [ObservableProperty] private string _ttsVoice = "默认女声";
-    [ObservableProperty] private string _speechRecognitionLanguage = "zh-CN";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VoiceConfigurationSummary))]
+    [NotifyPropertyChangedFor(nameof(TtsPreviewText))]
+    private string _ttsVoice = "默认女声";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VoiceConfigurationSummary))]
+    [NotifyPropertyChangedFor(nameof(SpeechRecognitionLanguageDescription))]
+    private string _speechRecognitionLanguage = "zh-CN";
+
     [ObservableProperty] private string _voiceSettingsStatus = "语音配置会保存到本机，录音和播放服务接入后会直接读取。";
 
     [ObservableProperty]
@@ -141,10 +162,13 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsNotBusy))]
     private bool _isBusy;
 
+    [ObservableProperty] private string _runtimeOverviewStatus = "正在读取运行态配置。";
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNotModelSectionSelected))]
-    private bool _isModelSectionSelected = true;
+    private bool _isModelSectionSelected;
 
+    [ObservableProperty] private bool _isOverviewSectionSelected = true;
     [ObservableProperty] private bool _isMimoCodeSectionSelected;
     [ObservableProperty] private bool _isPermissionSectionSelected;
     [ObservableProperty] private bool _isMemorySectionSelected;
@@ -173,6 +197,8 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [ObservableProperty] private string _characterSaveStatus = "角色配置会自动保存在本机。";
     [ObservableProperty] private string _characterLibraryStatus = "角色库会保存多个可切换的角色档案。";
     [ObservableProperty] private string _characterAssetSuggestionStatus = "扫描图片目录后会生成状态图匹配建议。";
+    [ObservableProperty] private string _characterManifestStatus = "角色包格式以寻研主格式为准，Petdex 仅作为可选兼容信息。";
+    [ObservableProperty] private string _characterManifestPreview = string.Empty;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasCharacterAvatarImageSuggestion))]
@@ -226,6 +252,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
 
         Sections =
         [
+            new SettingsSectionItem("overview", "总览", "运行态验收"),
             new SettingsSectionItem("model", "模型", "Provider、API Key、模型名"),
             new SettingsSectionItem("mimoCode", "Mimo Code", "本机代码能力接入"),
             new SettingsSectionItem("permission", "权限", "确认策略与审计"),
@@ -266,6 +293,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         ];
 
         PermissionReadinessItems = [];
+        RuntimeOverviewItems = [];
         PermissionRequestTypeItems = [];
         PermissionAuditItems = [];
         MimoCodeReadinessItems = [];
@@ -283,6 +311,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         CharacterProfiles = [];
         CharacterAssetSuggestions = [];
         CharacterStatePreviewItems = [];
+        CharacterManifestFormatItems = [];
         CharacterStateImageItems =
         [
             new CharacterStateImageItem("Idle", "空闲 / 默认", "站立.png"),
@@ -325,6 +354,8 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         RefreshTaskHistoryCards();
         RefreshHotkeyCards();
         RefreshDataDirectoryItems();
+        RefreshRuntimeOverviewCards();
+        RefreshCharacterManifestPreviewCore();
     }
 
     public ObservableCollection<SettingsSectionItem> Sections { get; }
@@ -338,6 +369,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     public ObservableCollection<string> TtsVoiceOptions { get; }
     public ObservableCollection<string> SpeechRecognitionLanguageOptions { get; }
     public ObservableCollection<CharacterTraitOption> CharacterTraitOptions { get; }
+    public ObservableCollection<SettingsListItem> RuntimeOverviewItems { get; }
     public ObservableCollection<SettingsListItem> MimoCodeReadinessItems { get; }
     public ObservableCollection<SettingsListItem> PermissionReadinessItems { get; }
     public ObservableCollection<SettingsListItem> PermissionRequestTypeItems { get; }
@@ -357,6 +389,26 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     public ObservableCollection<CharacterAssetSuggestionItem> CharacterAssetSuggestions { get; }
     public ObservableCollection<CharacterStateImageItem> CharacterStateImageItems { get; }
     public ObservableCollection<CharacterStatePreviewItem> CharacterStatePreviewItems { get; }
+    public ObservableCollection<SettingsListItem> CharacterManifestFormatItems { get; }
+    public bool IsApiKeyHidden => !IsApiKeyVisible;
+    public string ApiKeyVisibilityButtonText => IsApiKeyVisible ? "隐藏" : "显示";
+    public bool IsModelConnectionFailed => HasModelConnectionResult && !IsModelConnectionSuccessful;
+    public string VoiceConfigurationSummary =>
+        $"TTS：{CleanText(TtsVoice, "默认女声", 32)}；识别语言：{CleanText(SpeechRecognitionLanguage, "zh-CN", 16)}";
+
+    public string TtsPreviewText =>
+        $"预览文案：你好，我是寻研。当前会使用 {CleanText(TtsVoice, "默认女声", 32)} 的语音配置。";
+
+    public string SpeechRecognitionLanguageDescription => SpeechRecognitionLanguage switch
+    {
+        "zh-CN" => "普通话识别，适合中文桌面任务和日常问答。",
+        "zh-HK" => "粤语/繁体中文场景预留，实际效果取决于后续 STT Provider。",
+        "en-US" => "英文识别，适合英文网页、代码和学习任务。",
+        "ja-JP" => "日语识别预留。",
+        "ko-KR" => "韩语识别预留。",
+        _ => "自定义识别语言，实际支持范围取决于后续 STT Provider。"
+    };
+
     public bool IsNotModelSectionSelected => !IsModelSectionSelected;
     public bool HasPendingMemoryReviews => PendingMemoryReviews.Count > 0;
     public bool HasNoPendingMemoryReviews => !HasPendingMemoryReviews;
@@ -395,9 +447,17 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             ApiKey = _settings.ApiKey;
             ApiEndpoint = _settings.ApiEndpoint;
             ModelName = _settings.ModelName;
-            SelectedProvider = Providers.FirstOrDefault(x => x.Name == _settings.ProviderName) ??
-                               InferProvider(_settings.ApiEndpoint) ??
-                               Providers[0];
+            _isApplyingProvider = true;
+            try
+            {
+                SelectedProvider = Providers.FirstOrDefault(x => x.Name == _settings.ProviderName) ??
+                                   InferProvider(_settings.ApiEndpoint) ??
+                                   Providers[0];
+            }
+            finally
+            {
+                _isApplyingProvider = false;
+            }
             IsMimoCodeEnabled = _settings.MimoCodeEnabled;
             MimoCodeExecutablePath = _settings.MimoCodeExecutablePath;
             MimoCodeWorkspacePath = _settings.MimoCodeWorkspaceDirectory;
@@ -431,6 +491,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             await RefreshTaskHistorySnapshotAsync(ct);
             RefreshHotkeyCards();
             RefreshDataDirectoryItems();
+            RefreshRuntimeOverviewCards();
         }
         finally
         {
@@ -450,6 +511,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             return;
 
         SelectedSectionId = sectionId;
+        IsOverviewSectionSelected = sectionId == "overview";
         IsModelSectionSelected = sectionId == "model";
         IsMimoCodeSectionSelected = sectionId == "mimoCode";
         IsPermissionSectionSelected = sectionId == "permission";
@@ -469,6 +531,13 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         ApiEndpoint = SelectedProvider.DefaultEndpoint;
         ModelName = SelectedProvider.DefaultModel;
         ModelSettingsStatus = $"已填入 {SelectedProvider.DisplayName} 的默认端点和模型名。";
+        RefreshRuntimeOverviewCards();
+    }
+
+    [RelayCommand]
+    private void ToggleApiKeyVisibility()
+    {
+        IsApiKeyVisible = !IsApiKeyVisible;
     }
 
     [RelayCommand]
@@ -499,6 +568,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
                 ? "已保存模型配置，但 API Key 为空。"
                 : $"已保存 {_settings.ProviderName} / {_settings.ModelName}。";
             VoiceSettingsStatus = $"已保存语音配置：{_settings.TtsVoice} / {_settings.SpeechRecognitionLanguage}。";
+            RefreshRuntimeOverviewCards();
         }
         finally
         {
@@ -509,7 +579,28 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [RelayCommand]
     private void PreviewTtsVoice()
     {
-        VoiceSettingsStatus = $"试听入口已就绪：{CleanText(TtsVoice, "默认女声", 32)}。TTS 服务接入后会播放当前角色预览文案。";
+        VoiceSettingsStatus =
+            $"{TtsPreviewText} TTS 服务接入后会播放这段预览；当前先保存选择和展示状态。";
+    }
+
+    [RelayCommand]
+    private async Task SaveVoiceSettings()
+    {
+        IsBusy = true;
+
+        try
+        {
+            _settings.TtsVoice = CleanText(TtsVoice, "默认女声", 32);
+            _settings.SpeechRecognitionLanguage = CleanText(SpeechRecognitionLanguage, "zh-CN", 16);
+            await _configurationManager.SaveAppSettingsAsync(_settings);
+
+            VoiceSettingsStatus = $"已保存语音配置：{VoiceConfigurationSummary}。聊天区麦克风和朗读按钮会按该配置展示状态。";
+            RefreshRuntimeOverviewCards();
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
@@ -518,23 +609,27 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         if (SelectedProvider is null)
         {
             ModelSettingsStatus = "请先选择 Provider。";
+            SetModelConnectionResult(false, "配置未完成", "请选择 Provider 后再测试连接。", "本地校验");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(ApiEndpoint) || string.IsNullOrWhiteSpace(ModelName))
         {
             ModelSettingsStatus = "请先填写 Base URL 和模型名。";
+            SetModelConnectionResult(false, "配置未完成", "Base URL 和模型名不能为空。", "本地校验");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(ApiKey) && SelectedProvider.Name != "Local")
         {
             ModelSettingsStatus = "当前 API Key 为空。远程 Provider 需要用户自己的 API Key。";
+            SetModelConnectionResult(false, "缺少 API Key", "远程 Provider 不会使用内置 Key，需要用户填写自己的 API Key。", "本地校验");
             return;
         }
 
         IsBusy = true;
         ModelSettingsStatus = $"正在测试 {SelectedProvider.DisplayName}...";
+        HasModelConnectionResult = false;
 
         try
         {
@@ -545,9 +640,12 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
                     ModelName,
                     ApiKey));
 
-            ModelSettingsStatus = result.Success
-                ? $"{result.Message} {result.Detail}"
-                : $"{result.Message} {result.Detail}";
+            SetModelConnectionResult(
+                result.Success,
+                result.Success ? "连接测试通过" : "连接测试失败",
+                result.Detail,
+                $"{SelectedProvider.DisplayName} / {ModelName}");
+            ModelSettingsStatus = $"{result.Message} {result.Detail}";
         }
         finally
         {
@@ -1824,6 +1922,35 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void RefreshCharacterManifestPreview()
+    {
+        RefreshCharacterManifestPreviewCore("已刷新寻研角色包清单预览。");
+    }
+
+    [RelayCommand]
+    private async Task ExportCharacterManifest()
+    {
+        try
+        {
+            var manifest = BuildCurrentCharacterManifest();
+            var json = MascotCharacterManifestFactory.ToJson(manifest);
+            var exportDirectory = Path.Combine(GetLocalDataRoot(), "Exports", "Characters", manifest.Slug);
+            Directory.CreateDirectory(exportDirectory);
+
+            var exportPath = Path.Combine(exportDirectory, "character.manifest.json");
+            await File.WriteAllTextAsync(exportPath, json);
+
+            CharacterManifestPreview = json;
+            RefreshCharacterManifestFormatItems(manifest);
+            CharacterManifestStatus = $"已导出寻研角色包清单：{exportPath}";
+        }
+        catch (Exception ex)
+        {
+            CharacterManifestStatus = $"导出失败：{ex.Message}";
+        }
+    }
+
+    [RelayCommand]
     private void ScanCharacterAssetSuggestions()
     {
         RefreshCharacterAssetSuggestions();
@@ -1975,7 +2102,36 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         if (value is null || _isApplyingProvider)
             return;
 
-        ApplyProviderDefaultsIfEmpty();
+        ApplyProviderDefaults(overwriteExisting: true);
+        ClearModelConnectionResult();
+        ModelSettingsStatus = $"已切换到 {value.DisplayName}，并填入默认端点和模型。";
+    }
+
+    partial void OnApiKeyChanged(string value)
+    {
+        ClearModelConnectionResult();
+    }
+
+    partial void OnApiEndpointChanged(string value)
+    {
+        ClearModelConnectionResult();
+    }
+
+    partial void OnModelNameChanged(string value)
+    {
+        ClearModelConnectionResult();
+    }
+
+    partial void OnTtsVoiceChanged(string value)
+    {
+        VoiceSettingsStatus = $"语音配置已变更，尚未保存：{VoiceConfigurationSummary}。";
+        RefreshRuntimeOverviewCards();
+    }
+
+    partial void OnSpeechRecognitionLanguageChanged(string value)
+    {
+        VoiceSettingsStatus = $"识别语言已变更，尚未保存：{SpeechRecognitionLanguageDescription}";
+        RefreshRuntimeOverviewCards();
     }
 
     partial void OnSelectedPendingMemoryReviewChanged(PendingMemoryReviewItem? value)
@@ -2036,6 +2192,11 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
 
     private void ApplyProviderDefaultsIfEmpty()
     {
+        ApplyProviderDefaults(overwriteExisting: false);
+    }
+
+    private void ApplyProviderDefaults(bool overwriteExisting)
+    {
         if (SelectedProvider is null)
             return;
 
@@ -2043,12 +2204,12 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
 
         try
         {
-            if (string.IsNullOrWhiteSpace(ApiEndpoint))
+            if (overwriteExisting || string.IsNullOrWhiteSpace(ApiEndpoint))
             {
                 ApiEndpoint = SelectedProvider.DefaultEndpoint;
             }
 
-            if (string.IsNullOrWhiteSpace(ModelName))
+            if (overwriteExisting || string.IsNullOrWhiteSpace(ModelName))
             {
                 ModelName = SelectedProvider.DefaultModel;
             }
@@ -2057,6 +2218,26 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         {
             _isApplyingProvider = false;
         }
+    }
+
+    private void SetModelConnectionResult(bool success, string title, string detail, string meta)
+    {
+        IsModelConnectionSuccessful = success;
+        ModelConnectionResultTitle = CleanText(title, success ? "连接测试通过" : "连接测试失败", 80);
+        ModelConnectionResultDetail = CleanText(detail, "没有返回详细信息。", 500);
+        ModelConnectionResultMeta = CleanText(meta, "测试连接", 120);
+        HasModelConnectionResult = true;
+        RefreshRuntimeOverviewCards();
+    }
+
+    private void ClearModelConnectionResult()
+    {
+        HasModelConnectionResult = false;
+        IsModelConnectionSuccessful = false;
+        ModelConnectionResultTitle = "尚未测试";
+        ModelConnectionResultDetail = "当前配置变更后需要重新测试连接。";
+        ModelConnectionResultMeta = "等待测试";
+        RefreshRuntimeOverviewCards();
     }
 
     private ModelProviderOption? InferProvider(string endpoint)
@@ -2092,6 +2273,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             "后续对接",
             "等待 connector",
             "后续只需要把启动、任务输入、事件流和结果返回挂到这些配置上。"));
+        RefreshRuntimeOverviewCards();
     }
 
     private static string NormalizeMimoCodeModelMode(string value)
@@ -2130,6 +2312,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             "保存时会检查格式、重复组合键和 Windows 注册冲突；失败时会保留上一次可用配置。"));
 
         HotkeySettingsStatus = GetHotkeyStatusText();
+        RefreshRuntimeOverviewCards();
     }
 
     private void LoadHotkeyTextFromService()
@@ -2214,6 +2397,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         var totalBytes = directories.Sum(item => TryGetDirectorySize(item.Path));
         DataStorageSummary = $"已跟踪 {directories.Length} 个目录，合计约 {FormatBytes(totalBytes)}。";
         DataSettingsStatus = "数据页已加载。清理操作只会处理本地缓存目录。";
+        RefreshRuntimeOverviewCards();
     }
 
     private DataDirectoryItem CreateDataDirectoryItem(string title, string path, string description)
@@ -2466,7 +2650,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             entry.Key,
             string.IsNullOrWhiteSpace(entry.Source) ? "IMemoryStore" : entry.Source,
             entry.IsConfirmed ? "已确认" : "待确认",
-            CleanText(entry.Content, "无内容", 400),
+            string.IsNullOrWhiteSpace(entry.Content) ? "无内容" : entry.Content.Trim(),
             tags,
             FormatTime(entry.UpdatedAt),
             entry.ExpiresAt.HasValue ? FormatTime(entry.ExpiresAt.Value) : "长期");
@@ -2768,6 +2952,70 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         _ => type.ToString()
     };
 
+    private void RefreshRuntimeOverviewCards()
+    {
+        RuntimeOverviewItems.Clear();
+
+        var providerName = SelectedProvider?.DisplayName ?? "未选择";
+        var hasModelConfig = SelectedProvider is not null &&
+                             !string.IsNullOrWhiteSpace(ApiEndpoint) &&
+                             !string.IsNullOrWhiteSpace(ModelName);
+        var hasRequiredKey = SelectedProvider?.Name == "Local" || !string.IsNullOrWhiteSpace(ApiKey);
+        RuntimeOverviewItems.Add(new SettingsListItem(
+            "模型 Provider",
+            !hasModelConfig ? "未配置" : hasRequiredKey ? (IsModelConnectionSuccessful ? "已验证" : "待测试") : "缺少 Key",
+            $"{providerName} / {CleanText(ModelName, "未填写模型", 64)}。实际可用性以测试连接结果为准。"));
+
+        RuntimeOverviewItems.Add(new SettingsListItem(
+            "Mimo Code",
+            IsMimoCodeEnabled ? "已启用" : "未启用",
+            IsMimoCodeEnabled
+                ? $"{CleanText(MimoCodeExecutablePath, "mimo", 80)}；{GetMimoCodeModelModeText(MimoCodeModelConfigMode)}。"
+                : "关闭时仍可使用内置 Agent；需要本机代码能力时再启用。"));
+
+        RuntimeOverviewItems.Add(new SettingsListItem(
+            "语音 UI",
+            "状态壳就绪",
+            $"{VoiceConfigurationSummary}。真实 STT/TTS 录制、转写和播放仍等待服务接入。"));
+
+        RuntimeOverviewItems.Add(new SettingsListItem(
+            "权限确认",
+            _permissionManager is null ? "未注入" : "已接入",
+            $"{SelectedAutoApproveLevel?.Title ?? "每次确认"}；最近审计 {_auditLogTotalCount} 条。"));
+
+        RuntimeOverviewItems.Add(new SettingsListItem(
+            "记忆中心",
+            _memoryStore is null ? "未注入" : IsMemoryEnabled ? "已开启" : "已关闭",
+            _memoryStatistics is null
+                ? "等待 IMemoryStore 统计。"
+                : $"全部 {_memoryStatistics.TotalCount} 条，待确认 {_memoryStatistics.UnconfirmedCount} 条。"));
+
+        RuntimeOverviewItems.Add(new SettingsListItem(
+            "任务历史",
+            _taskHistoryStore is null ? "未注入" : _taskHistoryStatistics is null ? "等待统计" : $"{_taskHistoryStatistics.TotalTasks} 条",
+            _taskHistoryStatistics is null
+                ? "等待 ITaskHistoryStore 统计。"
+                : $"完成 {_taskHistoryStatistics.CompletedTasks}，失败 {_taskHistoryStatistics.FailedTasks}，工具调用 {_taskHistoryStatistics.TotalToolCalls}。"));
+
+        RuntimeOverviewItems.Add(new SettingsListItem(
+            "快捷键",
+            HotkeyItems.Count == 0 ? "未读取" : "已读取",
+            $"聊天：{CleanText(ChatHotkeyText, "未配置", 40)}；屏幕圈选：{CleanText(ScreenSelectionHotkeyText, "未配置", 40)}。"));
+
+        RuntimeOverviewItems.Add(new SettingsListItem(
+            "日志/数据目录",
+            DataDirectoryItems.Count == 0 ? "未读取" : "已定位",
+            CleanText(DataStorageSummary, "等待刷新本机数据目录。", 160)));
+
+        RuntimeOverviewItems.Add(new SettingsListItem(
+            "角色外观",
+            string.IsNullOrWhiteSpace(CharacterName) ? "未命名" : CharacterName,
+            $"{CleanText(CharacterRole, "桌面助手", 60)}；状态图预览 {CharacterStatePreviewItems.Count} 项。"));
+
+        RuntimeOverviewStatus =
+            $"已汇总 {RuntimeOverviewItems.Count} 个运行模块。总览只读；具体配置请进入左侧对应页面处理。";
+    }
+
     private void RefreshPermissionCards()
     {
         PermissionReadinessItems.Clear();
@@ -2841,6 +3089,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
                 FormatPermissionDecision(entry.Decision),
                 $"{entry.Operation} / {FormatPermissionLevel(entry.Level)} / {entry.Target}"));
         }
+        RefreshRuntimeOverviewCards();
     }
 
     private void RefreshMemoryCards()
@@ -2896,6 +3145,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
                     $"{FormatTime(entry.UpdatedAt)} · {CleanText(entry.Content, "无内容", 80)}"));
             }
         }
+        RefreshRuntimeOverviewCards();
     }
 
     private void RefreshTaskHistoryCards()
@@ -2906,6 +3156,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         {
             TaskHistoryStatsItems.Add(new SettingsListItem("历史存储", _taskHistoryStore is null ? "未注入" : "已接入", "等待 ITaskHistoryStore.GetStatisticsAsync。"));
             TaskHistoryStatsItems.Add(new SettingsListItem("当前列表", $"{TaskHistoryBrowserItems.Count} 条", "搜索或筛选后会刷新当前列表。"));
+            RefreshRuntimeOverviewCards();
             return;
         }
 
@@ -2925,6 +3176,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
                 $"{group.Value} 条",
                 "按任务类型统计的历史记录。"));
         }
+        RefreshRuntimeOverviewCards();
     }
 
     private void RefreshCharacterAssetSuggestions()
@@ -3143,6 +3395,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(HasCharacterProfiles));
         OnPropertyChanged(nameof(HasNoCharacterProfiles));
         OnPropertyChanged(nameof(HasSelectedCharacterProfile));
+        RefreshRuntimeOverviewCards();
     }
 
     private static CharacterProfileListItem CreateCharacterProfileListItem(MascotCharacterProfileEntry entry) =>
@@ -3256,6 +3509,49 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             item => CleanPathText(item.FileName, "avatar.png", 160))
     };
 
+    private MascotCharacterManifest BuildCurrentCharacterManifest()
+    {
+        var stateDisplayNames = CharacterStateImageItems.ToDictionary(
+            item => item.StateKey,
+            item => item.DisplayName,
+            StringComparer.OrdinalIgnoreCase);
+
+        return MascotCharacterManifestFactory.Create(BuildCurrentCharacterProfile(), stateDisplayNames);
+    }
+
+    private void RefreshCharacterManifestPreviewCore(string? status = null)
+    {
+        var manifest = BuildCurrentCharacterManifest();
+        CharacterManifestPreview = MascotCharacterManifestFactory.ToJson(manifest);
+        RefreshCharacterManifestFormatItems(manifest);
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            CharacterManifestStatus = status;
+        }
+    }
+
+    private void RefreshCharacterManifestFormatItems(MascotCharacterManifest manifest)
+    {
+        CharacterManifestFormatItems.Clear();
+        CharacterManifestFormatItems.Add(new SettingsListItem(
+            "主格式",
+            manifest.Schema,
+            "以寻研角色资料、人格设定和状态图为主，不把 Petdex 当作项目主模型。"));
+        CharacterManifestFormatItems.Add(new SettingsListItem(
+            "默认角色",
+            $"{manifest.Name} / {manifest.Slug}",
+            "当前角色会作为可导出的完整角色包样例。"));
+        CharacterManifestFormatItems.Add(new SettingsListItem(
+            "状态资源",
+            $"{manifest.States.Count} 个状态",
+            "状态名沿用寻研 UI 状态，缺图时回退到 Idle 或默认头像。"));
+        CharacterManifestFormatItems.Add(new SettingsListItem(
+            "兼容策略",
+            manifest.Animation.PetdexCompatibility.Enabled ? "Petdex 启用" : "Petdex 可选",
+            "Petdex 精灵图、网格和状态行只作为导入转换信息。"));
+    }
+
     private void SetStateImage(string stateKey, string fileName)
     {
         var item = CharacterStateImageItems.FirstOrDefault(x => x.StateKey == stateKey);
@@ -3326,6 +3622,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         CharacterImageStatus = result.Message;
         RefreshCharacterAssetWarnings(profile);
         RefreshCharacterStatePreviews(profile);
+        RefreshCharacterManifestPreviewCore();
     }
 
     private void ApplyCharacterTraitSelection(IEnumerable<string>? traits)
@@ -3411,6 +3708,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         CharacterStatePreviewStatus =
             $"状态图检查：{availableCount} 个可用，{fallbackCount} 个回退头像，{missingCount} 个缺失。";
         OnPropertyChanged(nameof(HasCharacterStatePreviews));
+        RefreshRuntimeOverviewCards();
     }
 
     private static bool UsesConfiguredStateImage(string configuredFileName, string? resolvedFilePath)
@@ -3678,6 +3976,13 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         _pendingMemoryClearIds.Clear();
         _isMemoryClearConfirmationPending = false;
         MemoryClearButtonText = "清理";
+    }
+
+    private void ResetMemoryEditMode()
+    {
+        IsMemoryBrowserEditMode = false;
+        MemoryEditDraftContent = string.Empty;
+        MemoryEditDraftTags = string.Empty;
     }
 
     private void ResetTaskHistoryCleanupConfirmation()

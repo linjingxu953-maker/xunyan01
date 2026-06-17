@@ -64,7 +64,7 @@ public class ServiceHealthTests
     }
 
     [Fact]
-    public void ServiceInitializer_ShouldInitializeInOrder()
+    public async Task ServiceInitializer_ShouldInitializeInOrder()
     {
         var initializer = new ServiceInitializer();
         var order = new List<string>();
@@ -73,7 +73,7 @@ public class ServiceHealthTests
         initializer.Register("high", _ => { order.Add("high"); return Task.CompletedTask; }, 3);
         initializer.Register("medium", _ => { order.Add("medium"); return Task.CompletedTask; }, 2);
 
-        initializer.InitializeAllAsync().Wait();
+        await initializer.InitializeAllAsync();
 
         Assert.Equal("high", order[0]);
         Assert.Equal("medium", order[1]);

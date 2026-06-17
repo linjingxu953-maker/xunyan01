@@ -6,6 +6,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using DesktopMascot.UI.Services;
 using DesktopMascot.UI.ViewModels;
 
 namespace DesktopMascot.UI.Views;
@@ -146,24 +147,17 @@ public partial class FloatingWindow : Window
             return;
 
         var seconds = (DateTime.UtcNow - _animationStart).TotalSeconds;
-        var speed = _viewModel.IsMascotBusy ? 5.2 : _viewModel.IsMascotWaiting ? 4.0 : 2.4;
-        var wave = Math.Sin(seconds * speed);
-        var secondary = Math.Sin(seconds * speed * 0.5);
-        var lift = _viewModel.IsMascotBusy ? -4.0 : _viewModel.IsMascotWaiting ? -2.4 : -1.8;
-        var shake = _viewModel.IsMascotError ? Math.Sin(seconds * 18) * 2.5 : 0;
-        var scale = 1 + wave * (_viewModel.IsMascotBusy ? 0.025 : 0.012);
+        var profile = MascotAnimationProfile.ForState(_viewModel.CurrentState, _viewModel.IsBusy);
+        var frame = profile.Evaluate(seconds);
 
         var transforms = new TransformGroup();
-        transforms.Children.Add(new ScaleTransform(scale, 1 + secondary * 0.01));
-        transforms.Children.Add(new TranslateTransform(shake, wave * lift));
-        MascotHost.RenderTransformOrigin = new RelativePoint(0.5, 0.78, RelativeUnit.Relative);
+        transforms.Children.Add(new ScaleTransform(frame.ScaleX, frame.ScaleY));
+        transforms.Children.Add(new RotateTransform(frame.RotationDegrees));
+        transforms.Children.Add(new TranslateTransform(frame.OffsetX, frame.OffsetY));
+        MascotHost.RenderTransformOrigin = new RelativePoint(0.5, 0.82, RelativeUnit.Relative);
         MascotHost.RenderTransform = transforms;
-
-        MascotHalo.Opacity = _viewModel.IsMascotBusy
-            ? 0.42 + Math.Abs(wave) * 0.28
-            : _viewModel.IsMascotWaiting
-                ? 0.36 + Math.Abs(wave) * 0.22
-                : 0.24 + Math.Abs(wave) * 0.12;
+        MascotHalo.Opacity = frame.HaloOpacity;
+        MascotStateChip.RenderTransform = new TranslateTransform(0, frame.ChipOffsetY);
     }
 
     private void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)

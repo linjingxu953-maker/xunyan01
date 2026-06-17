@@ -1,6 +1,6 @@
 using System.Text.Json;
 using DesktopMascot.Agent.Models;
-using DesktopMascot.Agent.Tools;
+using DesktopMascot.Core.Tools;
 
 namespace DesktopMascot.Agent.Providers;
 

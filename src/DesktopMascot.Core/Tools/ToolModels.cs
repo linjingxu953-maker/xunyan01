@@ -3,6 +3,18 @@ using DesktopMascot.Core.Enums;
 namespace DesktopMascot.Core.Tools;
 
 /// <summary>
+/// 工具执行结果（统一的轻量结果类型）
+/// </summary>
+public class ToolResult
+{
+    public string ToolCallId { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public bool Success { get; set; }
+    public string? Error { get; set; }
+}
+
+/// <summary>
 /// 工具定义
 /// </summary>
 public class ToolDefinition

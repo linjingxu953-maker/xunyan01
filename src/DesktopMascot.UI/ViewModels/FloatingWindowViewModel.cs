@@ -176,6 +176,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         var key = string.IsNullOrWhiteSpace(section) ? "overview" : section;
         var (title, desc, fallback) = key switch
         {
+            "overview" => ("运行态验收", "集中查看寻研当前配置是否具备运行条件。", "总览只读；具体配置请进入对应页面处理。"),
             "model" => ("模型设置", "配置 Provider、API Key、Base URL 和默认模型。", "模型配置会保存到本机配置目录。"),
             "mimoCode" => ("Mimo Code", "接入本机 Mimo Code，模型调用仍使用用户自己的 API 配置。", "Mimo Code 接入配置会保存到本机配置目录。"),
             "permission" => ("权限", "查看文件写入、命令执行和高风险工具的确认策略。", "权限确认仍走当前独立确认弹窗体系。"),
@@ -198,7 +199,10 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
 
     private static bool ShouldSyncInlineSettingsStatus(string? propertyName) =>
         propertyName is nameof(SettingsWindowViewModel.SelectedSectionId) or nameof(SettingsWindowViewModel.IsBusy)
+            or nameof(SettingsWindowViewModel.RuntimeOverviewStatus)
             or nameof(SettingsWindowViewModel.ModelSettingsStatus) or nameof(SettingsWindowViewModel.MimoCodeStatus)
+            or nameof(SettingsWindowViewModel.VoiceSettingsStatus) or nameof(SettingsWindowViewModel.TtsVoice)
+            or nameof(SettingsWindowViewModel.SpeechRecognitionLanguage)
             or nameof(SettingsWindowViewModel.PermissionSettingsStatus) or nameof(SettingsWindowViewModel.MemorySettingsStatus)
             or nameof(SettingsWindowViewModel.TaskHistorySettingsStatus)
             or nameof(SettingsWindowViewModel.HotkeySettingsStatus) or nameof(SettingsWindowViewModel.DataSettingsStatus)
@@ -213,7 +217,9 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         if (InlineSettings.IsBusy) return "正在处理设置操作，请稍候。";
         return section switch
         {
-            "model" => InlineSettings.ModelSettingsStatus, "mimoCode" => InlineSettings.MimoCodeStatus,
+            "overview" => InlineSettings.RuntimeOverviewStatus,
+            "model" => $"{InlineSettings.ModelSettingsStatus} {InlineSettings.VoiceSettingsStatus}",
+            "mimoCode" => InlineSettings.MimoCodeStatus,
             "permission" => InlineSettings.PermissionSettingsStatus, "memory" => InlineSettings.MemorySettingsStatus,
             "history" => InlineSettings.TaskHistorySettingsStatus,
             "hotkey" => InlineSettings.HotkeySettingsStatus, "data" => $"{InlineSettings.DataSettingsStatus} {InlineSettings.DataStorageSummary}",
@@ -223,7 +229,12 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     }
 
     // ── 公开方法 ──
-    public void PlayMessageAudio(string? content) { IsVoiceReplyPlaying = true; VoiceReplyStatus = $"准备朗读：{CleanText(content, "当前消息", 60)}"; }
+    public void PlayMessageAudio(string? content)
+    {
+        IsVoiceReplyPlaying = true;
+        VoiceReplyStatus =
+            $"准备使用 {InlineSettings.TtsVoice} 朗读：{CleanText(content, "当前消息", 60)}。TTS 服务接入后播放。";
+    }
     public void RequestScreenSelection() { if (!CanStartScreenSelection) return; StatusMessage = "拖动鼠标圈选要理解的屏幕区域。"; ScreenSelectionRequested?.Invoke(this, EventArgs.Empty); }
 
     public async Task AnalyzeSelectedScreenRegionAsync(ScreenSelectionResult result)

@@ -1,3 +1,4 @@
+using DesktopMascot.Core.Tools;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using DesktopMascot.Agent.Interop;

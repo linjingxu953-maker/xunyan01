@@ -1,3 +1,4 @@
+using DesktopMascot.Core.Tools;
 using System.Data;
 using System.Data.SQLite;
 using System.Text;

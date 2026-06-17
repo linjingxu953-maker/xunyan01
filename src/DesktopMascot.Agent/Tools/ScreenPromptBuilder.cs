@@ -1,3 +1,4 @@
+using DesktopMascot.Core.Tools;
 using DesktopMascot.Agent.Models;
 
 namespace DesktopMascot.Agent.Tools;

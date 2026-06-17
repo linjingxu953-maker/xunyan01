@@ -3,7 +3,7 @@ using DesktopMascot.Core.Tools;
 
 namespace DesktopMascot.Core.Tests;
 
-public class AppTaskSchedulerTests : IDisposable
+public class AppTaskSchedulerTests : IAsyncLifetime
 {
     private readonly ToolRegistry _toolRegistry;
     private readonly AppTaskScheduler _scheduler;
@@ -14,12 +14,16 @@ public class AppTaskSchedulerTests : IDisposable
         _toolRegistry.Register(new GetCurrentTimeTool());
         _toolRegistry.Register(new CalculatorTool());
         _scheduler = new AppTaskScheduler(_toolRegistry);
-        _scheduler.StartAsync().Wait();
     }
 
-    public void Dispose()
+    public async Task InitializeAsync()
     {
-        _scheduler.StopAsync().Wait();
+        await _scheduler.StartAsync();
+    }
+
+    public async Task DisposeAsync()
+    {
+        await _scheduler.StopAsync();
         _scheduler.Dispose();
     }
 
@@ -157,16 +161,16 @@ public class AppTaskSchedulerTests : IDisposable
     }
 
     [Fact]
-    public void ScheduleEventOccurred_ShouldFire()
+    public async Task ScheduleEventOccurred_ShouldFire()
     {
         var eventFired = false;
         _scheduler.ScheduleEventOccurred += e => eventFired = true;
 
-        _scheduler.AddTaskAsync(new ScheduledTask
+        await _scheduler.AddTaskAsync(new ScheduledTask
         {
             Name = "事件测试任务",
             ToolName = "get_current_time"
-        }).Wait();
+        });
 
         Assert.True(eventFired);
     }

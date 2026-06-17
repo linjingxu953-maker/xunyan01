@@ -14,7 +14,7 @@ internal class DisabledTool : ToolBase
         IsEnabled = false
     };
 
-    public override Task<ToolCallResponse> ExecuteAsync(ToolCallRequest request, CancellationToken ct = default)
+    public override Task<ToolResult> ExecuteAsync(string arguments, CancellationToken ct = default)
     {
         return Task.FromResult(Success("不应该执行到这里"));
     }
@@ -183,75 +183,62 @@ public class BuiltInToolsTests_M15
     public async Task GetCurrentTimeTool_ShouldReturnTime()
     {
         var tool = new GetCurrentTimeTool();
-        var request = new ToolCallRequest { Arguments = "{}" };
 
-        var response = await tool.ExecuteAsync(request);
+        var result = await tool.ExecuteAsync("{}");
 
-        Assert.True(response.Success);
-        Assert.NotEmpty(response.Result);
+        Assert.True(result.Success);
+        Assert.NotEmpty(result.Content);
     }
 
     [Fact]
     public async Task CalculatorTool_ShouldCalculate()
     {
         var tool = new CalculatorTool();
-        var request = new ToolCallRequest
-        {
-            Arguments = """{"expression": "2 + 3 * 4"}"""
-        };
 
-        var response = await tool.ExecuteAsync(request);
+        var result = await tool.ExecuteAsync("""{"expression": "2 + 3 * 4"}""");
 
-        Assert.True(response.Success);
-        Assert.Equal("14", response.Result);
+        Assert.True(result.Success);
+        Assert.Equal("14", result.Content);
     }
 
     [Fact]
     public async Task CalculatorTool_InvalidExpression_ShouldFail()
     {
         var tool = new CalculatorTool();
-        var request = new ToolCallRequest
-        {
-            Arguments = """{"expression": "invalid"}"""
-        };
 
-        var response = await tool.ExecuteAsync(request);
+        var result = await tool.ExecuteAsync("""{"expression": "invalid"}""");
 
-        Assert.False(response.Success);
-        Assert.Contains("错误", response.Error);
+        Assert.False(result.Success);
+        Assert.Contains("错误", result.Error);
     }
 
     [Fact]
     public async Task GetWeatherTool_ShouldReturnWeather()
     {
         var tool = new GetWeatherTool();
-        var request = new ToolCallRequest
-        {
-            Arguments = """{"city": "北京"}"""
-        };
 
-        var response = await tool.ExecuteAsync(request);
+        var result = await tool.ExecuteAsync("""{"city": "北京"}""");
 
-        Assert.True(response.Success);
-        Assert.Contains("北京", response.Result);
+        Assert.True(result.Success);
+        Assert.Contains("北京", result.Content);
     }
 
     [Fact]
-    public void ToolBase_ValidateArguments_Valid_ShouldReturnTrue()
+    public async Task ToolBase_ValidateArguments_Valid_ShouldReturnTrue()
     {
         var tool = new CalculatorTool();
 
-        var valid = tool.ValidateArgumentsAsync("""{"expression": "1+1"}""").Result;
+        var valid = await tool.ValidateArgumentsAsync("""{"expression": "1+1"}""");
 
         Assert.True(valid);
     }
 
     [Fact]
-    public void ToolBase_ValidateArguments_Invalid_ShouldReturnFalse()
+    public async Task ToolBase_ValidateArguments_Invalid_ShouldReturnFalse()
     {
         var tool = new CalculatorTool();
 
-        var valid = tool.ValidateArgumentsAsync("not json").Result;
+        var valid = await tool.ValidateArgumentsAsync("not json");
 
         Assert.False(valid);
     }

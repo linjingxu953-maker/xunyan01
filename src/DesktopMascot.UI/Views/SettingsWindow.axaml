@@ -35,6 +35,10 @@
                     <StackPanel Grid.Row="1"
                                 Margin="0,22,0,0"
                                 Spacing="8">
+                        <Button Content="总览"
+                                Classes="settingsNavButton"
+                                Command="{Binding SelectSectionCommand}"
+                                CommandParameter="overview"/>
                         <Button Content="模型"
                                 Classes="settingsNavButton"
                                 Command="{Binding SelectSectionCommand}"
@@ -76,6 +80,50 @@
                           VerticalScrollBarVisibility="Auto">
                 <Grid>
                     <StackPanel Spacing="18"
+                                IsVisible="{Binding IsOverviewSectionSelected}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="运行态验收"
+                                       Foreground="{StaticResource Brush.Text.Primary}"
+                                       FontSize="22"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="集中查看寻研当前配置是否具备运行条件。总览只读，具体修改仍在左侧对应页面完成。"
+                                       Classes="bodyText"/>
+                        </StackPanel>
+
+                        <Border Classes="toolCard">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="{Binding RuntimeOverviewStatus}"
+                                           Classes="bodyText"
+                                           TextWrapping="Wrap"/>
+                                <ItemsControl ItemsSource="{Binding RuntimeOverviewItems}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:SettingsListItem">
+                                            <Border Classes="inlineCard"
+                                                    Margin="0,0,0,8">
+                                                <Grid ColumnDefinitions="*,Auto"
+                                                      RowDefinitions="Auto,Auto"
+                                                      ColumnSpacing="12">
+                                                    <TextBlock Text="{Binding Title}"
+                                                               Classes="sectionTitle"/>
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding Value}"
+                                                               Classes="captionText"
+                                                               HorizontalAlignment="Right"/>
+                                                    <TextBlock Grid.Row="1"
+                                                               Grid.ColumnSpan="2"
+                                                               Text="{Binding Description}"
+                                                               Classes="bodyText"
+                                                               TextWrapping="Wrap"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Spacing="18"
                                 IsVisible="{Binding IsModelSectionSelected}">
                         <StackPanel Spacing="4">
                             <TextBlock Text="模型设置"
@@ -89,7 +137,7 @@
                         <Border Classes="toolCard">
                             <StackPanel Spacing="14">
                                 <Grid ColumnDefinitions="150,*"
-                                      RowDefinitions="Auto,Auto,Auto,Auto"
+                                      RowDefinitions="Auto,Auto,Auto,Auto,Auto"
                                       ColumnSpacing="14"
                                       RowSpacing="12">
                                     <TextBlock Text="Provider"
@@ -104,12 +152,27 @@
                                                Text="API Key"
                                                Classes="sectionTitle"
                                                VerticalAlignment="Center"/>
-                                    <TextBox Grid.Row="1"
-                                             Grid.Column="1"
-                                             Classes="formInput"
-                                             PasswordChar="*"
-                                             PlaceholderText="sk-..."
-                                             Text="{Binding ApiKey}"/>
+                                    <Grid Grid.Row="1"
+                                          Grid.Column="1"
+                                          ColumnDefinitions="*,Auto"
+                                          ColumnSpacing="8">
+                                        <TextBox Grid.Column="0"
+                                                 Classes="formInput"
+                                                 PasswordChar="*"
+                                                 PlaceholderText="sk-..."
+                                                 Text="{Binding ApiKey}"
+                                                 IsVisible="{Binding IsApiKeyHidden}"/>
+                                        <TextBox Grid.Column="0"
+                                                 Classes="formInput"
+                                                 PlaceholderText="sk-..."
+                                                 Text="{Binding ApiKey}"
+                                                 IsVisible="{Binding IsApiKeyVisible}"/>
+                                        <Button Grid.Column="1"
+                                                Content="{Binding ApiKeyVisibilityButtonText}"
+                                                Classes="secondaryAction"
+                                                Command="{Binding ToggleApiKeyVisibilityCommand}"
+                                                MinWidth="64"/>
+                                    </Grid>
 
                                     <TextBlock Grid.Row="2"
                                                Text="Base URL"
@@ -121,14 +184,40 @@
                                              Text="{Binding ApiEndpoint}"/>
 
                                     <TextBlock Grid.Row="3"
+                                               Text="模型选择"
+                                               Classes="sectionTitle"
+                                               VerticalAlignment="Center"/>
+                                    <ComboBox Grid.Row="3"
+                                              Grid.Column="1"
+                                              ItemsSource="{Binding SelectedProvider.ModelOptions}"
+                                              SelectedItem="{Binding ModelName}"
+                                              MinWidth="260"/>
+
+                                    <TextBlock Grid.Row="4"
                                                Text="模型名"
                                                Classes="sectionTitle"
                                                VerticalAlignment="Center"/>
-                                    <TextBox Grid.Row="3"
+                                    <TextBox Grid.Row="4"
                                              Grid.Column="1"
                                              Classes="formInput"
+                                             PlaceholderText="可从上方选择默认模型，也可按 Provider 控制台填写模型 ID"
                                              Text="{Binding ModelName}"/>
                                 </Grid>
+
+                                <Border Background="{StaticResource Brush.Warning.Surface}"
+                                        BorderBrush="{StaticResource Brush.Warning.Border}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="12">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="本机保存提示"
+                                                   Classes="sectionTitle"
+                                                   Foreground="{StaticResource Brush.Warning.Text}"/>
+                                        <TextBlock Text="保存会把 API Key 写入本机应用配置，供 Agent 调用用户自己的模型服务。不要把配置目录或截图分享给他人。"
+                                                   Classes="captionText"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
 
                                 <Grid ColumnDefinitions="*,Auto,Auto,Auto">
                                     <TextBlock Text="{Binding ModelSettingsStatus}"
@@ -156,6 +245,42 @@
                             </StackPanel>
                         </Border>
 
+                        <Border Background="{StaticResource Brush.Success.Surface}"
+                                BorderBrush="{StaticResource Brush.Success.Text}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="14"
+                                IsVisible="{Binding IsModelConnectionSuccessful}">
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{Binding ModelConnectionResultTitle}"
+                                           Classes="sectionTitle"
+                                           Foreground="{StaticResource Brush.Success.Text}"/>
+                                <TextBlock Text="{Binding ModelConnectionResultMeta}"
+                                           Classes="captionText"/>
+                                <TextBlock Text="{Binding ModelConnectionResultDetail}"
+                                           Classes="bodyText"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="{StaticResource Brush.Warning.Surface}"
+                                BorderBrush="{StaticResource Brush.Warning.Border}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="14"
+                                IsVisible="{Binding IsModelConnectionFailed}">
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{Binding ModelConnectionResultTitle}"
+                                           Classes="sectionTitle"
+                                           Foreground="{StaticResource Brush.Warning.Text}"/>
+                                <TextBlock Text="{Binding ModelConnectionResultMeta}"
+                                           Classes="captionText"/>
+                                <TextBlock Text="{Binding ModelConnectionResultDetail}"
+                                           Classes="bodyText"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+
                         <Border Classes="inlineCard">
                             <StackPanel Spacing="6">
                                 <TextBlock Text="连接测试说明"
@@ -174,7 +299,7 @@
                                                Classes="bodyText"/>
                                 </StackPanel>
                                 <Grid ColumnDefinitions="150,*,150,*"
-                                      RowDefinitions="Auto,Auto"
+                                      RowDefinitions="Auto,Auto,Auto,Auto"
                                       ColumnSpacing="14"
                                       RowSpacing="12">
                                     <TextBlock Text="TTS 语音"
@@ -191,18 +316,52 @@
                                               ItemsSource="{Binding SpeechRecognitionLanguageOptions}"
                                               SelectedItem="{Binding SpeechRecognitionLanguage}"/>
                                     <TextBlock Grid.Row="1"
-                                               Grid.ColumnSpan="3"
+                                               Grid.ColumnSpan="4"
+                                               Text="{Binding VoiceConfigurationSummary}"
+                                               Classes="bodyText"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock Grid.Row="2"
+                                               Grid.ColumnSpan="4"
+                                               Text="{Binding SpeechRecognitionLanguageDescription}"
+                                               Classes="captionText"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock Grid.Row="3"
+                                               Grid.ColumnSpan="2"
                                                Text="{Binding VoiceSettingsStatus}"
                                                Classes="captionText"
                                                TextWrapping="Wrap"
                                                VerticalAlignment="Center"/>
-                                    <Button Grid.Row="1"
-                                            Grid.Column="3"
-                                            Content="预览试听"
-                                            Classes="secondaryAction"
-                                            Command="{Binding PreviewTtsVoiceCommand}"
-                                            HorizontalAlignment="Right"/>
+                                    <StackPanel Grid.Row="3"
+                                                Grid.Column="2"
+                                                Grid.ColumnSpan="2"
+                                                Orientation="Horizontal"
+                                                HorizontalAlignment="Right"
+                                                Spacing="8">
+                                        <Button Content="预览试听"
+                                                Classes="secondaryAction"
+                                                Command="{Binding PreviewTtsVoiceCommand}"/>
+                                        <Button Content="保存语音"
+                                                Classes="primaryAction"
+                                                Command="{Binding SaveVoiceSettingsCommand}"
+                                                Background="{StaticResource Brush.Info.Text}"
+                                                Padding="14,7"/>
+                                    </StackPanel>
                                 </Grid>
+
+                                <Border Background="{StaticResource Brush.Info.Surface}"
+                                        BorderBrush="{StaticResource Brush.Border.Subtle}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="12">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="{Binding TtsPreviewText}"
+                                                   Classes="sectionTitle"
+                                                   Foreground="{StaticResource Brush.Info.Text}"/>
+                                        <TextBlock Text="当前阶段只保存语音偏好和展示聊天区状态；真实录音、转写和播放会在 STT/TTS 服务接入后启用。"
+                                                   Classes="captionText"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
                         </Border>
 
@@ -904,7 +1063,8 @@
                                                                Classes="bodyText"/>
                                                 </Grid>
 
-                                                <StackPanel Spacing="6">
+                                                <StackPanel Spacing="6"
+                                                            IsVisible="{Binding IsMemoryBrowserReadMode}">
                                                     <TextBlock Text="标签"
                                                                Classes="sectionTitle"/>
                                                     <TextBlock Text="{Binding SelectedMemoryBrowserItem.Tags}"
@@ -912,7 +1072,8 @@
                                                                TextWrapping="Wrap"/>
                                                 </StackPanel>
 
-                                                <StackPanel Spacing="6">
+                                                <StackPanel Spacing="6"
+                                                            IsVisible="{Binding IsMemoryBrowserReadMode}">
                                                     <TextBlock Text="内容"
                                                                Classes="sectionTitle"/>
                                                     <TextBox Text="{Binding SelectedMemoryBrowserItem.Content, Mode=OneWay}"
@@ -924,12 +1085,55 @@
                                                              Classes="formInput"/>
                                                 </StackPanel>
 
-                                                <Grid ColumnDefinitions="*,Auto">
-                                                    <TextBlock Text="删除会直接调用 IMemoryStore.DeleteAsync，适用于误存条目清理。"
+                                                <StackPanel Spacing="8"
+                                                            IsVisible="{Binding IsMemoryBrowserEditMode}">
+                                                    <StackPanel Spacing="6">
+                                                        <TextBlock Text="编辑内容"
+                                                                   Classes="sectionTitle"/>
+                                                        <TextBox Text="{Binding MemoryEditDraftContent}"
+                                                                 AcceptsReturn="True"
+                                                                 TextWrapping="Wrap"
+                                                                 MinHeight="130"
+                                                                 MaxHeight="210"
+                                                                 Classes="formInput"/>
+                                                    </StackPanel>
+                                                    <StackPanel Spacing="6">
+                                                        <TextBlock Text="编辑标签"
+                                                                   Classes="sectionTitle"/>
+                                                        <TextBox Text="{Binding MemoryEditDraftTags}"
+                                                                 PlaceholderText="key:value，多个标签可用逗号、分号或换行分隔"
+                                                                 AcceptsReturn="True"
+                                                                 TextWrapping="Wrap"
+                                                                 MinHeight="54"
+                                                                 MaxHeight="90"
+                                                                 Classes="formInput"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+                                                      ColumnSpacing="8">
+                                                    <TextBlock Text="编辑会保留原记忆类型、Key、来源和过期时间；删除会直接调用 IMemoryStore.DeleteAsync。"
                                                                Classes="captionText"
                                                                VerticalAlignment="Center"
                                                                TextWrapping="Wrap"/>
                                                     <Button Grid.Column="1"
+                                                            Content="编辑"
+                                                            Classes="secondaryAction"
+                                                            Command="{Binding EditSelectedMemoryCommand}"
+                                                            IsVisible="{Binding IsMemoryBrowserReadMode}"/>
+                                                    <Button Grid.Column="2"
+                                                            Content="保存编辑"
+                                                            Classes="primaryAction"
+                                                            Command="{Binding SaveEditedMemoryCommand}"
+                                                            Background="{StaticResource Brush.Info.Text}"
+                                                            Padding="12,7"
+                                                            IsVisible="{Binding IsMemoryBrowserEditMode}"/>
+                                                    <Button Grid.Column="3"
+                                                            Content="取消"
+                                                            Classes="secondaryAction"
+                                                            Command="{Binding CancelMemoryEditCommand}"
+                                                            IsVisible="{Binding IsMemoryBrowserEditMode}"/>
+                                                    <Button Grid.Column="4"
                                                             Content="删除当前记忆"
                                                             Classes="secondaryAction"
                                                             Command="{Binding DeleteSelectedMemoryCommand}"
@@ -1920,6 +2124,74 @@
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
                                     </StackPanel>
+
+                                    <Border Classes="inlineCard">
+                                        <StackPanel Spacing="10">
+                                            <Grid ColumnDefinitions="*,Auto,Auto"
+                                                  ColumnSpacing="8">
+                                                <StackPanel Spacing="3">
+                                                    <TextBlock Text="角色包格式"
+                                                               Classes="sectionTitle"/>
+                                                    <TextBlock Text="{Binding CharacterManifestStatus}"
+                                                               Classes="captionText"
+                                                               TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                                <Button Grid.Column="1"
+                                                        Content="刷新清单"
+                                                        Classes="secondaryAction"
+                                                        Command="{Binding RefreshCharacterManifestPreviewCommand}"
+                                                        VerticalAlignment="Top"/>
+                                                <Button Grid.Column="2"
+                                                        Content="导出清单"
+                                                        Classes="secondaryAction"
+                                                        Command="{Binding ExportCharacterManifestCommand}"
+                                                        VerticalAlignment="Top"/>
+                                            </Grid>
+
+                                            <ItemsControl ItemsSource="{Binding CharacterManifestFormatItems}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:SettingsListItem">
+                                                        <Border Width="188"
+                                                                MinHeight="76"
+                                                                Margin="0,0,8,8"
+                                                                Padding="8"
+                                                                CornerRadius="8"
+                                                                Background="{StaticResource Brush.Surface.Subtle}"
+                                                                BorderBrush="{StaticResource Brush.Border.Subtle}"
+                                                                BorderThickness="1">
+                                                            <StackPanel Spacing="4">
+                                                                <TextBlock Text="{Binding Title}"
+                                                                           Classes="sectionTitle"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Text="{Binding Value}"
+                                                                           Classes="bodyText"
+                                                                           FontWeight="SemiBold"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Text="{Binding Description}"
+                                                                           Classes="captionText"
+                                                                           TextWrapping="Wrap"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+
+                                            <TextBox Classes="formInput"
+                                                     Text="{Binding CharacterManifestPreview, Mode=OneWay}"
+                                                     IsReadOnly="True"
+                                                     AcceptsReturn="True"
+                                                     TextWrapping="NoWrap"
+                                                     MinHeight="150"
+                                                     MaxHeight="220"
+                                                     FontFamily="Consolas"
+                                                     FontSize="12"/>
+                                        </StackPanel>
+                                    </Border>
 
                                     <StackPanel Spacing="7">
                                         <TextBlock Text="预设"

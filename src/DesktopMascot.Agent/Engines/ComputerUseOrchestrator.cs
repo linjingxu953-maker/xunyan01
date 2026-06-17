@@ -4,6 +4,7 @@ using DesktopMascot.Agent.Providers;
 using DesktopMascot.Core.Enums;
 using DesktopMascot.Core.Interfaces;
 using DesktopMascot.Core.Models;
+using DesktopMascot.Core.Tools;
 using Microsoft.Extensions.Logging;
 
 namespace DesktopMascot.Agent.Engines;

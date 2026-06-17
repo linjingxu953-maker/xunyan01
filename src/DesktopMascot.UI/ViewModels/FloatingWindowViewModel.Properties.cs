@@ -82,9 +82,14 @@ public partial class FloatingWindowViewModel
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanSendMessage))]
     private string _inputText = string.Empty;
-    [ObservableProperty] private bool _isVoiceRecording;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VoiceInputButtonText))]
+    private bool _isVoiceRecording;
     [ObservableProperty] private string _voiceInputStatus = "语音输入待命";
-    [ObservableProperty] private bool _isVoiceReplyPlaying;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VoiceReplyButtonText))]
+    [NotifyPropertyChangedFor(nameof(CanStopVoiceReply))]
+    private bool _isVoiceReplyPlaying;
     [ObservableProperty] private string _voiceReplyStatus = "语音回复待命";
     [ObservableProperty] private bool _isMainAreaHitTestVisible = true;
     [ObservableProperty] private bool _isChatPanelHitTestVisible = true;
@@ -148,6 +153,9 @@ public partial class FloatingWindowViewModel
     public bool HasTaskHistory => TaskHistory.Count > 0;
     public bool HasNoTaskHistory => !HasTaskHistory;
     public bool CanUseTaskResultActions => HasTaskResult && !IsBusy;
+    public string VoiceInputButtonText => IsVoiceRecording ? "结束录音" : "麦克风";
+    public string VoiceReplyButtonText => IsVoiceReplyPlaying ? "停止朗读" : "朗读待命";
+    public bool CanStopVoiceReply => IsVoiceReplyPlaying;
     public bool CanRetryCurrentTask => CanRetryTask && !IsBusy && !IsWaitingForUserConfirmation && !string.IsNullOrWhiteSpace(_lastUserMessage);
     public bool CanResolvePendingConfirmation => IsWaitingForUserConfirmation && _pendingConfirmationTask is not null && !IsBusy;
     public bool IsMascotBusy => IsBusy || CurrentState is MascotState.Understanding or MascotState.ReadingContext or MascotState.Planning or MascotState.Working or MascotState.Reporting;

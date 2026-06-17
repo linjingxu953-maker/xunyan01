@@ -109,10 +109,18 @@ public class ToolRegistry : IToolRegistry
         }
 
         var stopwatch = Stopwatch.StartNew();
-        var response = await tool.ExecuteAsync(request, ct);
+        var result = await tool.ExecuteAsync(request.Arguments, ct);
         stopwatch.Stop();
 
-        response.Duration = stopwatch.Elapsed;
+        var response = new ToolCallResponse
+        {
+            RequestId = request.RequestId ?? "",
+            ToolName = request.ToolName,
+            Success = result.Success,
+            Result = result.Content,
+            Error = result.Error,
+            Duration = stopwatch.Elapsed
+        };
 
         // 记录日志
         var log = new ToolCallLog

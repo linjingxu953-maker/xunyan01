@@ -57,14 +57,4 @@ public class ToolCall
     public string Arguments { get; set; } = "{}";
 }
 
-/// <summary>
-/// 工具结果
-/// </summary>
-public class ToolResult
-{
-    public string ToolCallId { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public string Content { get; set; } = string.Empty;
-    public bool Success { get; set; }
-    public string? Error { get; set; }
-}
+// ToolResult 已迁移至 Core.Tools.ToolModels，请使用 using DesktopMascot.Core.Tools;

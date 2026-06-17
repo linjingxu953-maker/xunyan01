@@ -1,3 +1,4 @@
+using DesktopMascot.Core.Tools;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;

@@ -1,3 +1,4 @@
+using DesktopMascot.Core.Tools;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using DesktopMascot.Agent.Context;

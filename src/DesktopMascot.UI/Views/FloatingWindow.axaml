@@ -22,15 +22,16 @@
 
     <Grid x:Name="WindowRoot"
           ClipToBounds="False">
-        <Border x:Name="MascotHost"
-                Classes="mascotIcon"
-                Classes.busy="{Binding IsMascotBusy}"
-                Classes.waiting="{Binding IsMascotWaiting}"
-                Classes.error="{Binding IsMascotError}"
-                IsVisible="{Binding IsMascotIconVisible}"
-                PointerPressed="MascotIcon_PointerPressed"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Bottom"
+                <Border x:Name="MascotHost"
+                        Classes="mascotIcon"
+                        Classes.busy="{Binding IsMascotBusy}"
+                        Classes.waiting="{Binding IsMascotWaiting}"
+                        Classes.error="{Binding IsMascotError}"
+                        Classes.completed="{Binding IsMascotCompleted}"
+                        IsVisible="{Binding IsMascotIconVisible}"
+                        PointerPressed="MascotIcon_PointerPressed"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
                 ZIndex="2"
                 Margin="0,0,4,4">
             <Grid>
@@ -51,7 +52,8 @@
                            Foreground="{Binding StateAccentBrush}"
                            IsVisible="{Binding HasNoCharacterImage}"
                            IsHitTestVisible="False"/>
-                <Border Classes="mascotStateChip"
+                <Border x:Name="MascotStateChip"
+                        Classes="mascotStateChip"
                         Background="{Binding StateAccentBrush}">
                     <TextBlock Text="{Binding StateHint}"
                                Foreground="White"
@@ -231,7 +233,7 @@
                                                             <TextBlock Text="{Binding Content}"
                                                                        Classes="messageContent"
                                                                        Foreground="{Binding ContentBrush}"/>
-                                                            <Button Content="朗读"
+                                                            <Button Content="朗读此回复"
                                                                     Classes="bubbleAudioButton"
                                                                     Click="PlayMessageButton_Click"
                                                                     Tag="{Binding Content}"
@@ -282,7 +284,7 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto,Auto"
                                       ColumnSpacing="10">
                                     <Button Grid.Column="0"
-                                            Content="麦克风"
+                                            Content="{Binding VoiceInputButtonText}"
                                             Classes="voiceButton"
                                             Command="{Binding ToggleVoiceInputCommand}"/>
                                     <TextBox Grid.Column="1"
@@ -292,9 +294,10 @@
                                              Classes="chatInput"
                                              KeyDown="InputBox_KeyDown"/>
                                     <Button Grid.Column="2"
-                                            Content="停止朗读"
+                                            Content="{Binding VoiceReplyButtonText}"
                                             Classes="voiceButton"
-                                            Command="{Binding StopVoiceReplyCommand}"/>
+                                            Command="{Binding StopVoiceReplyCommand}"
+                                            IsEnabled="{Binding CanStopVoiceReply}"/>
                                     <Button Grid.Column="3"
                                             Content="发送"
                                             Classes="sendButton"
@@ -343,6 +346,10 @@
                                     Classes="inlineSettingsNav">
                                 <StackPanel Margin="12,14"
                                             Spacing="7">
+                                    <Button Content="总览"
+                                            Classes="inlineSettingsNavButton"
+                                            Command="{Binding SelectInlineSettingsSectionCommand}"
+                                            CommandParameter="overview"/>
                                     <Button Content="模型"
                                             Classes="inlineSettingsNavButton"
                                             Command="{Binding SelectInlineSettingsSectionCommand}"
@@ -380,6 +387,43 @@
                                 <StackPanel Margin="18"
                                             Spacing="14">
                                     <StackPanel Spacing="12"
+                                                IsVisible="{Binding InlineSettings.IsOverviewSectionSelected}">
+                                        <Border Classes="inlineSettingsCard">
+                                            <StackPanel Spacing="10">
+                                                <TextBlock Text="{Binding InlineSettings.RuntimeOverviewStatus}"
+                                                           Classes="inlineSettingsBody"
+                                                           TextWrapping="Wrap"/>
+                                                <ItemsControl ItemsSource="{Binding InlineSettings.RuntimeOverviewItems}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:SettingsListItem">
+                                                            <Border Background="#0FFFFFFF"
+                                                                    BorderBrush="#18FFFFFF"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="8"
+                                                                    Padding="10"
+                                                                    Margin="0,0,0,8">
+                                                                <StackPanel Spacing="4">
+                                                                    <Grid ColumnDefinitions="*,Auto">
+                                                                        <TextBlock Text="{Binding Title}"
+                                                                                   Classes="inlineSettingsCardTitle"/>
+                                                                        <TextBlock Grid.Column="1"
+                                                                                   Text="{Binding Value}"
+                                                                                   Classes="inlineSettingsBody"
+                                                                                   HorizontalAlignment="Right"/>
+                                                                    </Grid>
+                                                                    <TextBlock Text="{Binding Description}"
+                                                                               Classes="inlineSettingsBody"
+                                                                               TextWrapping="Wrap"/>
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <StackPanel Spacing="12"
                                                 IsVisible="{Binding InlineSettings.IsModelSectionSelected}">
                                         <Border Classes="inlineSettingsCard">
                                             <StackPanel Spacing="10">
@@ -404,9 +448,30 @@
                                                               ItemsSource="{Binding InlineSettings.SpeechRecognitionLanguageOptions}"
                                                               SelectedItem="{Binding InlineSettings.SpeechRecognitionLanguage}"/>
                                                 </Grid>
+                                                <TextBlock Text="{Binding InlineSettings.VoiceConfigurationSummary}"
+                                                           Classes="inlineSettingsBody"
+                                                           TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding InlineSettings.SpeechRecognitionLanguageDescription}"
+                                                           Classes="inlineSettingsBody"
+                                                           TextWrapping="Wrap"/>
                                                 <TextBlock Text="{Binding InlineSettings.VoiceSettingsStatus}"
                                                            Classes="inlineSettingsBody"
                                                            TextWrapping="Wrap"/>
+                                                <Grid ColumnDefinitions="*,Auto,Auto"
+                                                      ColumnSpacing="8">
+                                                    <TextBlock Text="{Binding InlineSettings.TtsPreviewText}"
+                                                               Classes="inlineSettingsBody"
+                                                               VerticalAlignment="Center"
+                                                               TextWrapping="Wrap"/>
+                                                    <Button Grid.Column="1"
+                                                            Content="预览语音"
+                                                            Classes="inlineSettingsBackButton"
+                                                            Command="{Binding InlineSettings.PreviewTtsVoiceCommand}"/>
+                                                    <Button Grid.Column="2"
+                                                            Content="保存语音"
+                                                            Classes="inlineSettingsBackButton"
+                                                            Command="{Binding InlineSettings.SaveVoiceSettingsCommand}"/>
+                                                </Grid>
                                                 <Grid ColumnDefinitions="*,Auto,Auto,Auto">
                                                     <TextBlock Text="模型配置保存到本机，应用不内置 API Key。"
                                                                Classes="inlineSettingsBody"

@@ -1,5 +1,7 @@
+using DesktopMascot.Core.Tools;
 using DesktopMascot.Agent.Context;
 using DesktopMascot.Agent.Models;
+using LlmToolDef = DesktopMascot.Agent.Models.ToolDefinition;
 
 namespace DesktopMascot.Agent.Tools;
 
@@ -64,9 +66,9 @@ public class ToolRegistry
     /// <summary>
     /// 获取所有工具定义
     /// </summary>
-    public IEnumerable<ToolDefinition> GetToolDefinitions()
+    public IEnumerable<LlmToolDef> GetToolDefinitions()
     {
-        return _tools.Values.Select(t => new ToolDefinition
+        return _tools.Values.Select(t => new LlmToolDef
         {
             Name = t.Name,
             Description = t.Description,
