@@ -525,20 +525,25 @@ AgentOrchestrator.ExecuteAsync()
 
 | 指标 | 数值 |
 |------|------|
-| 已完成模块 | 33 个（M1-M2, M4-M20, M22-M28, M31-M42） |
-| 单元测试 | 331 个全部通过 |
-| 代码行数 | 约 13500+ 行 |
-| 核心模块 | Core, Agent |
+| 已完成模块 | 55+ 个（M1-M2, M4-M20, M22-M28, M31-M42, 快速迭代22项, 角色包3项） |
+| 单元测试 | 558 个全部通过（Agent 315 + Core 232 + UI 11） |
+| 代码行数 | 约 20000+ 行 |
+| 核心模块 | Core, Agent, App |
+| 内置工具 | 32 个（全部注册到 ToolRegistry） |
 | 待完成 | M3（UI）、M32 UI、Computer Use UI、封测包 |
 
 ## 更新日志
 
 | 日期 | 更新内容 |
 |------|----------|
-| 2026-06-11 | 项目初始化，创建通用记忆文件 |
-| 2026-06-11 | M1 完成：项目骨架搭建，编译测试通过 |
-| 2026-06-11 | M2 完成：状态机闭环 |
-| 2026-06-11 | M4 完成：Agent 层搭建 |
+| 2026-06-16-17 | 视频处理工具 + HyperFrames 集成（VideoProcessingTool + ShortVideoMakerTool） |
+| 2026-06-16-17 | Petdex 调研 + 角色包格式（CharacterModels + CharacterPackageLoader + PetdexImportConverter） |
+| 2026-06-16-17 | DI 注册补全（LearningEngine + ConversationManager + AgentPersonality + EdgeTts + CharacterPackage） |
+| 2026-06-16-17 | IntentClassifier 增强（+26 个意图模式覆盖全部工具） |
+| 2026-06-16-17 | FileMemoryStore O(1) 优化（Dictionary 索引 + 30秒批量刷新） |
+| 2026-06-16-17 | 角色包集成测试（7 个端到端测试） |
+| 2026-06-16-17 | Bug 确认（Timer async void 已修复、WorkflowEngine 审批绕过已修复） |
+| 2026-06-16-17 | 安全测试脚本 run-full-tests-safe.ps1 + 538→558 测试 |
 | 2026-06-11 | M5 完成：上下文 MVP |
 | 2026-06-11 | M6 完成：权限与安全 |
 | 2026-06-11 | M7 完成：记忆系统 |
@@ -590,4 +595,5 @@ AgentOrchestrator.ExecuteAsync()
 
 - `docs/API接入设计.md` — API 接入完整设计（Provider 列表、配置流程、接口、安全存储、国产模型支持）
 - `docs/状态事件与确认接口设计.md` — 状态事件结构 + 权限/记忆确认接口定义（M26/M29/M30）
-- `docs/2026-06-12-项目当前问题记录.md` — Bug 审计报告
+- `docs/MiMo-Petdex角色格式借鉴边界方案.md` — 角色包格式借鉴边界（自有格式 + Petdex 可选兼容层）
+- `Petdex借鉴方案.md`（桌面） — Petdex 项目调研 + 可借鉴内容
