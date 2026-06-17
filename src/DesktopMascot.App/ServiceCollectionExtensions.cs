@@ -109,6 +109,8 @@ public static class ServiceCollectionExtensions
         // 语音
         services.AddSingleton<ITextToSpeechProvider>(sp =>
             new EdgeTtsProvider(Path.Combine(dataDir, "tts")));
+        services.AddSingleton<ISpeechRecognitionProvider, WhisperSpeechProvider>();
+        services.AddSingleton<VoiceConversationMode>();
 
         // 角色包
         services.AddSingleton<CharacterPackageLoader>();
@@ -135,7 +137,8 @@ public static class ServiceCollectionExtensions
             var llmProvider = sp.GetRequiredService<ILlmProvider>();
             var ttsProvider = sp.GetService<ITextToSpeechProvider>();
             var characterManager = sp.GetService<ICharacterManager>();
-            ToolRegistryInitializer.RegisterBuiltInTools(registry, contextProvider, llmProvider, ttsProvider, characterManager);
+            var speechProvider = sp.GetService<ISpeechRecognitionProvider>();
+            ToolRegistryInitializer.RegisterBuiltInTools(registry, contextProvider, llmProvider, ttsProvider, characterManager, null, speechProvider);
             return registry;
         });
         services.AddSingleton<ComputerUseOrchestrator>();
