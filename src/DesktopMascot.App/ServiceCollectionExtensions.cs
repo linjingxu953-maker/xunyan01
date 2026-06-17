@@ -117,6 +117,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<CharacterPackageLoader>();
         services.AddSingleton<PetdexImportConverter>();
         services.AddSingleton<ICharacterManager, CharacterManager>();
+        services.AddSingleton<ICharacterMarketStore>(sp =>
+            new CharacterMarketStore(Path.Combine(dataDir, "characters")));
 
         // Agent 层
         services.AddSingleton<IApiKeyStore, FileApiKeyStore>();
@@ -139,7 +141,8 @@ public static class ServiceCollectionExtensions
             var ttsProvider = sp.GetService<ITextToSpeechProvider>();
             var characterManager = sp.GetService<ICharacterManager>();
             var speechProvider = sp.GetService<ISpeechRecognitionProvider>();
-            ToolRegistryInitializer.RegisterBuiltInTools(registry, contextProvider, llmProvider, ttsProvider, characterManager, null, speechProvider);
+            var marketStore = sp.GetService<ICharacterMarketStore>();
+            ToolRegistryInitializer.RegisterBuiltInTools(registry, contextProvider, llmProvider, ttsProvider, characterManager, null, speechProvider, marketStore);
             return registry;
         });
         services.AddSingleton<ComputerUseOrchestrator>();

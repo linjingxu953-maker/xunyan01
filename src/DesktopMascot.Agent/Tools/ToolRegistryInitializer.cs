@@ -14,7 +14,7 @@ public static class ToolRegistryInitializer
     /// <summary>
     /// 注册所有内置工具
     /// </summary>
-    public static void RegisterBuiltInTools(ToolRegistry registry, IContextProvider contextProvider, ILlmProvider? llmProvider = null, ITextToSpeechProvider? ttsProvider = null, ICharacterManager? characterManager = null, Action<AgentPersonality>? onPersonalityChanged = null, ISpeechRecognitionProvider? speechProvider = null)
+    public static void RegisterBuiltInTools(ToolRegistry registry, IContextProvider contextProvider, ILlmProvider? llmProvider = null, ITextToSpeechProvider? ttsProvider = null, ICharacterManager? characterManager = null, Action<AgentPersonality>? onPersonalityChanged = null, ISpeechRecognitionProvider? speechProvider = null, ICharacterMarketStore? marketStore = null)
     {
         registry.SetContextProvider(contextProvider);
 
@@ -108,6 +108,12 @@ public static class ToolRegistryInitializer
         {
             registry.Register(new SpeechRecognitionTool(speechProvider));
         }
+
+        // 角色市场工具
+        if (marketStore != null && characterManager != null)
+        {
+            registry.Register(new CharacterMarketTool(marketStore, characterManager));
+        }
     }
 
     /// <summary>
@@ -168,7 +174,8 @@ public static class ToolRegistryInitializer
             "text_to_speech",
             "speech_recognition",
             // 角色
-            "character_switch"
+            "character_switch",
+            "character_market"
         };
     }
 }
