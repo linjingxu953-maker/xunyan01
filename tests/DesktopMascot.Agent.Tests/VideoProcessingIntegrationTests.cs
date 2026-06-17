@@ -53,7 +53,7 @@ public class VideoProcessingIntegrationTests : IDisposable
 
         var outputPath = Path.Combine(_tempDir, "test.mp4");
         await RunFfmpegForTestAsync(
-            $"-hide_banner -loglevel error -y -f lavfi -i \"color=c=red:s=320x240:d=3,drawtext=text='Hello':fontcolor=white:fontsize=40:x=(w-text_w)/2:y=(h-text_h)/2\" -f lavfi -i \"sine=frequency=440:duration=3\" -c:v libx264 -c:a aac -shortest \"{outputPath}\"");
+            $"-hide_banner -loglevel error -y -f lavfi -i \"color=c=red:s=320x240:d=3\" -f lavfi -i \"sine=frequency=440:duration=3\" -pix_fmt yuv420p -c:v libx264 -c:a aac -shortest \"{outputPath}\"");
 
         Assert.True(File.Exists(outputPath));
         Assert.True(new FileInfo(outputPath).Length > 0);
@@ -169,7 +169,7 @@ public class VideoProcessingIntegrationTests : IDisposable
     {
         var path = Path.Combine(_tempDir, "source.mp4");
         await RunFfmpegForTestAsync(
-            $"-hide_banner -loglevel error -y -f lavfi -i \"color=c=blue:s=320x240:d=3\" -f lavfi -i \"sine=frequency=440:duration=3\" -c:v libx264 -c:a aac -shortest \"{path}\"");
+            $"-hide_banner -loglevel error -y -f lavfi -i \"color=c=blue:s=320x240:d=3\" -f lavfi -i \"sine=frequency=440:duration=3\" -pix_fmt yuv420p -c:v libx264 -c:a aac -shortest \"{path}\"");
 
         return path;
     }

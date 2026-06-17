@@ -265,7 +265,7 @@ public class VideoProcessingTool : ITool
         if (!File.Exists(inputPath)) return Fail($"文件不存在：{inputPath}");
 
         var args = $"-v quiet -print_format json -show_format -show_streams \"{inputPath}\"";
-        var output = await RunFfmpegRawAsync(args, ct);
+        var output = await RunFfprobeRawAsync(args, ct);
 
         var doc = JsonDocument.Parse(output);
         var format = doc.RootElement.TryGetProperty("format", out var fEl) ? fEl : default;
@@ -402,11 +402,25 @@ public class VideoProcessingTool : ITool
         }
     }
 
-    private static async Task<string> RunFfmpegRawAsync(string arguments, CancellationToken ct)
+    private static Task<string> RunFfmpegRawAsync(string arguments, CancellationToken ct)
+    {
+        return RunProcessRawAsync("ffmpeg", "FFmpeg", arguments, ct);
+    }
+
+    private static Task<string> RunFfprobeRawAsync(string arguments, CancellationToken ct)
+    {
+        return RunProcessRawAsync("ffprobe", "FFprobe", arguments, ct);
+    }
+
+    private static async Task<string> RunProcessRawAsync(
+        string fileName,
+        string displayName,
+        string arguments,
+        CancellationToken ct)
     {
         var psi = new ProcessStartInfo
         {
-            FileName = "ffmpeg",
+            FileName = fileName,
             Arguments = arguments,
             UseShellExecute = false,
             RedirectStandardOutput = true,
@@ -414,13 +428,15 @@ public class VideoProcessingTool : ITool
             CreateNoWindow = true
         };
 
-        using var process = Process.Start(psi) ?? throw new InvalidOperationException("无法启动 FFmpeg");
-        var output = await process.StandardOutput.ReadToEndAsync(ct);
-        var error = await process.StandardError.ReadToEndAsync(ct);
+        using var process = Process.Start(psi) ?? throw new InvalidOperationException($"无法启动 {displayName}");
+        var outputTask = process.StandardOutput.ReadToEndAsync(ct);
+        var errorTask = process.StandardError.ReadToEndAsync(ct);
         await process.WaitForExitAsync(ct);
+        var output = await outputTask;
+        var error = await errorTask;
 
         if (process.ExitCode != 0)
-            throw new InvalidOperationException($"FFmpeg 错误：{error}");
+            throw new InvalidOperationException($"{displayName} 错误：{error}");
 
         return output;
     }
