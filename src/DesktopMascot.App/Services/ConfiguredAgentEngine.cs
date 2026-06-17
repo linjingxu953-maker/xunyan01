@@ -3,6 +3,7 @@ using DesktopMascot.Agent.Memory;
 using DesktopMascot.Agent.Models;
 using DesktopMascot.Agent.Providers;
 using DesktopMascot.Agent.Tools;
+using DesktopMascot.Core.Character;
 using DesktopMascot.Core.Configuration;
 using DesktopMascot.Core.Conversation;
 using DesktopMascot.Core.ErrorHandling;
@@ -33,6 +34,7 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
     private readonly IAuditLogStore? _auditLogStore;
     private readonly ErrorHandler? _errorHandler;
     private readonly AgentPersonality? _personality;
+    private readonly ICharacterManager? _characterManager;
 
     public ConfiguredAgentEngine(
         IConfigurationManager configurationManager,
@@ -46,7 +48,8 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
         LearningEngine? learningEngine = null,
         IAuditLogStore? auditLogStore = null,
         ErrorHandler? errorHandler = null,
-        AgentPersonality? personality = null)
+        AgentPersonality? personality = null,
+        ICharacterManager? characterManager = null)
     {
         _configurationManager = configurationManager;
         _toolRegistry = toolRegistry;
@@ -60,6 +63,7 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
         _auditLogStore = auditLogStore;
         _errorHandler = errorHandler;
         _personality = personality;
+        _characterManager = characterManager;
     }
 
     public async Task<TaskResult> ExecuteAsync(AgentTask task, CancellationToken ct = default)
@@ -101,6 +105,13 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
 
     private AgentOrchestrator CreateOrchestrator(ILlmProvider provider)
     {
+        // 优先从 CharacterManager 获取当前角色人格
+        var personality = _personality;
+        if (_characterManager?.IsReady == true && _characterManager.Current != null)
+        {
+            personality = CharacterToPersonalityConverter.Convert(_characterManager.Current);
+        }
+
         var computerUseLogger = new Logger<ComputerUseOrchestrator>(NullLoggerFactory.Instance);
         var computerUseOrchestrator = new ComputerUseOrchestrator(provider, _eventBus, computerUseLogger);
         return new AgentOrchestrator(new AgentOrchestratorOptions
@@ -116,7 +127,7 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
             LearningEngine = _learningEngine,
             AuditLogStore = _auditLogStore,
             ErrorHandler = _errorHandler,
-            Personality = _personality
+            Personality = personality
         });
     }
 

@@ -143,7 +143,26 @@ public static class ServiceCollectionExtensions
             return registry;
         });
         services.AddSingleton<ComputerUseOrchestrator>();
-        services.AddSingleton<IAgentEngine, ConfiguredAgentEngine>();
+        services.AddSingleton<IAgentEngine>(sp =>
+        {
+            var configManager = sp.GetRequiredService<IConfigurationManager>();
+            var toolRegistry = sp.GetRequiredService<Agent.Tools.ToolRegistry>();
+            var eventBus = sp.GetRequiredService<ITaskEventBus>();
+            var eventStream = sp.GetRequiredService<ITaskEventStream>();
+            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<AgentOrchestrator>>();
+            var memoryService = sp.GetService<MemoryIntegrationService>();
+            var historyStore = sp.GetService<ITaskHistoryStore>();
+            var convManager = sp.GetService<ConversationManager>();
+            var learnEngine = sp.GetService<LearningEngine>();
+            var auditStore = sp.GetService<IAuditLogStore>();
+            var errorHandler = sp.GetService<ErrorHandler>();
+            var characterManager = sp.GetService<ICharacterManager>();
+
+            return new ConfiguredAgentEngine(
+                configManager, toolRegistry, eventBus, eventStream, logger,
+                memoryService, historyStore, convManager, learnEngine,
+                auditStore, errorHandler, characterManager: characterManager);
+        });
 
         // 任务路由
         services.AddSingleton<ITaskRouter, EnhancedTaskRouter>();

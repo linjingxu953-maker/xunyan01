@@ -96,6 +96,23 @@ public class CharacterMetadata
     public string License { get; set; } = "MIT";
     public List<string> Tags { get; set; } = new();
     public string Notes { get; set; } = "";
+    public CharacterMarketInfo? Market { get; set; }
+}
+
+/// <summary>
+/// 角色市场信息 — 为角色商店预留的扩展字段
+/// </summary>
+public class CharacterMarketInfo
+{
+    public string StoreId { get; set; } = "";
+    public string PreviewImage { get; set; } = "";
+    public string Description { get; set; } = "";
+    public float Rating { get; set; }
+    public int Downloads { get; set; }
+    public string DownloadUrl { get; set; } = "";
+    public string CompatibleVersion { get; set; } = "1.0";
+    public bool IsFeatured { get; set; }
+    public DateTime? PublishedAt { get; set; }
 }
 
 /// <summary>
