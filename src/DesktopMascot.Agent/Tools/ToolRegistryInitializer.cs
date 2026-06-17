@@ -12,7 +12,7 @@ public static class ToolRegistryInitializer
     /// <summary>
     /// 注册所有内置工具
     /// </summary>
-    public static void RegisterBuiltInTools(ToolRegistry registry, IContextProvider contextProvider, ILlmProvider? llmProvider = null)
+    public static void RegisterBuiltInTools(ToolRegistry registry, IContextProvider contextProvider, ILlmProvider? llmProvider = null, ITextToSpeechProvider? ttsProvider = null)
     {
         registry.SetContextProvider(contextProvider);
 
@@ -89,7 +89,11 @@ public static class ToolRegistryInitializer
         registry.Register(new VideoProcessingTool());
         registry.Register(new ShortVideoMakerTool());
 
-        // 语音工具（需要 ITextToSpeechProvider，暂不在此注册）
+        // 语音工具（需要 ITextToSpeechProvider）
+        if (ttsProvider != null)
+        {
+            registry.Register(new TextToSpeechTool(ttsProvider));
+        }
     }
 
     /// <summary>
@@ -145,7 +149,9 @@ public static class ToolRegistryInitializer
             // 图像视频
             "image_processing",
             "video_processing",
-            "short_video_maker"
+            "short_video_maker",
+            // 语音
+            "text_to_speech"
         };
     }
 }

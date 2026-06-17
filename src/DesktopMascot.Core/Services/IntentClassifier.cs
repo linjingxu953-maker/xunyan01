@@ -44,6 +44,42 @@ public static class IntentClassifier
         IntentPatterns["代码审查"] = new IntentPattern("workflow_code_review", 0.85f, new[] { "file_system" }, new[] { "read_file", "list_directory" });
         IntentPatterns["文件整理"] = new IntentPattern("workflow_file_org", 0.8f, new[] { "file_system" }, new[] { "list_directory", "write_file" });
         IntentPatterns["数据分析"] = new IntentPattern("workflow_data_analysis", 0.8f, new[] { "file_system" }, new[] { "read_file", "write_file" });
+
+        // 新增：文件操作
+        IntentPatterns["对比文件"] = new IntentPattern("file_compare", 0.85f, new[] { "file_system" }, new[] { "file_compare" });
+        IntentPatterns["批量重命名"] = new IntentPattern("batch_file_process", 0.85f, new[] { "file_system" }, new[] { "batch_file_processor" });
+        IntentPatterns["文件版本"] = new IntentPattern("file_version", 0.8f, new[] { "file_system" }, new[] { "file_version" });
+
+        // 新增：代码/安全分析
+        IntentPatterns["代码分析"] = new IntentPattern("code_analysis", 0.85f, new[] { "file_system" }, new[] { "code_analysis" });
+        IntentPatterns["安全扫描"] = new IntentPattern("security_scan", 0.9f, new[] { "file_system" }, new[] { "security_scan" });
+        IntentPatterns["性能分析"] = new IntentPattern("performance_analysis", 0.85f, new[] { "file_system" }, new[] { "performance_analysis" });
+
+        // 新增：网络/数据库
+        IntentPatterns["发请求"] = new IntentPattern("network_request", 0.8f, new[] { "network" }, new[] { "network_request" });
+        IntentPatterns["API调用"] = new IntentPattern("network_request", 0.85f, new[] { "network" }, new[] { "network_request" });
+        IntentPatterns["数据库"] = new IntentPattern("database_operation", 0.8f, new[] { "database" }, new[] { "database" });
+
+        // 新增：日历/邮件
+        IntentPatterns["日程"] = new IntentPattern("calendar", 0.8f, new[] { "calendar" }, new[] { "calendar" });
+        IntentPatterns["提醒"] = new IntentPattern("notification", 0.75f, new[] { "notification" }, new[] { "notification" });
+        IntentPatterns["发邮件"] = new IntentPattern("email", 0.85f, new[] { "email" }, new[] { "email" });
+
+        // 新增：文件处理
+        IntentPatterns["加密"] = new IntentPattern("file_encryption", 0.85f, new[] { "file_system" }, new[] { "file_encryption" });
+        IntentPatterns["压缩图片"] = new IntentPattern("image_processing", 0.8f, new[] { "file_system" }, new[] { "image_processing" });
+        IntentPatterns["转换格式"] = new IntentPattern("image_processing", 0.75f, new[] { "file_system" }, new[] { "image_processing" });
+
+        // 新增：视频制作
+        IntentPatterns["剪视频"] = new IntentPattern("video_processing", 0.85f, new[] { "media" }, new[] { "video_processing" });
+        IntentPatterns["视频剪辑"] = new IntentPattern("video_processing", 0.9f, new[] { "media" }, new[] { "video_processing" });
+        IntentPatterns["短视频"] = new IntentPattern("short_video", 0.9f, new[] { "media" }, new[] { "short_video_maker" });
+        IntentPatterns["配音"] = new IntentPattern("short_video", 0.8f, new[] { "media" }, new[] { "short_video_maker", "text_to_speech" });
+        IntentPatterns["视频转音频"] = new IntentPattern("extract_audio", 0.85f, new[] { "media" }, new[] { "video_processing" });
+
+        // 新增：云存储
+        IntentPatterns["云同步"] = new IntentPattern("cloud_sync", 0.8f, new[] { "cloud" }, new[] { "cloud_sync" });
+        IntentPatterns["上传文件"] = new IntentPattern("cloud_sync", 0.75f, new[] { "cloud" }, new[] { "cloud_sync" });
     }
 
     /// <summary>分类用户意图</summary>

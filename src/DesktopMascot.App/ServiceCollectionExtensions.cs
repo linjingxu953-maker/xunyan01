@@ -6,6 +6,7 @@ using DesktopMascot.Agent.Providers;
 using DesktopMascot.Agent.Tools;
 using DesktopMascot.App.Services;
 using DesktopMascot.Core.Caching;
+using DesktopMascot.Core.Character;
 using DesktopMascot.Core.Configuration;
 using DesktopMascot.Core.Conversation;
 using DesktopMascot.Core.ErrorHandling;
@@ -105,6 +106,14 @@ public static class ServiceCollectionExtensions
         // Agent 人格
         services.AddSingleton(new AgentPersonality());
 
+        // 语音
+        services.AddSingleton<ITextToSpeechProvider>(sp =>
+            new EdgeTtsProvider(Path.Combine(dataDir, "tts")));
+
+        // 角色包
+        services.AddSingleton<CharacterPackageLoader>();
+        services.AddSingleton<PetdexImportConverter>();
+
         // Agent 层
         services.AddSingleton<IApiKeyStore, FileApiKeyStore>();
         services.AddSingleton<LlmProviderFactory>();
@@ -123,7 +132,8 @@ public static class ServiceCollectionExtensions
             var registry = new Agent.Tools.ToolRegistry();
             var contextProvider = sp.GetRequiredService<IContextProvider>();
             var llmProvider = sp.GetRequiredService<ILlmProvider>();
-            ToolRegistryInitializer.RegisterBuiltInTools(registry, contextProvider, llmProvider);
+            var ttsProvider = sp.GetService<ITextToSpeechProvider>();
+            ToolRegistryInitializer.RegisterBuiltInTools(registry, contextProvider, llmProvider, ttsProvider);
             return registry;
         });
         services.AddSingleton<ComputerUseOrchestrator>();
