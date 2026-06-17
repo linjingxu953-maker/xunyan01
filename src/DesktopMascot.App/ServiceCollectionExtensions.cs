@@ -113,6 +113,7 @@ public static class ServiceCollectionExtensions
         // 角色包
         services.AddSingleton<CharacterPackageLoader>();
         services.AddSingleton<PetdexImportConverter>();
+        services.AddSingleton<ICharacterManager, CharacterManager>();
 
         // Agent 层
         services.AddSingleton<IApiKeyStore, FileApiKeyStore>();
