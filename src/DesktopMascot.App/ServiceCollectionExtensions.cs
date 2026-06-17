@@ -134,7 +134,8 @@ public static class ServiceCollectionExtensions
             var contextProvider = sp.GetRequiredService<IContextProvider>();
             var llmProvider = sp.GetRequiredService<ILlmProvider>();
             var ttsProvider = sp.GetService<ITextToSpeechProvider>();
-            ToolRegistryInitializer.RegisterBuiltInTools(registry, contextProvider, llmProvider, ttsProvider);
+            var characterManager = sp.GetService<ICharacterManager>();
+            ToolRegistryInitializer.RegisterBuiltInTools(registry, contextProvider, llmProvider, ttsProvider, characterManager);
             return registry;
         });
         services.AddSingleton<ComputerUseOrchestrator>();

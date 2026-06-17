@@ -35,7 +35,7 @@ public class AgentOrchestrator : IAgentEngine
     private readonly LearningEngine _learningEngine;
     private readonly int _maxIterations;
 
-    private readonly AgentPersonality _personality;
+    private AgentPersonality _personality;
 
     /// <summary>主构造函数 — 通过 Options 对象注入所有依赖</summary>
     public AgentOrchestrator(AgentOrchestratorOptions options)
@@ -53,6 +53,12 @@ public class AgentOrchestrator : IAgentEngine
         _auditLogStore = options.AuditLogStore;
         _errorHandler = options.ErrorHandler;
         _personality = options.Personality ?? new AgentPersonality();
+    }
+
+    /// <summary>运行时更新角色人格（角色切换时调用）</summary>
+    public void UpdatePersonality(AgentPersonality newPersonality)
+    {
+        _personality = newPersonality ?? throw new ArgumentNullException(nameof(newPersonality));
     }
 
     /// <summary>便捷构造函数 — 仅必选依赖，供测试和简单场景使用</summary>

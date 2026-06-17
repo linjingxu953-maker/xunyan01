@@ -1,5 +1,7 @@
 using DesktopMascot.Core.Tools;
+using DesktopMascot.Core.Character;
 using DesktopMascot.Agent.Context;
+using DesktopMascot.Agent.Models;
 using DesktopMascot.Agent.Providers;
 
 namespace DesktopMascot.Agent.Tools;
@@ -12,7 +14,7 @@ public static class ToolRegistryInitializer
     /// <summary>
     /// 注册所有内置工具
     /// </summary>
-    public static void RegisterBuiltInTools(ToolRegistry registry, IContextProvider contextProvider, ILlmProvider? llmProvider = null, ITextToSpeechProvider? ttsProvider = null)
+    public static void RegisterBuiltInTools(ToolRegistry registry, IContextProvider contextProvider, ILlmProvider? llmProvider = null, ITextToSpeechProvider? ttsProvider = null, ICharacterManager? characterManager = null, Action<AgentPersonality>? onPersonalityChanged = null)
     {
         registry.SetContextProvider(contextProvider);
 
@@ -93,6 +95,12 @@ public static class ToolRegistryInitializer
         if (ttsProvider != null)
         {
             registry.Register(new TextToSpeechTool(ttsProvider));
+        }
+
+        // 角色切换工具
+        if (characterManager != null)
+        {
+            registry.Register(new CharacterSwitchTool(characterManager, onPersonalityChanged));
         }
     }
 
