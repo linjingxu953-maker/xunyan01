@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.Json;
 using DesktopMascot.Core.Enums;
 using DesktopMascot.Core.Storage;
 
@@ -7,14 +8,24 @@ namespace DesktopMascot.Core.Learning;
 using DesktopMascot.Core.Summary;
 
 /// <summary>
-/// 学习引擎 - 从用户反馈和任务模式中学习（线程安全）
+/// 学习引擎 - 从用户反馈和任务模式中学习（线程安全，支持 JSON 持久化）
 /// </summary>
 public class LearningEngine
 {
     private readonly ConcurrentDictionary<string, UserPreference> _preferences = new();
     private readonly ConcurrentBag<EvolutionRecord> _evolutionHistory = new();
-    private readonly ConcurrentDictionary<string, int> _taskPatterns = new(); // taskType -> count
+    private readonly ConcurrentDictionary<string, int> _taskPatterns = new();
     private readonly ConcurrentDictionary<string, ConcurrentBag<string>> _skillSuggestions = new();
+    private readonly string? _persistPath;
+    private readonly object _saveLock = new();
+    private bool _isDirty;
+
+    public LearningEngine(string? persistPath = null)
+    {
+        _persistPath = persistPath;
+        if (_persistPath != null)
+            Load();
+    }
 
     /// <summary>记录用户反馈</summary>
     public void RecordFeedback(string taskId, FeedbackType type, string content)
@@ -46,6 +57,7 @@ public class LearningEngine
             ImpactScore = 0.3f,
             SourceTaskId = taskId
         });
+        MarkDirty();
     }
 
     /// <summary>记录负面反馈</summary>
@@ -58,6 +70,7 @@ public class LearningEngine
             ImpactScore = -0.3f,
             SourceTaskId = taskId
         });
+        MarkDirty();
     }
 
     /// <summary>记录纠正</summary>
@@ -70,6 +83,7 @@ public class LearningEngine
             ImpactScore = 0.5f,
             SourceTaskId = taskId
         });
+        MarkDirty();
     }
 
     /// <summary>记录偏好</summary>
@@ -97,6 +111,7 @@ public class LearningEngine
                     existing.LastObserved = DateTime.UtcNow;
                     return existing;
                 });
+            MarkDirty();
         }
     }
 
@@ -105,6 +120,7 @@ public class LearningEngine
     {
         var key = $"{taskType}_{(success ? "success" : "failure")}";
         _taskPatterns.AddOrUpdate(key, 1, (_, c) => c + 1);
+        MarkDirty();
 
         // 检测重复模式
         var successKey = $"{taskType}_success";
@@ -308,6 +324,85 @@ public class LearningEngine
         var total = successCount + failureCount;
         return total == 0 ? 0f : (float)successCount / total;
     }
+
+    /// <summary>标记数据已变更</summary>
+    private void MarkDirty() => _isDirty = true;
+
+    /// <summary>保存到 JSON 文件</summary>
+    public void Save()
+    {
+        if (_persistPath == null) return;
+
+        lock (_saveLock)
+        {
+            if (!_isDirty) return;
+
+            var data = new LearningData
+            {
+                Preferences = _preferences.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+                EvolutionHistory = _evolutionHistory.ToArray().ToList(),
+                TaskPatterns = _taskPatterns.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+                SkillSuggestions = _skillSuggestions.ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value.ToArray().ToList()),
+                SavedAt = DateTime.UtcNow
+            };
+
+            var dir = Path.GetDirectoryName(_persistPath);
+            if (!string.IsNullOrEmpty(dir))
+                Directory.CreateDirectory(dir);
+
+            var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(_persistPath, json);
+            _isDirty = false;
+        }
+    }
+
+    /// <summary>从 JSON 文件加载</summary>
+    private void Load()
+    {
+        if (_persistPath == null || !File.Exists(_persistPath)) return;
+
+        try
+        {
+            var json = File.ReadAllText(_persistPath);
+            var data = JsonSerializer.Deserialize<LearningData>(json);
+            if (data == null) return;
+
+            foreach (var kvp in data.Preferences)
+                _preferences[kvp.Key] = kvp.Value;
+
+            foreach (var record in data.EvolutionHistory)
+                _evolutionHistory.Add(record);
+
+            foreach (var kvp in data.TaskPatterns)
+                _taskPatterns[kvp.Key] = kvp.Value;
+
+            foreach (var kvp in data.SkillSuggestions)
+            {
+                var bag = new ConcurrentBag<string>(kvp.Value);
+                _skillSuggestions[kvp.Key] = bag;
+            }
+
+            _isDirty = false;
+        }
+        catch
+        {
+            // 加载失败不崩溃，从空状态开始
+        }
+    }
+}
+
+/// <summary>
+/// 学习数据序列化模型
+/// </summary>
+internal class LearningData
+{
+    public Dictionary<string, UserPreference> Preferences { get; set; } = new();
+    public List<EvolutionRecord> EvolutionHistory { get; set; } = new();
+    public Dictionary<string, int> TaskPatterns { get; set; } = new();
+    public Dictionary<string, List<string>> SkillSuggestions { get; set; } = new();
+    public DateTime SavedAt { get; set; }
 }
 
 /// <summary>

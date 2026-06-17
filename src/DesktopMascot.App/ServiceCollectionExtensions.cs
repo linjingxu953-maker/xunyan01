@@ -70,7 +70,8 @@ public static class ServiceCollectionExtensions
 
         // 对话和学习
         services.AddSingleton<ConversationManager>();
-        services.AddSingleton<LearningEngine>();
+        services.AddSingleton<LearningEngine>(sp =>
+            new LearningEngine(Path.Combine(dataDir, "learning", "learning_data.json")));
 
         // 权限
         services.AddSingleton<IPermissionManager, PermissionManager>();
