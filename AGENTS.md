@@ -596,4 +596,5 @@ AgentOrchestrator.ExecuteAsync()
 - `docs/API接入设计.md` — API 接入完整设计（Provider 列表、配置流程、接口、安全存储、国产模型支持）
 - `docs/状态事件与确认接口设计.md` — 状态事件结构 + 权限/记忆确认接口定义（M26/M29/M30）
 - `docs/MiMo-Petdex角色格式借鉴边界方案.md` — 角色包格式借鉴边界（自有格式 + Petdex 可选兼容层）
+- `docs/角色切换UI绑定设计.md` — Codex 角色切换 UI 绑定接口说明 + ViewModel 设计建议
 - `Petdex借鉴方案.md`（桌面） — Petdex 项目调研 + 可借鉴内容

@@ -83,6 +83,8 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     {
         IsWaitingForUserConfirmation = false; IsTaskActive = true; IsBusy = true; CanCancelTask = true;
         TaskActionStatus = "任务正在执行。"; _pendingResponseMessage = $"{CharacterName}：正在处理...";
+        if (task.Type == TaskType.ScreenUnderstand)
+            ScreenSelectionContext = ScreenSelectionContext.WithStatus("识别中", "AI 正在理解屏幕区域。");
         Messages.Add(_pendingResponseMessage); MessageItems.Add(new MessageItem { Role = "assistant", Content = "正在处理..." });
         try
         {
@@ -92,6 +94,8 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
             ActiveStepText = result.Success ? "已完成" : "执行失败";
             TaskResultStatusText = result.Success ? "已完成" : "执行失败";
             TaskResultPreview = ResolveResultText(result);
+            if (task.Type == TaskType.ScreenUnderstand)
+                ScreenSelectionContext = ScreenSelectionContext.WithResult(result.Success, result.Content, result.Error);
             TaskActionStatus = result.Success ? "任务完成，可以复制或保存结果。" : "任务失败，可以重试。";
             if (MessageItems.Count > 0 && MessageItems[^1].Content == "正在处理...")
                 MessageItems.RemoveAt(MessageItems.Count - 1);

@@ -29,6 +29,7 @@ public partial class FloatingWindowViewModel
         IsWaitingForUserConfirmation = e.State is MascotState.WaitingApproval or MascotState.MemoryConfirm;
         ApplyConfirmationStateFromEvent(e, message);
         ApplyTaskResultStateFromEvent(e, message);
+        ApplyScreenSelectionContextFromEvent(e, message);
         ApplyComputerUseStateFromEvent(e, message);
         RefreshCharacterImage();
         AddToolCallRecord(e);
@@ -114,6 +115,33 @@ public partial class FloatingWindowViewModel
             case TaskEventType.ToolCallCompleted: TaskActionStatus = $"工具执行完成：{GetMetadataString(taskEvent, "toolName", "未知工具")}"; break;
             case TaskEventType.ToolCallFailed: TaskActionStatus = $"工具执行失败：{GetMetadataString(taskEvent, "toolName", "未知工具")}"; break;
         }
+    }
+
+    private void ApplyScreenSelectionContextFromEvent(TaskEvent taskEvent, string message)
+    {
+        if (!ScreenSelectionContext.HasRegion)
+            return;
+
+        if (taskEvent.EventType == TaskEventType.TaskFailed || taskEvent.State == MascotState.Error)
+        {
+            ScreenSelectionContext = ScreenSelectionContext.WithResult(success: false, content: null, error: message);
+            return;
+        }
+
+        if (taskEvent.EventType == TaskEventType.TaskCompleted || taskEvent.State == MascotState.Completed)
+        {
+            var resultText = GetFirstMetadataString(taskEvent, "content", "result", "output", "summary", "analysis");
+            ScreenSelectionContext = ScreenSelectionContext.WithResult(success: true, content: string.IsNullOrWhiteSpace(resultText) ? message : resultText, error: null);
+            return;
+        }
+
+        ScreenSelectionContext = taskEvent.State switch
+        {
+            MascotState.ReadingContext => ScreenSelectionContext.WithStatus("截取屏幕", message),
+            MascotState.Understanding or MascotState.Working or MascotState.Planning => ScreenSelectionContext.WithStatus("识别中", message),
+            MascotState.Reporting => ScreenSelectionContext.WithStatus("整理结果", message),
+            _ => ScreenSelectionContext
+        };
     }
 
     // ── 时间线 / 工具调用 ──

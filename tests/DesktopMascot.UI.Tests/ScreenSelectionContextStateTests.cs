@@ -46,4 +46,55 @@ public sealed class ScreenSelectionContextStateTests
         Assert.Equal("暂无圈选区域", state.RegionText);
         Assert.Equal("等待 Ctrl+Shift+S 或点击圈选", state.SizeText);
     }
+
+    [Fact]
+    public void WithResult_UsesReadableScreenUnderstandJsonSummary()
+    {
+        var state = ScreenSelectionContextState.From(new ScreenSelectionResult
+        {
+            X = 12,
+            Y = 24,
+            Width = 320,
+            Height = 180,
+            IsConfirmed = true
+        });
+
+        var updated = state.WithResult(
+            success: true,
+            content: """
+            {
+              "identification": "这是一个 PowerShell 报错窗口",
+              "understanding": "用户需要定位命令启动失败原因",
+              "confidence": 0.86
+            }
+            """,
+            error: null);
+
+        Assert.True(updated.HasRegion);
+        Assert.Equal("识别完成", updated.StatusText);
+        Assert.Equal("识别：这是一个 PowerShell 报错窗口；理解：用户需要定位命令启动失败原因", updated.DetailText);
+        Assert.Equal("屏幕坐标 12, 24", updated.RegionText);
+        Assert.Equal("320 x 180", updated.SizeText);
+    }
+
+    [Fact]
+    public void WithResult_ReportsFailureWithoutDroppingRegion()
+    {
+        var state = ScreenSelectionContextState.From(new ScreenSelectionResult
+        {
+            X = -100,
+            Y = 40,
+            Width = 200,
+            Height = 120,
+            IsConfirmed = true
+        });
+
+        var updated = state.WithResult(success: false, content: null, error: "视觉模型调用失败");
+
+        Assert.True(updated.HasRegion);
+        Assert.Equal("识别失败", updated.StatusText);
+        Assert.Equal("视觉模型调用失败", updated.DetailText);
+        Assert.Equal("屏幕坐标 -100, 40", updated.RegionText);
+        Assert.Equal("200 x 120", updated.SizeText);
+    }
 }
