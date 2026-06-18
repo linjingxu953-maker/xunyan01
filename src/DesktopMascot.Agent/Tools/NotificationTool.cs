@@ -17,16 +17,8 @@ public class NotificationTool : ITool
     private readonly object _lock = new();
     private readonly Timer? _timer;
 
-    public NotificationTool()
+    public NotificationTool() : this(null)
     {
-        _dataDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "DesktopMascot", "notifications");
-        Directory.CreateDirectory(_dataDir);
-
-        LoadReminders();
-        LoadHistory();
-        _timer = new Timer(CheckReminders, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
     }
 
     public string Name => "notification";
@@ -35,7 +27,7 @@ public class NotificationTool : ITool
     {
         "type": "object",
         "properties": {
-            "action": { "type": "string", "enum": ["notify", "reminder", "list_reminders", "cancel_reminder", "update_reminder", "history", "clear_history", "snooze", "sound"], "description": "操作类型" },
+            "action": { "type": "string", "enum": ["notify", "toast", "reminder", "list_reminders", "cancel_reminder", "update_reminder", "history", "clear_history", "snooze", "sound"], "description": "操作类型" },
             "title": { "type": "string", "description": "通知标题" },
             "message": { "type": "string", "description": "通知内容" },
             "delay_seconds": { "type": "integer", "description": "延迟秒数" },
@@ -53,10 +45,7 @@ public class NotificationTool : ITool
 
     public NotificationTool(string? dataDirectory = null)
     {
-        _dataDir = dataDirectory ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "DesktopMascot", "notifications");
-        Directory.CreateDirectory(_dataDir);
+        _dataDir = ResolveDataDirectory(dataDirectory);
         LoadReminders();
         LoadHistory();
         _timer = new Timer(CheckReminders, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
@@ -73,6 +62,7 @@ public class NotificationTool : ITool
             return action switch
             {
                 "notify" => await SendNotificationAsync(root, ct),
+                "toast" => await SendNotificationAsync(root, ct),
                 "reminder" => await SetReminderAsync(root, ct),
                 "list_reminders" => ListReminders(),
                 "cancel_reminder" => CancelReminder(root),
@@ -495,6 +485,34 @@ public class NotificationTool : ITool
     private static string? GetRequiredString(JsonElement root, string name)
     {
         return root.TryGetProperty(name, out var el) ? el.GetString() : null;
+    }
+
+    private static string ResolveDataDirectory(string? dataDirectory)
+    {
+        var preferred = dataDirectory ?? Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "DesktopMascot", "notifications");
+
+        try
+        {
+            Directory.CreateDirectory(preferred);
+            return preferred;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return CreateFallbackDataDirectory();
+        }
+        catch (IOException)
+        {
+            return CreateFallbackDataDirectory();
+        }
+    }
+
+    private static string CreateFallbackDataDirectory()
+    {
+        var fallback = Path.Combine(Path.GetTempPath(), "DesktopMascot", "notifications");
+        Directory.CreateDirectory(fallback);
+        return fallback;
     }
 
     private static ToolResult Fail(string error) => new() { Name = "notification", Success = false, Error = error };

@@ -396,7 +396,7 @@ public class LearningEngine
 /// <summary>
 /// 学习数据序列化模型
 /// </summary>
-internal class LearningData
+public class LearningData
 {
     public Dictionary<string, UserPreference> Preferences { get; set; } = new();
     public List<EvolutionRecord> EvolutionHistory { get; set; } = new();
