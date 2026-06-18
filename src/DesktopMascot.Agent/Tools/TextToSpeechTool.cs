@@ -132,24 +132,12 @@ public class TextToSpeechTool : ITool
 
         try
         {
-            // 使用 PowerShell MediaPlayer 播放音频（后台静默播放）
-            var psScript = $@"
-                Add-Type -AssemblyName PresentationCore
-                $player = New-Object System.Windows.Media.MediaPlayer
-                $player.Open([uri]'file:///{filePath.Replace("\\", "/")}')
-                $player.Play()
-                Start-Sleep -Seconds 3
-                $player.Close()
-            ";
-
+            // 使用 Process.Start 打开音频文件，系统默认播放器播放
             Process.Start(new ProcessStartInfo
             {
-                FileName = "powershell.exe",
-                Arguments = $"-NoProfile -Command \"{psScript.Replace("\"", "\\\"")}\"",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true
+                FileName = filePath,
+                UseShellExecute = true,
+                CreateNoWindow = true
             });
         }
         catch

@@ -104,23 +104,11 @@ public class VoiceConversationMode
 
         try
         {
-            var psScript = $@"
-                Add-Type -AssemblyName PresentationCore
-                $player = New-Object System.Windows.Media.MediaPlayer
-                $player.Open([uri]'file:///{filePath.Replace("\\", "/")}')
-                $player.Play()
-                Start-Sleep -Seconds 3
-                $player.Close()
-            ";
-
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
-                FileName = "powershell.exe",
-                Arguments = $"-NoProfile -Command \"{psScript.Replace("\"", "\\\"")}\"",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true
+                FileName = filePath,
+                UseShellExecute = true,
+                CreateNoWindow = true
             });
         }
         catch { }

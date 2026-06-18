@@ -33,6 +33,17 @@ public class EdgeTtsProvider : ITextToSpeechProvider
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
+        // 先检查 edge-tts 是否安装
+        if (!await IsEdgeTtsAvailableAsync())
+        {
+            return new TextToSpeechResult
+            {
+                Success = false,
+                Error = "edge-tts 未安装。请运行：pip install edge-tts",
+                Duration = stopwatch.Elapsed
+            };
+        }
+
         try
         {
             var dir = Path.GetDirectoryName(outputPath);
@@ -172,5 +183,32 @@ public class EdgeTtsProvider : ITextToSpeechProvider
             .Replace("\"", "\\\"")
             .Replace("\n", " ")
             .Replace("\r", "");
+    }
+
+    private static async Task<bool> IsEdgeTtsAvailableAsync()
+    {
+        try
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "edge-tts",
+                    Arguments = "--version",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+
+            process.Start();
+            await process.WaitForExitAsync();
+            return process.ExitCode == 0;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }
