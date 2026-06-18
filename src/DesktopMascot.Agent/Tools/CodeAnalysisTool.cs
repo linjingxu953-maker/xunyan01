@@ -155,7 +155,7 @@ public class CodeAnalysisTool : ITool
 
         var sb = new StringBuilder();
         sb.AppendLine($"代码质量分析：{Path.GetFileName(filePath)}");
-        sb.AppendLine($"语言：{lang} | 行数：{lines.Length} | 评分：{qualityScore}/100");
+        sb.AppendLine($"语言：{lang} | 行数：{lines.Length} | 质量评分：{qualityScore}/100");
         sb.AppendLine();
 
         if (issues.Count == 0)
