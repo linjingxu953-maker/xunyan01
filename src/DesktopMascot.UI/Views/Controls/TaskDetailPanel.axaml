@@ -22,7 +22,7 @@
             <Border Classes="screenSelectionContextCard"
                     IsVisible="{Binding HasScreenSelectionContext}">
                 <Grid ColumnDefinitions="*,Auto"
-                      RowDefinitions="Auto,Auto,Auto,Auto">
+                      RowDefinitions="Auto,Auto,Auto,Auto,Auto">
                     <StackPanel Grid.Row="0"
                                 Grid.Column="0"
                                 Spacing="3">
@@ -50,7 +50,30 @@
                                    Classes="screenContextMeta"
                                    HorizontalAlignment="Right"/>
                     </Grid>
-                    <Expander Grid.Row="2"
+                    <Border Grid.Row="2"
+                            Grid.ColumnSpan="2"
+                            Classes="screenContextScreenshotRow"
+                            IsVisible="{Binding ScreenSelectionContext.HasScreenshotEvidence}"
+                            ToolTip.Tip="{Binding ScreenSelectionContext.ScreenshotPath}"
+                            Margin="0,10,0,0">
+                        <Grid ColumnDefinitions="Auto,*,Auto"
+                              ColumnSpacing="8">
+                            <TextBlock Text="截图证据"
+                                       Classes="screenContextDetailLabel"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding ScreenSelectionContext.ScreenshotFileName}"
+                                       Classes="screenContextDetailValue"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <Button Grid.Column="2"
+                                    Classes="screenContextEvidenceButton"
+                                    Click="UseScreenScreenshotEvidence_Click">
+                                引用截图
+                            </Button>
+                        </Grid>
+                    </Border>
+                    <Expander Grid.Row="3"
                               Grid.ColumnSpan="2"
                               Classes="screenContextDetailsExpander"
                               IsVisible="{Binding ScreenSelectionContext.HasDetailItems}"
@@ -79,7 +102,7 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </Expander>
-                    <ItemsControl Grid.Row="3"
+                    <ItemsControl Grid.Row="4"
                                   Grid.ColumnSpan="2"
                                   ItemsSource="{Binding ScreenSelectionContext.SuggestedActions}"
                                   IsVisible="{Binding ScreenSelectionContext.HasSuggestedActions}"

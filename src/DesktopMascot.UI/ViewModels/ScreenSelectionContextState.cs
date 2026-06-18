@@ -1,4 +1,5 @@
 using DesktopMascot.UI.Services;
+using System.IO;
 using System.Text.Json;
 
 namespace DesktopMascot.UI.ViewModels;
@@ -12,6 +13,7 @@ public sealed class ScreenSelectionContextState
         sizeText: "等待 Ctrl+Shift+S 或点击圈选",
         statusText: "待命",
         detailText: "选择屏幕区域后会显示坐标和尺寸。",
+        screenshotPath: string.Empty,
         suggestedActions: [],
         detailItems: []);
 
@@ -22,6 +24,7 @@ public sealed class ScreenSelectionContextState
         string sizeText,
         string statusText,
         string detailText,
+        string screenshotPath,
         IReadOnlyList<ScreenContextActionItem> suggestedActions,
         IReadOnlyList<ScreenContextDetailItem> detailItems)
     {
@@ -31,6 +34,7 @@ public sealed class ScreenSelectionContextState
         SizeText = sizeText;
         StatusText = statusText;
         DetailText = detailText;
+        ScreenshotPath = screenshotPath;
         SuggestedActions = suggestedActions;
         DetailItems = detailItems;
     }
@@ -41,6 +45,11 @@ public sealed class ScreenSelectionContextState
     public string SizeText { get; }
     public string StatusText { get; }
     public string DetailText { get; }
+    public string ScreenshotPath { get; }
+    public string ScreenshotFileName => string.IsNullOrWhiteSpace(ScreenshotPath)
+        ? string.Empty
+        : Path.GetFileName(ScreenshotPath);
+    public bool HasScreenshotEvidence => !string.IsNullOrWhiteSpace(ScreenshotPath);
     public IReadOnlyList<ScreenContextActionItem> SuggestedActions { get; }
     public bool HasSuggestedActions => SuggestedActions.Count > 0;
     public IReadOnlyList<ScreenContextDetailItem> DetailItems { get; }
@@ -59,6 +68,7 @@ public sealed class ScreenSelectionContextState
             sizeText: sizeText,
             statusText: Clean(statusText, "等待视觉理解"),
             detailText: $"将把该屏幕区域交给视觉理解：({result.X}, {result.Y}) {result.Width}x{result.Height}",
+            screenshotPath: string.Empty,
             suggestedActions: [],
             detailItems: []);
     }
@@ -75,6 +85,7 @@ public sealed class ScreenSelectionContextState
             sizeText: SizeText,
             statusText: Clean(statusText, StatusText),
             detailText: Clean(detailText, DetailText),
+            screenshotPath: ScreenshotPath,
             suggestedActions: SuggestedActions,
             detailItems: DetailItems);
     }
@@ -86,6 +97,7 @@ public sealed class ScreenSelectionContextState
 
         if (!success)
         {
+            var failureScreenshotPath = Clean(BuildScreenshotPath(content), ScreenshotPath);
             return new ScreenSelectionContextState(
                 hasRegion: true,
                 title: Title,
@@ -93,10 +105,12 @@ public sealed class ScreenSelectionContextState
                 sizeText: SizeText,
                 statusText: "识别失败",
                 detailText: Clean(error, Clean(content, "屏幕理解失败，可以重试。")),
+                screenshotPath: failureScreenshotPath,
                 suggestedActions: [],
                 detailItems: []);
         }
 
+        var screenshotPath = Clean(BuildScreenshotPath(content), ScreenshotPath);
         return new ScreenSelectionContextState(
             hasRegion: true,
             title: Title,
@@ -104,6 +118,7 @@ public sealed class ScreenSelectionContextState
             sizeText: SizeText,
             statusText: "识别完成",
             detailText: BuildReadableResultSummary(content),
+            screenshotPath: screenshotPath,
             suggestedActions: BuildSuggestedActions(content),
             detailItems: BuildDetailItems(content));
     }
@@ -197,6 +212,25 @@ public sealed class ScreenSelectionContextState
         catch (JsonException)
         {
             return [];
+        }
+    }
+
+    private static string BuildScreenshotPath(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+            return string.Empty;
+
+        try
+        {
+            using var document = JsonDocument.Parse(content);
+            var root = document.RootElement;
+            return root.ValueKind == JsonValueKind.Object
+                ? GetFirstJsonString(root, "screenshotPath", "screenPath", "imagePath", "capturePath", "previewPath")
+                : string.Empty;
+        }
+        catch (JsonException)
+        {
+            return string.Empty;
         }
     }
 

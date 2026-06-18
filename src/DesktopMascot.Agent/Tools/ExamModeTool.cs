@@ -19,15 +19,17 @@ public class ExamModeTool : ITool
     private readonly object _lock = new();
 
     public string Name => "exam_mode";
-    public string Description => "考试模式：检测题目/选项、模拟答题操作、自动翻页、记录考试结果、支持选择题/填空题/判断题。";
+    public string Description => "考试模式：检测题目/选项、模拟答题操作、自动翻页、记录考试结果、支持选择题/填空题/判断题/简答题/多选题。";
     public string ParametersSchema => """
     {
         "type": "object",
         "properties": {
-            "action": { "type": "string", "enum": ["detect_question", "answer_choice", "answer_fill", "answer_judge", "auto_answer", "next_question", "record_result", "get_summary", "screenshot_analyze"], "description": "操作类型" },
+            "action": { "type": "string", "enum": ["detect_question", "answer_choice", "answer_fill", "answer_judge", "answer_essay", "answer_multi", "auto_answer", "next_question", "record_result", "get_summary", "screenshot_analyze"], "description": "操作类型" },
             "question_text": { "type": "string", "description": "题目文本" },
             "options": { "type": "string", "description": "选项列表，逗号分隔" },
             "answer": { "type": "string", "description": "答案（选项字母或填空文本）" },
+            "answers": { "type": "string", "description": "多选答案（如 A,B,C）" },
+            "essay_text": { "type": "string", "description": "简答内容" },
             "correct": { "type": "boolean", "description": "是否正确（记录用）" },
             "question_number": { "type": "integer", "description": "题目序号" },
             "total_questions": { "type": "integer", "description": "总题数" },
@@ -60,6 +62,8 @@ public class ExamModeTool : ITool
                 "answer_choice" => await AnswerChoiceAsync(root, ct),
                 "answer_fill" => await AnswerFillAsync(root, ct),
                 "answer_judge" => await AnswerJudgeAsync(root, ct),
+                "answer_essay" => await AnswerEssayAsync(root, ct),
+                "answer_multi" => await AnswerMultiChoiceAsync(root, ct),
                 "auto_answer" => await AutoAnswerAsync(root, ct),
                 "next_question" => await NextQuestionAsync(ct),
                 "record_result" => RecordResult(root),
@@ -79,9 +83,8 @@ public class ExamModeTool : ITool
     private async Task<ToolResult> DetectQuestionAsync(CancellationToken ct)
     {
         // 获取屏幕内容
-        var contextResult = await _browserContext.ExecuteAsync("""{"action":"get_context"}""", ct);
         var screenResult = await _screenUnderstand.ExecuteAsync(
-            """{"action":"understand","hint":"这是一个考试/测验界面，请识别当前题目、题目类型（选择题/填空题/判断题）和所有选项"}""", ct);
+            """{"action":"understand","hint":"这是一个考试/测验界面，请识别：1.题目类型（单选/多选/填空/判断/简答）2.题目内容 3.所有选项（如有）4.当前题号和总题数"}""", ct);
 
         var sb = new StringBuilder();
         sb.AppendLine("题目检测结果");
@@ -91,12 +94,19 @@ public class ExamModeTool : ITool
 
         // 尝试提取题目类型
         var content = screenResult.Content;
-        if (content.Contains("A.") || content.Contains("A、") || content.Contains("（A）"))
-            sb.AppendLine("\n📌 检测到：选择题");
-        else if (content.Contains("对") && content.Contains("错") && content.Contains("判断"))
-            sb.AppendLine("\n📌 检测到：判断题");
+        if (content.Contains("多选") || content.Contains("可多选"))
+            sb.AppendLine("\n📌 建议使用 answer_multi 操作（多选题）");
+        else if (content.Contains("A.") || content.Contains("A、") || content.Contains("（A）"))
+            sb.AppendLine("\n📌 建议使用 answer_choice 操作（单选题）");
+        else if (content.Contains("对") && content.Contains("错") && (content.Contains("判断") || content.Contains("正确")))
+            sb.AppendLine("\n📌 建议使用 answer_judge 操作（判断题）");
+        else if (content.Contains("填空") || content.Contains("____") || content.Contains("（　　）"))
+            sb.AppendLine("\n📌 建议使用 answer_fill 操作（填空题）");
         else
-            sb.AppendLine("\n📌 检测到：可能为填空题或简答题");
+            sb.AppendLine("\n📌 可能为简答题，建议使用 answer_essay 操作");
+
+        sb.AppendLine();
+        sb.AppendLine("可用操作：answer_choice / answer_multi / answer_fill / answer_judge / answer_essay");
 
         return new ToolResult { Name = Name, Success = true, Content = sb.ToString() };
     }
@@ -227,6 +237,100 @@ public class ExamModeTool : ITool
             Success = true,
             Content = $"判断题作答：{(isTrue ? "对 ✓" : "错 ✗")}"
         };
+    }
+
+    #endregion
+
+    #region 简答题
+
+    private async Task<ToolResult> AnswerEssayAsync(JsonElement root, CancellationToken ct)
+    {
+        var essayText = root.TryGetProperty("essay_text", out var etEl) ? etEl.GetString() ?? "" : "";
+        var questionNumber = root.TryGetProperty("question_number", out var qnEl) ? qnEl.GetInt32() : 0;
+        var delayMs = root.TryGetProperty("delay_ms", out var dEl) ? dEl.GetInt32() : 1500;
+
+        if (string.IsNullOrEmpty(essayText))
+            return Fail("缺少 essay_text 参数（简答内容）");
+
+        // 简答题：先清空输入框（Ctrl+A 全选），然后输入文本
+        await _computerUse.ExecuteAsync(
+            $"{{\"action\":\"type\",\"keys\":\"Tab\",\"text\":\"{EscapeJson(essayText)}\"}}", ct);
+
+        await Task.Delay(delayMs, ct);
+
+        lock (_lock)
+        {
+            _records.Add(new ExamRecord
+            {
+                QuestionNumber = questionNumber,
+                Type = "essay",
+                Answer = essayText.Length > 100 ? essayText[..100] + "..." : essayText,
+                Timestamp = DateTime.Now
+            });
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine("简答题作答");
+        sb.AppendLine($"字数：{essayText.Length} 字");
+        sb.AppendLine($"题目序号：{questionNumber}");
+        sb.AppendLine("已模拟输入操作");
+
+        return new ToolResult { Name = Name, Success = true, Content = sb.ToString() };
+    }
+
+    #endregion
+
+    #region 多选题
+
+    private async Task<ToolResult> AnswerMultiChoiceAsync(JsonElement root, CancellationToken ct)
+    {
+        var answers = root.TryGetProperty("answers", out var ansEl) ? ansEl.GetString() ?? "" : "";
+        var questionNumber = root.TryGetProperty("question_number", out var qnEl) ? qnEl.GetInt32() : 0;
+        var delayMs = root.TryGetProperty("delay_ms", out var dEl) ? dEl.GetInt32() : 1500;
+
+        if (string.IsNullOrEmpty(answers))
+            return Fail("缺少 answers 参数（如 A,B,C）");
+
+        // 解析多个选项字母
+        var selectedOptions = answers.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(a => a.Trim().ToUpper()[0] - 'A')
+            .OrderBy(i => i)
+            .ToList();
+
+        // 逐个点击选中的选项
+        foreach (var optionIndex in selectedOptions)
+        {
+            var keys = new StringBuilder();
+            for (int i = 0; i <= optionIndex; i++)
+                keys.Append("Tab,");
+            keys.Append("Space");
+
+            await _computerUse.ExecuteAsync(
+                $"{{\"action\":\"type\",\"keys\":\"{keys}\"}}", ct);
+
+            await Task.Delay(200, ct);
+        }
+
+        await Task.Delay(delayMs, ct);
+
+        lock (_lock)
+        {
+            _records.Add(new ExamRecord
+            {
+                QuestionNumber = questionNumber,
+                Type = "multi_choice",
+                Answer = answers,
+                Timestamp = DateTime.Now
+            });
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine("多选题作答");
+        sb.AppendLine($"答案：{answers}");
+        sb.AppendLine($"题目序号：{questionNumber}");
+        sb.AppendLine($"已选中 {selectedOptions.Count} 个选项");
+
+        return new ToolResult { Name = Name, Success = true, Content = sb.ToString() };
     }
 
     #endregion

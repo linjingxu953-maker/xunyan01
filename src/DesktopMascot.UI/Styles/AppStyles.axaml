@@ -432,6 +432,30 @@
         <Setter Property="FontSize" Value="11"/>
     </Style>
 
+    <Style Selector="Border.screenContextScreenshotRow">
+        <Setter Property="Background" Value="#1D0F172A"/>
+        <Setter Property="BorderBrush" Value="#3A93C5FD"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="8,6"/>
+    </Style>
+
+    <Style Selector="Button.screenContextEvidenceButton">
+        <Setter Property="Background" Value="#243B82F6"/>
+        <Setter Property="BorderBrush" Value="#5093C5FD"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="7"/>
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="Foreground" Value="#EFF6FF"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="Button.screenContextEvidenceButton:pointerover">
+        <Setter Property="Background" Value="#334F9BFF"/>
+        <Setter Property="BorderBrush" Value="#8093C5FD"/>
+    </Style>
+
     <Style Selector="Button.screenContextActionButton">
         <Setter Property="Background" Value="#263B82F6"/>
         <Setter Property="BorderBrush" Value="#4A93C5FD"/>

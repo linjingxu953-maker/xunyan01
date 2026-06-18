@@ -19,4 +19,14 @@ public partial class TaskDetailPanel : UserControl
 
         e.Handled = true;
     }
+
+    private void UseScreenScreenshotEvidence_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is FloatingWindowViewModel viewModel)
+        {
+            viewModel.UseScreenScreenshotEvidence();
+        }
+
+        e.Handled = true;
+    }
 }

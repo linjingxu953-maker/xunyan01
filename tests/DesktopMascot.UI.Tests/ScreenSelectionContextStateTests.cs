@@ -208,4 +208,58 @@ public sealed class ScreenSelectionContextStateTests
                 Assert.Equal("C:\\tmp\\screen-area.png", item.Value);
             });
     }
+
+    [Fact]
+    public void WithResult_ExtractsScreenshotEvidenceFromScreenUnderstandJson()
+    {
+        var state = ScreenSelectionContextState.From(new ScreenSelectionResult
+        {
+            X = 12,
+            Y = 24,
+            Width = 320,
+            Height = 180,
+            IsConfirmed = true
+        });
+
+        var updated = state.WithResult(
+            success: true,
+            content: """
+            {
+              "identification": "这是一个表格区域",
+              "imagePath": "C:\\tmp\\screen-area.png"
+            }
+            """,
+            error: null);
+
+        Assert.True(updated.HasScreenshotEvidence);
+        Assert.Equal("C:\\tmp\\screen-area.png", updated.ScreenshotPath);
+        Assert.Equal("screen-area.png", updated.ScreenshotFileName);
+    }
+
+    [Fact]
+    public void WithStatus_PreservesScreenshotEvidence()
+    {
+        var state = ScreenSelectionContextState.From(new ScreenSelectionResult
+        {
+            X = 12,
+            Y = 24,
+            Width = 320,
+            Height = 180,
+            IsConfirmed = true
+        }).WithResult(
+            success: true,
+            content: """
+            {
+              "identification": "这是一个表格区域",
+              "screenshotPath": "C:\\tmp\\screen-area.png"
+            }
+            """,
+            error: null);
+
+        var updated = state.WithStatus("等待后续操作");
+
+        Assert.True(updated.HasScreenshotEvidence);
+        Assert.Equal("C:\\tmp\\screen-area.png", updated.ScreenshotPath);
+        Assert.Equal("screen-area.png", updated.ScreenshotFileName);
+    }
 }
