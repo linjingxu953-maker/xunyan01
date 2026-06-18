@@ -67,10 +67,10 @@ public class NetworkRequestTool : ITool
             var proxyUrl = root.TryGetProperty("proxy", out var pEl) ? pEl.GetString() : null;
             var responseMaxChars = root.TryGetProperty("response_max_chars", out var rmEl) ? rmEl.GetInt32() : 5000;
 
-            // 构建 handler
-            var handler = BuildHandler(followRedirects, proxyUrl);
+            // 构建 handler。测试或上层可注入 handler，避免真实网络依赖。
+            var handler = _handler ?? BuildHandler(followRedirects, proxyUrl);
 
-            using var client = new HttpClient(handler)
+            using var client = new HttpClient(handler, disposeHandler: _handler is null)
             {
                 Timeout = TimeSpan.FromSeconds(Math.Min(timeout, 300))
             };
