@@ -1,3 +1,4 @@
+using DesktopMascot.Core.Character;
 using DesktopMascot.Core.Configuration;
 using DesktopMascot.Core.Logging;
 using DesktopMascot.Core.Memory;
@@ -66,13 +67,16 @@ public class ApplicationCoordinator : IAsyncDisposable
             // 6. 初始化工具注册表
             await InitializeToolsAsync(ct);
 
-            // 7. 初始化工作流引擎
+            // 7. 初始化角色管理
+            await InitializeCharactersAsync(ct);
+
+            // 8. 初始化工作流引擎
             await InitializeWorkflowAsync(ct);
 
-            // 8. 初始化调度器
+            // 9. 初始化调度器
             await InitializeSchedulerAsync(ct);
 
-            // 9. 初始化插件
+            // 10. 初始化插件
             await InitializePluginsAsync(ct);
 
             _isInitialized = true;
@@ -161,6 +165,58 @@ public class ApplicationCoordinator : IAsyncDisposable
         var toolRegistry = _services.GetRequiredService<Core.Tools.IToolRegistry>();
         var tools = toolRegistry.GetAllDefinitions().ToList();
         _logger.Debug($"工具注册表初始化完成，共 {tools.Count} 个工具");
+        await Task.CompletedTask;
+    }
+
+    private async Task InitializeCharactersAsync(CancellationToken ct)
+    {
+        _logger.Debug("初始化角色管理");
+        var characterManager = _services.GetRequiredService<ICharacterManager>();
+
+        // 扫描默认角色目录
+        var dataDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "DesktopMascot", "characters");
+
+        if (Directory.Exists(dataDir))
+        {
+            var dirs = Directory.GetDirectories(dataDir);
+            var loadedCount = 0;
+
+            foreach (var dir in dirs)
+            {
+                ct.ThrowIfCancellationRequested();
+                try
+                {
+                    var result = characterManager.Load(dir);
+                    if (result.Success)
+                        loadedCount++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.Warning($"加载角色 {Path.GetFileName(dir)} 失败: {ex.Message}");
+                }
+            }
+
+            _logger.Debug($"角色初始化完成，加载 {loadedCount} 个角色");
+        }
+        else
+        {
+            Directory.CreateDirectory(dataDir);
+            _logger.Debug("角色目录不存在，已创建默认目录");
+        }
+
+        // 如果有已加载角色，记录当前角色
+        if (characterManager.IsReady)
+        {
+            var current = characterManager.Current!;
+            _logger.Debug($"当前角色：{current.Name}（{current.Slug}）");
+        }
+        else
+        {
+            _logger.Debug("暂无已加载角色");
+        }
+
         await Task.CompletedTask;
     }
 
