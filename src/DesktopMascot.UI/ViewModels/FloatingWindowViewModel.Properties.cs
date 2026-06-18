@@ -41,6 +41,9 @@ public partial class FloatingWindowViewModel
     [ObservableProperty] private string _taskSummary = "暂无任务";
     [ObservableProperty] private string _activeStepText = "等待任务";
     [ObservableProperty] private string _taskProgressText = "0%";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasScreenSelectionContext))]
+    private ScreenSelectionContextState _screenSelectionContext = ScreenSelectionContextState.Empty;
 
     // ── 任务结果 ──
     [ObservableProperty]
@@ -166,6 +169,7 @@ public partial class FloatingWindowViewModel
     public bool HasNoMessages => !HasMessages;
     public bool HasTaskHistory => TaskHistory.Count > 0;
     public bool HasNoTaskHistory => !HasTaskHistory;
+    public bool HasScreenSelectionContext => ScreenSelectionContext.HasRegion;
     public bool CanUseTaskResultActions => HasTaskResult && !IsBusy;
     public string VoiceInputButtonText => IsVoiceRecording ? "结束录音" : "麦克风";
     public string VoiceReplyButtonText => IsVoiceReplyPlaying ? "停止朗读" : "朗读待命";

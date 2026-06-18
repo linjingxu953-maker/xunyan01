@@ -19,6 +19,40 @@
                        Classes="bodyText"
                        MaxLines="3"/>
 
+            <Border Classes="screenSelectionContextCard"
+                    IsVisible="{Binding HasScreenSelectionContext}">
+                <Grid ColumnDefinitions="*,Auto"
+                      RowDefinitions="Auto,Auto">
+                    <StackPanel Grid.Row="0"
+                                Grid.Column="0"
+                                Spacing="3">
+                        <TextBlock Text="{Binding ScreenSelectionContext.Title}"
+                                   Classes="screenContextTitle"/>
+                        <TextBlock Text="{Binding ScreenSelectionContext.DetailText}"
+                                   Classes="screenContextBody"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <Border Grid.Row="0"
+                            Grid.Column="1"
+                            Classes="screenContextBadge"
+                            VerticalAlignment="Top">
+                        <TextBlock Text="{Binding ScreenSelectionContext.StatusText}"
+                                   Classes="screenContextBadgeText"/>
+                    </Border>
+                    <Grid Grid.Row="1"
+                          Grid.ColumnSpan="2"
+                          ColumnDefinitions="*,Auto"
+                          Margin="0,10,0,0">
+                        <TextBlock Text="{Binding ScreenSelectionContext.RegionText}"
+                                   Classes="screenContextMeta"/>
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding ScreenSelectionContext.SizeText}"
+                                   Classes="screenContextMeta"
+                                   HorizontalAlignment="Right"/>
+                    </Grid>
+                </Grid>
+            </Border>
+
             <Grid ColumnDefinitions="*,Auto">
                 <StackPanel>
                     <TextBlock Text="当前步骤"

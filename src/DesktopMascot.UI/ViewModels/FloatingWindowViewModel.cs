@@ -70,6 +70,8 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         IsTaskActive = true; IsBusy = false; CanCancelTask = false; HasTaskDetails = true; HasTaskResult = false;
         TaskResultPreview = "任务完成后会在这里显示结果。"; TaskResultStatusText = "执行中"; TaskActionStatus = "任务已创建。";
         CanRetryTask = false; TaskTimeline.Clear(); TaskToolCalls.Clear(); HasToolCallRecords = false;
+        if (task.Type != TaskType.ScreenUnderstand && !task.Parameters.ContainsKey("Region"))
+            ScreenSelectionContext = ScreenSelectionContextState.Empty;
         ResetComputerUsePanel(IsComputerUseTask(task, typeText, userMessage));
         if (IsComputerUsePanelVisible)
             AddComputerUseActionRecord("任务接收", ResolveComputerUseTarget(task, userMessage), "已创建", userMessage, DateTime.UtcNow);
@@ -240,6 +242,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     public async Task AnalyzeSelectedScreenRegionAsync(ScreenSelectionResult result)
     {
         if (!result.HasRegion) return;
+        ScreenSelectionContext = ScreenSelectionContextState.From(result, "等待视觉理解");
         var userMessage = $"请分析我圈选的屏幕区域 {result.Summary}";
         Messages.Add($"你：{userMessage}");
         var task = new AgentTask { Title = "屏幕区域理解", Input = userMessage, Type = TaskType.ScreenUnderstand, RequiredPermission = PermissionLevel.L2_ScreenBrowser, Parameters = { ["Region"] = new { region = new { x = result.X, y = result.Y, width = result.Width, height = result.Height } }, ["UserHint"] = "用户圈选的屏幕区域" } };
