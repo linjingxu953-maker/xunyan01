@@ -241,6 +241,17 @@ public partial class FloatingWindow : Window
         }
     }
 
+    private void UseScreenSuggestedAction_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: ScreenContextActionItem action })
+        {
+            _viewModel?.UseScreenSuggestedAction(action);
+            FocusInput();
+        }
+
+        e.Handled = true;
+    }
+
     private void InlineCharacterAssetDropZone_DragOver(object? sender, DragEventArgs e)
     {
         CharacterAssetDropHelper.SetDragEffect(e);

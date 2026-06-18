@@ -241,6 +241,20 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         VoiceReplyStatus =
             $"准备使用 {InlineSettings.TtsVoice} 朗读：{CleanText(content, "当前消息", 60)}。TTS 服务接入后播放。";
     }
+
+    public void UseScreenSuggestedAction(ScreenContextActionItem? action)
+    {
+        if (action is null)
+            return;
+
+        InputText = action.PromptText;
+        IsChatVisible = true;
+        IsChatPageVisible = true;
+        IsSettingsPageVisible = false;
+        TaskActionStatus = $"已填入建议动作：{action.Title}";
+        StatusMessage = "检查输入内容后可直接发送。";
+    }
+
     public void RequestScreenSelection() { if (!CanStartScreenSelection) return; StatusMessage = "拖动鼠标圈选要理解的屏幕区域。"; ScreenSelectionRequested?.Invoke(this, EventArgs.Empty); }
 
     public async Task AnalyzeSelectedScreenRegionAsync(ScreenSelectionResult result)

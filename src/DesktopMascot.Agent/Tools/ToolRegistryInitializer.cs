@@ -114,6 +114,17 @@ public static class ToolRegistryInitializer
         {
             registry.Register(new CharacterMarketTool(marketStore, characterManager));
         }
+
+        // 网课辅助和考试模式工具（需要 screen_understand + computer_use + browser_context）
+        var screenTool = registry.GetTool("screen_understand");
+        var computerTool = registry.GetTool("computer_use");
+        var browserTool = registry.GetTool("browser_context");
+        if (screenTool != null && computerTool != null)
+        {
+            registry.Register(new CourseAssistTool(screenTool, computerTool));
+            if (browserTool != null)
+                registry.Register(new ExamModeTool(screenTool, computerTool, browserTool));
+        }
     }
 
     /// <summary>

@@ -409,6 +409,54 @@
         <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
 
+    <Style Selector="Expander.screenContextDetailsExpander">
+        <Setter Property="Foreground" Value="#BFDBFE"/>
+    </Style>
+
+    <Style Selector="Border.screenContextDetailRow">
+        <Setter Property="Background" Value="#142563EB"/>
+        <Setter Property="BorderBrush" Value="#243B82F6"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="7"/>
+        <Setter Property="Padding" Value="8,6"/>
+    </Style>
+
+    <Style Selector="TextBlock.screenContextDetailLabel">
+        <Setter Property="Foreground" Value="#93C5FD"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="TextBlock.screenContextDetailValue">
+        <Setter Property="Foreground" Value="#E2E8F0"/>
+        <Setter Property="FontSize" Value="11"/>
+    </Style>
+
+    <Style Selector="Button.screenContextActionButton">
+        <Setter Property="Background" Value="#263B82F6"/>
+        <Setter Property="BorderBrush" Value="#4A93C5FD"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="9,5"/>
+        <Setter Property="MinHeight" Value="34"/>
+    </Style>
+
+    <Style Selector="Button.screenContextActionButton:pointerover">
+        <Setter Property="Background" Value="#334F9BFF"/>
+        <Setter Property="BorderBrush" Value="#8093C5FD"/>
+    </Style>
+
+    <Style Selector="TextBlock.screenContextActionTitle">
+        <Setter Property="Foreground" Value="#EFF6FF"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="TextBlock.screenContextActionMeta">
+        <Setter Property="Foreground" Value="#93C5FD"/>
+        <Setter Property="FontSize" Value="9"/>
+    </Style>
+
     <Style Selector="TextBlock.emptyChatTitle">
         <Setter Property="Foreground" Value="#F8FAFC"/>
         <Setter Property="FontSize" Value="15"/>

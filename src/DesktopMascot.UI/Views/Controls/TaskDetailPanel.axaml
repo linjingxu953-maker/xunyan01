@@ -22,7 +22,7 @@
             <Border Classes="screenSelectionContextCard"
                     IsVisible="{Binding HasScreenSelectionContext}">
                 <Grid ColumnDefinitions="*,Auto"
-                      RowDefinitions="Auto,Auto">
+                      RowDefinitions="Auto,Auto,Auto,Auto">
                     <StackPanel Grid.Row="0"
                                 Grid.Column="0"
                                 Spacing="3">
@@ -50,6 +50,62 @@
                                    Classes="screenContextMeta"
                                    HorizontalAlignment="Right"/>
                     </Grid>
+                    <Expander Grid.Row="2"
+                              Grid.ColumnSpan="2"
+                              Classes="screenContextDetailsExpander"
+                              IsVisible="{Binding ScreenSelectionContext.HasDetailItems}"
+                              Margin="0,10,0,0">
+                        <Expander.Header>
+                            <TextBlock Text="查看识别详情"
+                                       Classes="screenContextMeta"/>
+                        </Expander.Header>
+                        <ItemsControl ItemsSource="{Binding ScreenSelectionContext.DetailItems}"
+                                      Margin="0,8,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ScreenContextDetailItem">
+                                    <Border Classes="screenContextDetailRow"
+                                            Margin="0,0,0,6">
+                                        <Grid ColumnDefinitions="74,*"
+                                              ColumnSpacing="8">
+                                            <TextBlock Text="{Binding Label}"
+                                                       Classes="screenContextDetailLabel"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Value}"
+                                                       Classes="screenContextDetailValue"
+                                                       TextWrapping="Wrap"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Expander>
+                    <ItemsControl Grid.Row="3"
+                                  Grid.ColumnSpan="2"
+                                  ItemsSource="{Binding ScreenSelectionContext.SuggestedActions}"
+                                  IsVisible="{Binding ScreenSelectionContext.HasSuggestedActions}"
+                                  Margin="0,10,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ScreenContextActionItem">
+                                <Button Classes="screenContextActionButton"
+                                        Tag="{Binding}"
+                                        Click="UseScreenSuggestedAction_Click"
+                                        ToolTip.Tip="{Binding PromptText}"
+                                        Margin="0,0,8,8">
+                                    <StackPanel Spacing="1">
+                                        <TextBlock Text="{Binding Title}"
+                                                   Classes="screenContextActionTitle"/>
+                                        <TextBlock Text="{Binding KindText}"
+                                                   Classes="screenContextActionMeta"/>
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </Grid>
             </Border>
 
