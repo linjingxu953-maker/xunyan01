@@ -56,6 +56,11 @@
                            Foreground="#D1D5DB"
                            FontSize="12"
                            HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding SelectionRegionSummary}"
+                           IsVisible="{Binding HasSelectionRegionSummary}"
+                           Foreground="#93C5FD"
+                           FontSize="11"
+                           HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>
     </Grid>

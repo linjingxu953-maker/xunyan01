@@ -23,9 +23,11 @@ public sealed partial class ScreenSelectionViewModel : ObservableObject
 
     [ObservableProperty] private string _selectionText = "拖动鼠标圈选要理解的屏幕区域";
     [ObservableProperty] private string _selectionHint = "按 Esc 取消，松开鼠标确认";
+    [ObservableProperty] private string _selectionRegionSummary = "区域至少需要 12 x 12";
 
     public bool HasNoSelection => !HasSelection;
     public bool HasValidSelection => SelectionWidth >= 12 && SelectionHeight >= 12;
+    public bool HasSelectionRegionSummary => HasValidSelection;
 
     public void SetScreenTransform(PixelRect screenBounds, double screenScaling)
     {
@@ -80,6 +82,7 @@ public sealed partial class ScreenSelectionViewModel : ObservableObject
         SelectionHeight = 0;
         SelectionText = "拖动鼠标圈选要理解的屏幕区域";
         SelectionHint = "按 Esc 取消，松开鼠标确认";
+        SelectionRegionSummary = "区域至少需要 12 x 12";
     }
 
     private void UpdateSelection()
@@ -99,15 +102,38 @@ public sealed partial class ScreenSelectionViewModel : ObservableObject
         SelectionHint = HasValidSelection
             ? "松开鼠标确认，按 Esc 取消"
             : "区域至少需要 12 x 12";
+        SelectionRegionSummary = HasValidSelection
+            ? BuildRegionSummary()
+            : "区域至少需要 12 x 12";
         OnPropertyChanged(nameof(HasValidSelection));
+        OnPropertyChanged(nameof(HasSelectionRegionSummary));
     }
 
-    private ScreenSelectionResult CreateResult(bool isConfirmed) => new()
+    private string BuildRegionSummary()
     {
-        X = _screenBounds.X + (int)Math.Round(SelectionX * _screenScaling),
-        Y = _screenBounds.Y + (int)Math.Round(SelectionY * _screenScaling),
-        Width = Math.Max(1, (int)Math.Round(SelectionWidth * _screenScaling)),
-        Height = Math.Max(1, (int)Math.Round(SelectionHeight * _screenScaling)),
-        IsConfirmed = isConfirmed
-    };
+        var (x, y, width, height) = GetPhysicalRegion();
+        return $"屏幕坐标 {x}, {y} · {width} x {height}";
+    }
+
+    private (int X, int Y, int Width, int Height) GetPhysicalRegion()
+    {
+        var x = _screenBounds.X + (int)Math.Round(SelectionX * _screenScaling);
+        var y = _screenBounds.Y + (int)Math.Round(SelectionY * _screenScaling);
+        var width = Math.Max(1, (int)Math.Round(SelectionWidth * _screenScaling));
+        var height = Math.Max(1, (int)Math.Round(SelectionHeight * _screenScaling));
+        return (x, y, width, height);
+    }
+
+    private ScreenSelectionResult CreateResult(bool isConfirmed)
+    {
+        var (x, y, width, height) = GetPhysicalRegion();
+        return new ScreenSelectionResult
+        {
+            X = x,
+            Y = y,
+            Width = width,
+            Height = height,
+            IsConfirmed = isConfirmed
+        };
+    }
 }
