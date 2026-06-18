@@ -268,6 +268,30 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         StatusMessage = "检查输入内容后可直接发送。";
     }
 
+    public void ToggleScreenScreenshotPreview()
+    {
+        if (!ScreenScreenshotPreview.CanTogglePreview)
+        {
+            IsScreenScreenshotPreviewExpanded = false;
+            TaskActionStatus = "当前截图文件不可预览，只能引用路径。";
+            return;
+        }
+
+        IsScreenScreenshotPreviewExpanded = !IsScreenScreenshotPreviewExpanded;
+        TaskActionStatus = IsScreenScreenshotPreviewExpanded
+            ? $"已展开截图预览：{ScreenSelectionContext.ScreenshotFileName}"
+            : "已收起截图预览。";
+    }
+
+    public async Task CopyScreenScreenshotPathAsync()
+    {
+        if (!ScreenScreenshotPreview.CanCopyPath)
+            return;
+
+        var copied = await _taskResultActionService.CopyToClipboardAsync(ScreenSelectionContext.ScreenshotPath);
+        TaskActionStatus = copied ? "截图路径已复制到剪贴板。" : "复制失败：当前没有可用剪贴板。";
+    }
+
     public void RequestScreenSelection() { if (!CanStartScreenSelection) return; StatusMessage = "拖动鼠标圈选要理解的屏幕区域。"; ScreenSelectionRequested?.Invoke(this, EventArgs.Empty); }
 
     public async Task AnalyzeSelectedScreenRegionAsync(ScreenSelectionResult result)

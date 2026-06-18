@@ -40,6 +40,11 @@ public partial class FloatingWindowViewModel
     partial void OnIsChatVisibleChanged(bool value) => IsMainAreaHitTestVisible = !value;
     partial void OnInputTextChanged(string value) => SendMessageCommand.NotifyCanExecuteChanged();
     partial void OnCurrentStateChanged(MascotState value) { StateAccentBrush = GetAccentBrush(value); MascotBackgroundBrush = GetMascotBackgroundBrush(value); RefreshCharacterImage(); }
+    partial void OnScreenSelectionContextChanged(ScreenSelectionContextState value)
+    {
+        if (!value.HasScreenshotPreview)
+            IsScreenScreenshotPreviewExpanded = false;
+    }
 
     partial void OnIsBusyChanged(bool value)
     {

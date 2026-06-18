@@ -238,7 +238,9 @@
                                                 ToolTip.Tip="{Binding ScreenSelectionContext.ScreenshotPath}"
                                                 Margin="0,10,0,0">
                                             <Grid ColumnDefinitions="Auto,*,Auto"
-                                                  ColumnSpacing="10">
+                                                  RowDefinitions="Auto,Auto"
+                                                  ColumnSpacing="10"
+                                                  RowSpacing="8">
                                                 <Border Classes="screenContextPreviewFrame"
                                                         IsVisible="{Binding ScreenSelectionContext.HasScreenshotPreview}">
                                                     <Image Source="{Binding ScreenSelectionContext.ScreenshotPath, Converter={StaticResource ScreenshotPreviewConverter}}"
@@ -255,12 +257,32 @@
                                                                Classes="screenContextDetailValue"
                                                                TextTrimming="CharacterEllipsis"/>
                                                 </StackPanel>
-                                                <Button Grid.Column="2"
-                                                        Classes="screenContextEvidenceButton"
-                                                        VerticalAlignment="Center"
-                                                        Click="UseScreenScreenshotEvidence_Click">
-                                                    引用截图
-                                                </Button>
+                                                <StackPanel Grid.Column="2"
+                                                            Orientation="Horizontal"
+                                                            Spacing="6"
+                                                            VerticalAlignment="Center">
+                                                    <Button Classes="screenContextEvidenceButton"
+                                                            Content="{Binding ScreenScreenshotPreview.ToggleText}"
+                                                            IsEnabled="{Binding ScreenScreenshotPreview.CanTogglePreview}"
+                                                            Click="ToggleScreenScreenshotPreview_Click"/>
+                                                    <Button Classes="screenContextEvidenceButton"
+                                                            IsEnabled="{Binding ScreenScreenshotPreview.CanCopyPath}"
+                                                            Click="CopyScreenScreenshotPath_Click">
+                                                        复制路径
+                                                    </Button>
+                                                    <Button Classes="screenContextEvidenceButton"
+                                                            Click="UseScreenScreenshotEvidence_Click">
+                                                        引用截图
+                                                    </Button>
+                                                </StackPanel>
+                                                <Border Grid.Row="1"
+                                                        Grid.ColumnSpan="3"
+                                                        Classes="screenContextExpandedPreviewFrame"
+                                                        IsVisible="{Binding ScreenScreenshotPreview.ShowExpandedPreview}">
+                                                    <Image Source="{Binding ScreenSelectionContext.ScreenshotPath, Converter={StaticResource ScreenshotPreviewConverter}}"
+                                                           MaxHeight="220"
+                                                           Stretch="Uniform"/>
+                                                </Border>
                                             </Grid>
                                         </Border>
                                         <Expander Grid.Row="3"

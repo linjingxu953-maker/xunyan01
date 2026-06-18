@@ -29,4 +29,24 @@ public partial class TaskDetailPanel : UserControl
 
         e.Handled = true;
     }
+
+    private void ToggleScreenScreenshotPreview_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is FloatingWindowViewModel viewModel)
+        {
+            viewModel.ToggleScreenScreenshotPreview();
+        }
+
+        e.Handled = true;
+    }
+
+    private async void CopyScreenScreenshotPath_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is FloatingWindowViewModel viewModel)
+        {
+            await viewModel.CopyScreenScreenshotPathAsync();
+        }
+
+        e.Handled = true;
+    }
 }

@@ -453,6 +453,17 @@
         <Setter Property="ClipToBounds" Value="True"/>
     </Style>
 
+    <Style Selector="Border.screenContextExpandedPreviewFrame">
+        <Setter Property="MinHeight" Value="120"/>
+        <Setter Property="MaxHeight" Value="240"/>
+        <Setter Property="Background" Value="#26000000"/>
+        <Setter Property="BorderBrush" Value="#4460A5FA"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="8"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+    </Style>
+
     <Style Selector="Button.screenContextEvidenceButton">
         <Setter Property="Background" Value="#243B82F6"/>
         <Setter Property="BorderBrush" Value="#5093C5FD"/>

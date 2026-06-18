@@ -259,6 +259,22 @@ public partial class FloatingWindow : Window
         e.Handled = true;
     }
 
+    private void ToggleScreenScreenshotPreview_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        _viewModel?.ToggleScreenScreenshotPreview();
+        e.Handled = true;
+    }
+
+    private async void CopyScreenScreenshotPath_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (_viewModel is not null)
+        {
+            await _viewModel.CopyScreenScreenshotPathAsync();
+        }
+
+        e.Handled = true;
+    }
+
     private void InlineCharacterAssetDropZone_DragOver(object? sender, DragEventArgs e)
     {
         CharacterAssetDropHelper.SetDragEffect(e);
