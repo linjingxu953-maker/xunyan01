@@ -238,17 +238,26 @@
                                                 ToolTip.Tip="{Binding ScreenSelectionContext.ScreenshotPath}"
                                                 Margin="0,10,0,0">
                                             <Grid ColumnDefinitions="Auto,*,Auto"
-                                                  ColumnSpacing="8">
-                                                <TextBlock Text="截图证据"
-                                                           Classes="screenContextDetailLabel"
-                                                           VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="1"
-                                                           Text="{Binding ScreenSelectionContext.ScreenshotFileName}"
-                                                           Classes="screenContextDetailValue"
-                                                           VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis"/>
+                                                  ColumnSpacing="10">
+                                                <Border Classes="screenContextPreviewFrame"
+                                                        IsVisible="{Binding ScreenSelectionContext.HasScreenshotPreview}">
+                                                    <Image Source="{Binding ScreenSelectionContext.ScreenshotPath, Converter={StaticResource ScreenshotPreviewConverter}}"
+                                                           Width="96"
+                                                           Height="58"
+                                                           Stretch="UniformToFill"/>
+                                                </Border>
+                                                <StackPanel Grid.Column="1"
+                                                            Spacing="2"
+                                                            VerticalAlignment="Center">
+                                                    <TextBlock Text="截图证据"
+                                                               Classes="screenContextDetailLabel"/>
+                                                    <TextBlock Text="{Binding ScreenSelectionContext.ScreenshotFileName}"
+                                                               Classes="screenContextDetailValue"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
                                                 <Button Grid.Column="2"
                                                         Classes="screenContextEvidenceButton"
+                                                        VerticalAlignment="Center"
                                                         Click="UseScreenScreenshotEvidence_Click">
                                                     引用截图
                                                 </Button>

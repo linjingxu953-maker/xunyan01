@@ -262,4 +262,40 @@ public sealed class ScreenSelectionContextStateTests
         Assert.Equal("C:\\tmp\\screen-area.png", updated.ScreenshotPath);
         Assert.Equal("screen-area.png", updated.ScreenshotFileName);
     }
+
+    [Fact]
+    public void WithResult_MarksScreenshotPreviewOnlyWhenFileExists()
+    {
+        var screenshotPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+        File.WriteAllBytes(screenshotPath, [137, 80, 78, 71]);
+
+        try
+        {
+            var state = ScreenSelectionContextState.From(new ScreenSelectionResult
+            {
+                X = 12,
+                Y = 24,
+                Width = 320,
+                Height = 180,
+                IsConfirmed = true
+            });
+
+            var updated = state.WithResult(
+                success: true,
+                content: $$"""
+                {
+                  "identification": "这是一个表格区域",
+                  "screenshotPath": "{{screenshotPath.Replace("\\", "\\\\")}}"
+                }
+                """,
+                error: null);
+
+            Assert.True(updated.HasScreenshotEvidence);
+            Assert.True(updated.HasScreenshotPreview);
+        }
+        finally
+        {
+            File.Delete(screenshotPath);
+        }
+    }
 }

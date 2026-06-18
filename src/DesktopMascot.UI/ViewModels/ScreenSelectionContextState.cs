@@ -50,6 +50,7 @@ public sealed class ScreenSelectionContextState
         ? string.Empty
         : Path.GetFileName(ScreenshotPath);
     public bool HasScreenshotEvidence => !string.IsNullOrWhiteSpace(ScreenshotPath);
+    public bool HasScreenshotPreview => HasScreenshotEvidence && File.Exists(ScreenshotPath);
     public IReadOnlyList<ScreenContextActionItem> SuggestedActions { get; }
     public bool HasSuggestedActions => SuggestedActions.Count > 0;
     public IReadOnlyList<ScreenContextDetailItem> DetailItems { get; }

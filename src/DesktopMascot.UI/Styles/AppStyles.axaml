@@ -1,7 +1,10 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:converters="using:DesktopMascot.UI.Converters">
 
     <Styles.Resources>
+        <converters:ScreenshotPreviewConverter x:Key="ScreenshotPreviewConverter"/>
+
         <SolidColorBrush x:Key="Brush.Surface.Window" Color="#EEFFFFFF"/>
         <SolidColorBrush x:Key="Brush.Surface.Panel" Color="#FFFFFFFF"/>
         <SolidColorBrush x:Key="Brush.Surface.Subtle" Color="#F9FAFB"/>
@@ -438,6 +441,16 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Padding" Value="8,6"/>
+    </Style>
+
+    <Style Selector="Border.screenContextPreviewFrame">
+        <Setter Property="Width" Value="96"/>
+        <Setter Property="Height" Value="58"/>
+        <Setter Property="Background" Value="#22000000"/>
+        <Setter Property="BorderBrush" Value="#4460A5FA"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="7"/>
+        <Setter Property="ClipToBounds" Value="True"/>
     </Style>
 
     <Style Selector="Button.screenContextEvidenceButton">
