@@ -14,6 +14,7 @@ public class DatabaseTool : ITool
 {
     private string _connectionString = "";
     private SQLiteConnection? _sharedConnection;
+    private SQLiteTransaction? _activeTransaction;
     private readonly object _lock = new();
 
     public string Name => "database";
@@ -75,6 +76,11 @@ public class DatabaseTool : ITool
         {
             return Fail($"数据库操作失败：{ex.Message}");
         }
+        finally
+        {
+            if (_activeTransaction is null)
+                DisposeSharedConnection();
+        }
     }
 
     #region 连接管理
@@ -87,6 +93,8 @@ public class DatabaseTool : ITool
         var dir = Path.GetDirectoryName(dbPath);
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
+        DisposeActiveTransaction();
+        DisposeSharedConnection();
         _connectionString = $"Data Source={dbPath}";
         return new ToolResult { Name = Name, Success = true, Content = $"已连接数据库：{dbPath}" };
     }
@@ -106,6 +114,30 @@ public class DatabaseTool : ITool
         }
     }
 
+    private SQLiteCommand CreateCommand(string sql, SQLiteConnection connection)
+    {
+        var command = new SQLiteCommand(sql, connection);
+        if (_activeTransaction is not null)
+            command.Transaction = _activeTransaction;
+
+        return command;
+    }
+
+    private void DisposeActiveTransaction()
+    {
+        _activeTransaction?.Dispose();
+        _activeTransaction = null;
+    }
+
+    private void DisposeSharedConnection()
+    {
+        lock (_lock)
+        {
+            _sharedConnection?.Dispose();
+            _sharedConnection = null;
+        }
+    }
+
     #endregion
 
     #region 查询
@@ -118,7 +150,7 @@ public class DatabaseTool : ITool
         var maxRows = root.TryGetProperty("max_rows", out var mrEl) ? mrEl.GetInt32() : 1000;
 
         var connection = GetConnection();
-        using var command = new SQLiteCommand(sql, connection);
+        using var command = CreateCommand(sql, connection);
         using var reader = await command.ExecuteReaderAsync(ct);
 
         var sb = new StringBuilder();
@@ -160,7 +192,7 @@ public class DatabaseTool : ITool
     private async Task<ToolResult> ListTablesAsync(CancellationToken ct)
     {
         var connection = GetConnection();
-        using var command = new SQLiteCommand(
+        using var command = CreateCommand(
             "SELECT name, type FROM sqlite_master WHERE type IN ('table', 'view') ORDER BY name", connection);
         using var reader = await command.ExecuteReaderAsync(ct);
 
@@ -183,7 +215,7 @@ public class DatabaseTool : ITool
         if (string.IsNullOrEmpty(table)) return Fail("缺少 table 参数");
 
         var connection = GetConnection();
-        using var command = new SQLiteCommand($"PRAGMA table_info(\"{table}\")", connection);
+        using var command = CreateCommand($"PRAGMA table_info(\"{table}\")", connection);
         using var reader = await command.ExecuteReaderAsync(ct);
 
         var sb = new StringBuilder();
@@ -213,7 +245,7 @@ public class DatabaseTool : ITool
 
         var connection = GetConnection();
         var sql = $"CREATE TABLE IF NOT EXISTS \"{table}\" ({columns})";
-        using var command = new SQLiteCommand(sql, connection);
+        using var command = CreateCommand(sql, connection);
         await command.ExecuteNonQueryAsync(ct);
 
         return new ToolResult { Name = Name, Success = true, Content = $"表 {table} 创建成功" };
@@ -225,7 +257,7 @@ public class DatabaseTool : ITool
         if (string.IsNullOrEmpty(table)) return Fail("缺少 table 参数");
 
         var connection = GetConnection();
-        using var command = new SQLiteCommand($"DROP TABLE IF EXISTS \"{table}\"", connection);
+        using var command = CreateCommand($"DROP TABLE IF EXISTS \"{table}\"", connection);
         await command.ExecuteNonQueryAsync(ct);
 
         return new ToolResult { Name = Name, Success = true, Content = $"表 {table} 已删除" };
@@ -255,7 +287,7 @@ public class DatabaseTool : ITool
             var paramNames = string.Join(", ", record.Keys.Select(k => $"@{k}"));
             var sql = $"INSERT INTO \"{table}\" ({columns}) VALUES ({paramNames})";
 
-            using var command = new SQLiteCommand(sql, connection);
+            using var command = CreateCommand(sql, connection);
             foreach (var kvp in record)
                 command.Parameters.AddWithValue($"@{kvp.Key}", kvp.Value.ToString());
 
@@ -283,7 +315,8 @@ public class DatabaseTool : ITool
         var paramStr = string.Join(", ", columns.Select(k => $"@{k}"));
         var sql = $"INSERT INTO \"{table}\" ({colStr}) VALUES ({paramStr})";
 
-        using var transaction = connection.BeginTransaction();
+        var transaction = _activeTransaction ?? connection.BeginTransaction();
+        var ownsTransaction = _activeTransaction is null;
         try
         {
             using var command = new SQLiteCommand(sql, connection, transaction);
@@ -297,15 +330,23 @@ public class DatabaseTool : ITool
                 await command.ExecuteNonQueryAsync(ct);
             }
 
-            transaction.Commit();
+            if (ownsTransaction)
+                transaction.Commit();
         }
         catch
         {
-            transaction.Rollback();
+            if (ownsTransaction)
+                transaction.Rollback();
             throw;
         }
+        finally
+        {
+            if (ownsTransaction)
+                transaction.Dispose();
+        }
 
-        return new ToolResult { Name = Name, Success = true, Content = $"批量插入 {records.Count} 条记录到 {table}（事务提交）" };
+        var transactionScope = ownsTransaction ? "事务提交" : "加入当前事务";
+        return new ToolResult { Name = Name, Success = true, Content = $"批量插入 {records.Count} 条记录到 {table}（{transactionScope}）" };
     }
 
     private async Task<ToolResult> ExecuteNonQueryAsync(JsonElement root, string operation, CancellationToken ct)
@@ -314,7 +355,7 @@ public class DatabaseTool : ITool
         if (string.IsNullOrEmpty(sql)) return Fail("缺少 sql 参数");
 
         var connection = GetConnection();
-        using var command = new SQLiteCommand(sql, connection);
+        using var command = CreateCommand(sql, connection);
         var affected = await command.ExecuteNonQueryAsync(ct);
 
         return new ToolResult { Name = Name, Success = true, Content = $"已{operation} {affected} 条记录" };
@@ -326,23 +367,35 @@ public class DatabaseTool : ITool
 
     private async Task<ToolResult> BeginTransactionAsync(CancellationToken ct)
     {
+        if (_activeTransaction is not null)
+            return Fail("事务已开始");
+
         var connection = GetConnection();
-        using var transaction = connection.BeginTransaction();
-        // 事务对象会在后续 query/update/delete 中使用
+        _activeTransaction = connection.BeginTransaction();
         await Task.CompletedTask;
         return new ToolResult { Name = Name, Success = true, Content = "事务已开始" };
     }
 
     private async Task<ToolResult> CommitAsync(CancellationToken ct)
     {
-        var connection = GetConnection();
+        if (_activeTransaction is null)
+            return Fail("没有正在进行的事务");
+
+        _activeTransaction.Commit();
+        DisposeActiveTransaction();
+        DisposeSharedConnection();
         await Task.CompletedTask;
         return new ToolResult { Name = Name, Success = true, Content = "事务已提交" };
     }
 
     private async Task<ToolResult> RollbackAsync(CancellationToken ct)
     {
-        var connection = GetConnection();
+        if (_activeTransaction is null)
+            return Fail("没有正在进行的事务");
+
+        _activeTransaction.Rollback();
+        DisposeActiveTransaction();
+        DisposeSharedConnection();
         await Task.CompletedTask;
         return new ToolResult { Name = Name, Success = true, Content = "事务已回滚" };
     }
@@ -362,7 +415,7 @@ public class DatabaseTool : ITool
         if (string.IsNullOrEmpty(exportPath)) return Fail("缺少 export_path 参数");
 
         var connection = GetConnection();
-        using var command = new SQLiteCommand($"SELECT * FROM \"{table}\" LIMIT {maxRows}", connection);
+        using var command = CreateCommand($"SELECT * FROM \"{table}\" LIMIT {maxRows}", connection);
         using var reader = await command.ExecuteReaderAsync(ct);
 
         var dir = Path.GetDirectoryName(exportPath);
@@ -424,7 +477,8 @@ public class DatabaseTool : ITool
             var records = JsonSerializer.Deserialize<List<Dictionary<string, JsonElement>>>(content);
             if (records == null || records.Count == 0) return Fail("JSON 文件为空或格式无效");
 
-            using var transaction = connection.BeginTransaction();
+            var transaction = _activeTransaction ?? connection.BeginTransaction();
+            var ownsTransaction = _activeTransaction is null;
             try
             {
                 var columns = records[0].Keys.ToList();
@@ -445,13 +499,20 @@ public class DatabaseTool : ITool
                     imported++;
                 }
 
-                transaction.Commit();
+                if (ownsTransaction)
+                    transaction.Commit();
                 return new ToolResult { Name = Name, Success = true, Content = $"从 JSON 导入 {imported} 条记录到 {table}" };
             }
             catch (Exception ex)
             {
-                transaction.Rollback();
+                if (ownsTransaction)
+                    transaction.Rollback();
                 return Fail($"导入失败（已回滚）：{ex.Message}");
+            }
+            finally
+            {
+                if (ownsTransaction)
+                    transaction.Dispose();
             }
         }
         else
@@ -461,7 +522,8 @@ public class DatabaseTool : ITool
             if (lines.Length < 2) return Fail("CSV 文件为空");
 
             var headers = ParseCsvLine(lines[0]);
-            using var transaction = connection.BeginTransaction();
+            var transaction = _activeTransaction ?? connection.BeginTransaction();
+            var ownsTransaction = _activeTransaction is null;
             try
             {
                 var colStr = string.Join(", ", headers.Select(h => $"\"{h}\""));
@@ -482,13 +544,20 @@ public class DatabaseTool : ITool
                     imported++;
                 }
 
-                transaction.Commit();
+                if (ownsTransaction)
+                    transaction.Commit();
                 return new ToolResult { Name = Name, Success = true, Content = $"从 CSV 导入 {imported} 条记录到 {table}" };
             }
             catch (Exception ex)
             {
-                transaction.Rollback();
+                if (ownsTransaction)
+                    transaction.Rollback();
                 return Fail($"导入失败（已回滚）：{ex.Message}");
+            }
+            finally
+            {
+                if (ownsTransaction)
+                    transaction.Dispose();
             }
         }
     }
@@ -500,7 +569,7 @@ public class DatabaseTool : ITool
     private async Task<ToolResult> ListIndexesAsync(CancellationToken ct)
     {
         var connection = GetConnection();
-        using var command = new SQLiteCommand(
+        using var command = CreateCommand(
             "SELECT name, tbl_name, sql FROM sqlite_master WHERE type='index' ORDER BY name", connection);
         using var reader = await command.ExecuteReaderAsync(ct);
 
@@ -532,7 +601,7 @@ public class DatabaseTool : ITool
 
         var connection = GetConnection();
         var sql = $"CREATE INDEX IF NOT EXISTS \"{indexName}\" ON \"{table}\" ({indexColumns})";
-        using var command = new SQLiteCommand(sql, connection);
+        using var command = CreateCommand(sql, connection);
         await command.ExecuteNonQueryAsync(ct);
 
         return new ToolResult { Name = Name, Success = true, Content = $"索引 {indexName} 创建成功" };
@@ -552,7 +621,7 @@ public class DatabaseTool : ITool
 
         // SQLite 热备：使用 VACUUM INTO 或直接文件复制
         var connection = GetConnection();
-        using var command = new SQLiteCommand($"VACUUM INTO '{backupPath.Replace("'", "''")}'", connection);
+        using var command = CreateCommand($"VACUUM INTO '{backupPath.Replace("'", "''")}'", connection);
         await command.ExecuteNonQueryAsync(ct);
 
         return new ToolResult { Name = Name, Success = true, Content = $"数据库已备份到 {backupPath}" };
@@ -568,19 +637,19 @@ public class DatabaseTool : ITool
         var sb = new StringBuilder();
         sb.AppendLine("数据库统计");
 
-        using (var cmd = new SQLiteCommand("SELECT COUNT(*) FROM sqlite_master WHERE type='table'", connection))
+        using (var cmd = CreateCommand("SELECT COUNT(*) FROM sqlite_master WHERE type='table'", connection))
         {
             var tableCount = Convert.ToInt32(await cmd.ExecuteScalarAsync(ct));
             sb.AppendLine($"表数量：{tableCount}");
         }
 
-        using (var cmd = new SQLiteCommand("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'", connection))
+        using (var cmd = CreateCommand("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'", connection))
         {
             using var reader = await cmd.ExecuteReaderAsync(ct);
             while (await reader.ReadAsync(ct))
             {
                 var tableName = reader.GetString(0);
-                using (var countCmd = new SQLiteCommand($"SELECT COUNT(*) FROM \"{tableName}\"", connection))
+                using (var countCmd = CreateCommand($"SELECT COUNT(*) FROM \"{tableName}\"", connection))
                 {
                     var count = Convert.ToInt32(await countCmd.ExecuteScalarAsync(ct));
                     sb.AppendLine($"  {tableName}：{count} 行");

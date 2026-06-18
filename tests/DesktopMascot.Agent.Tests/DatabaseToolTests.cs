@@ -100,6 +100,86 @@ public class DatabaseToolTests
     }
 
     [Fact]
+    public async Task Transaction_Commit_ShouldPersistChanges()
+    {
+        var tool = new DatabaseTool();
+        var dbPath = GetTestDbPath();
+
+        try
+        {
+            SQLiteConnection.CreateFile(dbPath);
+            await tool.ExecuteAsync(JsonSerializer.Serialize(new { action = "connect", db_path = dbPath }));
+            await tool.ExecuteAsync(JsonSerializer.Serialize(new
+            {
+                action = "create_table",
+                table = "items",
+                columns = "id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT"
+            }));
+
+            var begin = await tool.ExecuteAsync(JsonSerializer.Serialize(new { action = "begin_transaction" }));
+            var insert = await tool.ExecuteAsync(JsonSerializer.Serialize(new
+            {
+                action = "insert",
+                table = "items",
+                data = JsonSerializer.Serialize(new[] { new { name = "commit-test" } })
+            }));
+            var commit = await tool.ExecuteAsync(JsonSerializer.Serialize(new { action = "commit" }));
+            var query = await tool.ExecuteAsync(JsonSerializer.Serialize(new { action = "query", sql = "SELECT COUNT(*) as total FROM items" }));
+
+            Assert.True(begin.Success);
+            Assert.True(insert.Success);
+            Assert.True(commit.Success);
+            Assert.True(query.Success);
+            Assert.Contains("total", query.Content);
+            Assert.Contains("1", query.Content);
+        }
+        finally
+        {
+            Cleanup();
+        }
+    }
+
+    [Fact]
+    public async Task Transaction_Rollback_ShouldDiscardChanges()
+    {
+        var tool = new DatabaseTool();
+        var dbPath = GetTestDbPath();
+
+        try
+        {
+            SQLiteConnection.CreateFile(dbPath);
+            await tool.ExecuteAsync(JsonSerializer.Serialize(new { action = "connect", db_path = dbPath }));
+            await tool.ExecuteAsync(JsonSerializer.Serialize(new
+            {
+                action = "create_table",
+                table = "items",
+                columns = "id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT"
+            }));
+
+            var begin = await tool.ExecuteAsync(JsonSerializer.Serialize(new { action = "begin_transaction" }));
+            var insert = await tool.ExecuteAsync(JsonSerializer.Serialize(new
+            {
+                action = "insert",
+                table = "items",
+                data = JsonSerializer.Serialize(new[] { new { name = "rollback-test" } })
+            }));
+            var rollback = await tool.ExecuteAsync(JsonSerializer.Serialize(new { action = "rollback" }));
+            var query = await tool.ExecuteAsync(JsonSerializer.Serialize(new { action = "query", sql = "SELECT COUNT(*) as total FROM items" }));
+
+            Assert.True(begin.Success);
+            Assert.True(insert.Success);
+            Assert.True(rollback.Success);
+            Assert.True(query.Success);
+            Assert.Contains("total", query.Content);
+            Assert.Contains("0", query.Content);
+        }
+        finally
+        {
+            Cleanup();
+        }
+    }
+
+    [Fact]
     public void DatabaseTool_Metadata_ShouldBeCorrect()
     {
         var tool = new DatabaseTool();
