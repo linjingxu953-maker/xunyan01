@@ -1,4 +1,5 @@
 using DesktopMascot.Core.Tools;
+using System.Diagnostics;
 using System.Text.Json;
 using DesktopMascot.Agent.Models;
 using DesktopMascot.Agent.Providers;
@@ -104,6 +105,9 @@ public class TextToSpeechTool : ITool
                 };
             }
 
+            // 自动播放生成的音频
+            PlayAudioFile(result.AudioFilePath);
+
             return new ToolResult
             {
                 Name = Name,
@@ -119,6 +123,38 @@ public class TextToSpeechTool : ITool
                 Success = false,
                 Error = $"文本转语音失败: {ex.Message}"
             };
+        }
+    }
+
+    private static void PlayAudioFile(string? filePath)
+    {
+        if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return;
+
+        try
+        {
+            // 使用 PowerShell MediaPlayer 播放音频（后台静默播放）
+            var psScript = $@"
+                Add-Type -AssemblyName PresentationCore
+                $player = New-Object System.Windows.Media.MediaPlayer
+                $player.Open([uri]'file:///{filePath.Replace("\\", "/")}')
+                $player.Play()
+                Start-Sleep -Seconds 3
+                $player.Close()
+            ";
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = $"-NoProfile -Command \"{psScript.Replace("\"", "\\\"")}\"",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            });
+        }
+        catch
+        {
+            // 播放失败不影响返回结果
         }
     }
 }

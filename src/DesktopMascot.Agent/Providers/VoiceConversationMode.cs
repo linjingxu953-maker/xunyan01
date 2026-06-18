@@ -92,7 +92,38 @@ public class VoiceConversationMode
         result.AudioFilePath = ttsResult.AudioFilePath;
         result.AudioData = ttsResult.AudioData;
 
+        // 自动播放语音回复
+        PlayAudioFile(ttsResult.AudioFilePath);
+
         return result;
+    }
+
+    private static void PlayAudioFile(string? filePath)
+    {
+        if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return;
+
+        try
+        {
+            var psScript = $@"
+                Add-Type -AssemblyName PresentationCore
+                $player = New-Object System.Windows.Media.MediaPlayer
+                $player.Open([uri]'file:///{filePath.Replace("\\", "/")}')
+                $player.Play()
+                Start-Sleep -Seconds 3
+                $player.Close()
+            ";
+
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = $"-NoProfile -Command \"{psScript.Replace("\"", "\\\"")}\"",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            });
+        }
+        catch { }
     }
 }
 

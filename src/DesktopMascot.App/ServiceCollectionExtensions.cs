@@ -110,7 +110,8 @@ public static class ServiceCollectionExtensions
         // 语音
         services.AddSingleton<ITextToSpeechProvider>(sp =>
             new EdgeTtsProvider(Path.Combine(dataDir, "tts")));
-        services.AddSingleton<ISpeechRecognitionProvider, WhisperSpeechProvider>();
+        services.AddSingleton<ISpeechRecognitionProvider>(sp =>
+            new WhisperSpeechProvider(""));  // 空 Key，后续通过配置注入
         services.AddSingleton<VoiceConversationMode>();
 
         // 角色包
