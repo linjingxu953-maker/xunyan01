@@ -481,6 +481,7 @@ AgentOrchestrator.ExecuteAsync()
 - [ ] M32: 屏幕理解 UI - 等待 Codex 完成全屏遮罩 + 圈选交互
 - [ ] Computer Use UI - 等待 Codex 完成控制面板壳子
 - [ ] M31+: 封测包 - 等用户验收功能后再规划
+- [ ] **TTS 播放修复（Codex 负责）** — EdgeTtsProvider 已能生成 MP3 到 `%AppData%/DesktopMascot/tts/`，但 UI 层触发播放时弹出播放器窗口报"无法访问本地存储"。Core/Agent 层 PlayAudioFile 已改为复制到临时目录再播放。需要 Codex 修复 UI 层：FloatingWindowViewModel 处理 TTS 结果时不弹系统播放器，改为直接播放音频文件或使用内置播放组件。
 
 #### 未来规划
 

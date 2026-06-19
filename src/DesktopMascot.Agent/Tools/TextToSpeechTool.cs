@@ -132,12 +132,22 @@ public class TextToSpeechTool : ITool
 
         try
         {
-            // 使用 Process.Start 打开音频文件，系统默认播放器播放
+            // 复制到临时目录播放，避免 AppData 路径安全策略限制
+            var tempFile = Path.Combine(Path.GetTempPath(), $"tts_play_{Guid.NewGuid():N}.mp3");
+            File.Copy(filePath, tempFile, true);
+
             Process.Start(new ProcessStartInfo
             {
-                FileName = filePath,
+                FileName = tempFile,
                 UseShellExecute = true,
-                CreateNoWindow = true
+                CreateNoWindow = true,
+                Verb = "open"
+            });
+
+            // 延迟清理临时文件
+            Task.Delay(10000).ContinueWith(_ =>
+            {
+                try { File.Delete(tempFile); } catch { }
             });
         }
         catch

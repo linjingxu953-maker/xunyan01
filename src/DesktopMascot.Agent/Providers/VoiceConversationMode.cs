@@ -104,11 +104,20 @@ public class VoiceConversationMode
 
         try
         {
+            var tempFile = Path.Combine(Path.GetTempPath(), $"tts_play_{Guid.NewGuid():N}.mp3");
+            File.Copy(filePath, tempFile, true);
+
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
-                FileName = filePath,
+                FileName = tempFile,
                 UseShellExecute = true,
-                CreateNoWindow = true
+                CreateNoWindow = true,
+                Verb = "open"
+            });
+
+            Task.Delay(10000).ContinueWith(_ =>
+            {
+                try { File.Delete(tempFile); } catch { }
             });
         }
         catch { }
