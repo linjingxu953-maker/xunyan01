@@ -1943,16 +1943,13 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         try
         {
             var manifest = BuildCurrentCharacterManifest();
-            var json = MascotCharacterManifestFactory.ToJson(manifest);
-            var exportDirectory = Path.Combine(GetLocalDataRoot(), "Exports", "Characters", manifest.Slug);
-            Directory.CreateDirectory(exportDirectory);
-
-            var exportPath = Path.Combine(exportDirectory, "character.manifest.json");
-            await File.WriteAllTextAsync(exportPath, json);
+            var exportRoot = Path.Combine(GetLocalDataRoot(), "Exports", "Characters");
+            var result = await MascotCharacterPackageExporter.ExportAsync(manifest, exportRoot);
+            var json = await File.ReadAllTextAsync(result.ManifestPath);
 
             CharacterManifestPreview = json;
-            RefreshCharacterManifestFormatItems(manifest);
-            CharacterManifestStatus = $"已导出寻研角色包清单：{exportPath}";
+            RefreshCharacterManifestFormatItems(result.Manifest);
+            CharacterManifestStatus = result.Message;
         }
         catch (Exception ex)
         {
