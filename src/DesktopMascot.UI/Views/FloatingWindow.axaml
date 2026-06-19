@@ -1391,7 +1391,16 @@
                                                                             Margin="0,0,8,0"/>
                                                                     <Button Content="导出角色包"
                                                                             Classes="sendButton"
-                                                                            Command="{Binding InlineSettings.ExportCharacterManifestCommand}"/>
+                                                                            Command="{Binding InlineSettings.ExportCharacterManifestCommand}"
+                                                                            Margin="0,0,8,0"/>
+                                                                    <Button Content="选择角色包"
+                                                                            Classes="inlineSettingsBackButton"
+                                                                            Command="{Binding InlineSettings.PickCharacterPackageManifestCommand}"
+                                                                            Margin="0,0,8,0"/>
+                                                                    <Button Content="导入角色包"
+                                                                            Classes="sendButton"
+                                                                            IsEnabled="{Binding InlineSettings.CanImportCharacterPackage}"
+                                                                            Command="{Binding InlineSettings.ImportCharacterPackageCommand}"/>
                                                                 </WrapPanel>
                                                             </Grid>
                                                             <Grid ColumnDefinitions="*,*"
@@ -1429,6 +1438,27 @@
                                                                     </StackPanel>
                                                                 </Border>
                                                             </Grid>
+                                                            <Border Classes="characterPackageFormatItem"
+                                                                    IsVisible="{Binding InlineSettings.HasCharacterPackageImportPreview}">
+                                                                <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+                                                                      RowSpacing="4">
+                                                                    <TextBlock Text="{Binding InlineSettings.CharacterPackageImportPreview.SummaryText}"
+                                                                               Classes="characterPackageMetaValue"
+                                                                               TextWrapping="Wrap"/>
+                                                                    <TextBlock Grid.Row="1"
+                                                                               Text="{Binding InlineSettings.CharacterPackageImportPreview.MissingStateImageText}"
+                                                                               Classes="inlineSettingsBody"
+                                                                               TextWrapping="Wrap"/>
+                                                                    <TextBlock Grid.Row="2"
+                                                                               Text="{Binding InlineSettings.CharacterPackageImportPreview.SourceText}"
+                                                                               Classes="characterStatePreviewDetail"
+                                                                               TextWrapping="Wrap"/>
+                                                                    <TextBlock Grid.Row="3"
+                                                                               Text="{Binding InlineSettings.CharacterPackageImportPreview.ImageFolderText}"
+                                                                               Classes="characterStatePreviewDetail"
+                                                                               TextWrapping="Wrap"/>
+                                                                </Grid>
+                                                            </Border>
                                                             <ItemsControl ItemsSource="{Binding InlineSettings.CharacterManifestFormatItems}">
                                                                 <ItemsControl.ItemsPanel>
                                                                     <ItemsPanelTemplate>
@@ -1470,10 +1500,13 @@
                                                                            TextWrapping="Wrap"
                                                                            VerticalAlignment="Center"/>
                                                                 <Button Grid.Column="1"
-                                                                        Content="导入资源"
+                                                                        Content="导入当前资源"
                                                                         Classes="inlineSettingsBackButton"
                                                                         Command="{Binding InlineSettings.ImportCharacterAssetsCommand}"/>
                                                             </Grid>
+                                                            <TextBlock Text="{Binding InlineSettings.CharacterPackageImportStatus}"
+                                                                       Classes="inlineSettingsBody"
+                                                                       TextWrapping="Wrap"/>
                                                             <TextBlock Text="{Binding InlineSettings.CharacterPackageExportCard.ImportHint}"
                                                                        Classes="characterStatePreviewDetail"
                                                                        TextWrapping="Wrap"/>

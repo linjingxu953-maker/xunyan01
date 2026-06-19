@@ -202,6 +202,13 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [ObservableProperty] private CharacterPackageExportCardState _characterPackageExportCard = CharacterPackageExportCardState.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCharacterPackageImportPreview))]
+    [NotifyPropertyChangedFor(nameof(CanImportCharacterPackage))]
+    private CharacterPackageImportPreviewState _characterPackageImportPreview = CharacterPackageImportPreviewState.Empty;
+
+    [ObservableProperty] private string _characterPackageImportStatus = "选择角色包清单后会预览导入内容。";
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasCharacterAvatarImageSuggestion))]
     private string _characterAvatarImageSuggestion = string.Empty;
 
@@ -436,6 +443,8 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     public bool HasNoCharacterAssetSuggestions => !HasCharacterAssetSuggestions;
     public bool HasCharacterAvatarImageSuggestion => !string.IsNullOrWhiteSpace(CharacterAvatarImageSuggestion);
     public bool HasCharacterStatePreviews => CharacterStatePreviewItems.Count > 0;
+    public bool HasCharacterPackageImportPreview => CharacterPackageImportPreview.HasPreview;
+    public bool CanImportCharacterPackage => CharacterPackageImportPreview.CanImport;
     public bool IsNotBusy => !IsBusy;
 
     public async Task LoadAsync(CancellationToken ct = default)
@@ -1949,6 +1958,44 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         {
             CharacterManifestStatus = $"导出失败：{ex.Message}";
         }
+    }
+
+    [RelayCommand]
+    private async Task PickCharacterPackageManifest()
+    {
+        var filePath = await _characterAssetPickerService.PickCharacterManifestFileAsync();
+        if (string.IsNullOrWhiteSpace(filePath))
+            return;
+
+        await LoadCharacterPackageManifestPreviewAsync(filePath);
+    }
+
+    [RelayCommand]
+    private void ImportCharacterPackage()
+    {
+        var preview = CharacterPackageImportPreview;
+        if (!preview.CanImport || preview.Profile is null)
+        {
+            CharacterPackageImportStatus = "请先选择可导入的寻研角色包清单。";
+            return;
+        }
+
+        var result = _characterAssetImportService.ImportToAppData(preview.Profile);
+        if (!result.Success || result.Profile is null)
+        {
+            CharacterPackageImportStatus = result.Message;
+            return;
+        }
+
+        ApplyCharacterProfile(result.Profile, save: true);
+        var entry = _characterStore.SaveProfile(result.Profile);
+        RefreshCharacterProfiles(entry.Id);
+
+        CharacterPackageImportStatus = $"{result.Message} 已保存到角色库：{entry.Name}。";
+        CharacterSaveStatus = $"已导入并启用角色：{CharacterName}。";
+        CharacterAssetWarningText = result.FallbackCount > 0
+            ? $"{result.Message} 缺少专用图片的状态已使用头像回退。"
+            : "导入完成，当前角色图片已改为应用资源目录。";
     }
 
     [RelayCommand]
@@ -3529,6 +3576,39 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         if (!string.IsNullOrWhiteSpace(status))
         {
             CharacterManifestStatus = status;
+        }
+    }
+
+    private async Task LoadCharacterPackageManifestPreviewAsync(string manifestPath)
+    {
+        try
+        {
+            if (!File.Exists(manifestPath))
+            {
+                CharacterPackageImportPreview = CharacterPackageImportPreviewState.Empty;
+                CharacterPackageImportStatus = "角色包清单文件不存在。";
+                return;
+            }
+
+            var json = await File.ReadAllTextAsync(manifestPath);
+            var manifest = MascotCharacterManifestFactory.FromJson(json);
+            if (manifest is null)
+            {
+                CharacterPackageImportPreview = CharacterPackageImportPreviewState.Empty;
+                CharacterPackageImportStatus = "角色包清单为空或无法解析。";
+                return;
+            }
+
+            CharacterManifestPreview = json;
+            RefreshCharacterManifestFormatItems(manifest);
+            CharacterPackageImportPreview = CharacterPackageImportPreviewState.FromManifest(manifest, manifestPath);
+            CharacterPackageImportStatus = CharacterPackageImportPreview.StatusText;
+            CharacterManifestStatus = $"已读取角色包清单：{manifestPath}";
+        }
+        catch (Exception ex)
+        {
+            CharacterPackageImportPreview = CharacterPackageImportPreviewState.Empty;
+            CharacterPackageImportStatus = $"读取角色包失败：{ex.Message}";
         }
     }
 

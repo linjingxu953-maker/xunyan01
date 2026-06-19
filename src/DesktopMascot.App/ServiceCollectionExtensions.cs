@@ -67,6 +67,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<MemoryConfirmationService>();
         services.AddSingleton<MemoryManager>();
         services.AddSingleton<MemoryIntegrationService>();
+        services.AddSingleton<MemoryPersistenceManager>(sp =>
+            new MemoryPersistenceManager(
+                sp.GetRequiredService<IMemoryStore>(),
+                Path.Combine(dataDir, "memory")));
 
         // 对话和学习
         services.AddSingleton<ConversationManager>();

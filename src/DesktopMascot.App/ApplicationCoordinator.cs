@@ -149,6 +149,25 @@ public class ApplicationCoordinator : IAsyncDisposable
         var memory = _services.GetRequiredService<IMemoryStore>();
         var stats = await memory.GetStatisticsAsync(ct);
         _logger.Debug($"记忆系统初始化完成，共 {stats.TotalCount} 条记忆");
+
+        // 启动时自动备份 + 清理过期记忆
+        try
+        {
+            var persistence = _services.GetService<MemoryPersistenceManager>();
+            if (persistence != null)
+            {
+                var backupResult = await persistence.BackupAsync("启动时自动备份", ct);
+                _logger.Debug($"自动备份完成：{backupResult.EntryCount} 条记忆");
+
+                var cleanupResult = await persistence.CleanupAsync(maxAgeDays: 90, onlyUnconfirmed: true, ct);
+                if (cleanupResult.RemovedCount > 0)
+                    _logger.Debug($"清理过期记忆：{cleanupResult.RemovedCount} 条");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning($"记忆持久化操作失败（不影响启动）：{ex.Message}");
+        }
     }
 
     private async Task InitializePermissionAsync(CancellationToken ct)
