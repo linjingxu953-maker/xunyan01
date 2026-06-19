@@ -23,7 +23,7 @@ public sealed class CharacterPackageExportCardState
         MascotCharacterManifestFactory.Schema,
         "character/character.manifest.json",
         "Petdex 仅作为可选导入兼容信息",
-        "导入资源会复制当前图片目录；完整角色包导入接口接入后复用此入口。");
+        "导出会生成 character.manifest.json 和 assets 图片目录；导入角色包会读取这个结构。");
 
     public string SummaryText { get; }
     public string SchemaText { get; }
@@ -45,7 +45,7 @@ public sealed class CharacterPackageExportCardState
             CleanText(manifest.Schema, MascotCharacterManifestFactory.Schema),
             $"{slug}/character.manifest.json",
             compatibilityText,
-            "导入资源会复制当前图片目录；完整角色包导入接口接入后复用此入口。");
+            "导出会生成 character.manifest.json 和 assets 图片目录；导入角色包会读取这个结构。");
     }
 
     private static string CleanText(string? value, string fallback)
