@@ -140,7 +140,7 @@ public sealed class DesktopShellService : IDisposable
         _trayIcon = new TrayIcon
         {
             Icon = TrayIconFactory.CreateDefaultIcon(),
-            ToolTipText = $"寻研 - {_hotkeyService.DisplayText} 唤起",
+            ToolTipText = $"寻研01 - {_hotkeyService.DisplayText} 唤起",
             Menu = menu,
             IsVisible = true
         };
@@ -186,7 +186,7 @@ public sealed class DesktopShellService : IDisposable
 
         if (_trayIcon is not null)
         {
-            _trayIcon.ToolTipText = $"寻研 - {_hotkeyService.DisplayText} 唤起";
+            _trayIcon.ToolTipText = $"寻研01 - {_hotkeyService.DisplayText} 唤起";
         }
     }
 

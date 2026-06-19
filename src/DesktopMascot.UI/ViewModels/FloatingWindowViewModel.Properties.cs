@@ -145,20 +145,20 @@ public partial class FloatingWindowViewModel
     [ObservableProperty] private string _inlineSettingsStatus = "选择左侧设置项查看当前配置入口。";
 
     // ── 角色 ──
-    [ObservableProperty] private string _characterName = "妍";
-    [ObservableProperty] private string _characterRole = "寻研桌面助手";
-    [ObservableProperty] private string _characterAvatarText = "妍";
-    [ObservableProperty] private string _characterDescription = "主动理解屏幕与任务上下文，清晰地给出下一步。";
+    [ObservableProperty] private string _characterName = "枫林渔人";
+    [ObservableProperty] private string _characterRole = "寻研01桌面助手";
+    [ObservableProperty] private string _characterAvatarText = "枫";
+    [ObservableProperty] private string _characterDescription = "寻研01默认桌面角色，负责理解屏幕与任务上下文，清晰地给出下一步。";
     [ObservableProperty] private string _characterPersonality = "沉稳可靠";
     [ObservableProperty] private string _characterToneStyle = "友善";
     [ObservableProperty] private string _characterLanguageStyle = "标准";
     [ObservableProperty] private string _characterReplyLength = "平衡";
     [ObservableProperty] private bool _characterUseEmoji;
     [ObservableProperty] private string _characterSystemPromptSuffix = string.Empty;
-    [ObservableProperty] private string _characterCatchphrase = "我在桌面待命，随时可以接任务。";
-    [ObservableProperty] private string _characterAccentColor = "#2563EB";
-    [ObservableProperty] private string _characterBackgroundColor = "#EEF6FF";
-    [ObservableProperty] private string _characterImageFolder = "assets/characters/default";
+    [ObservableProperty] private string _characterCatchphrase = "我是枫林渔人，随时可以接任务。";
+    [ObservableProperty] private string _characterAccentColor = "#047857";
+    [ObservableProperty] private string _characterBackgroundColor = "#ECFDF5";
+    [ObservableProperty] private string _characterImageFolder = "assets/characters/feng lin yu ren";
     [ObservableProperty] private string _characterAvatarImage = "avatar.png";
     [ObservableProperty] private string _characterImageStatus = "未找到角色图片时会使用文字头像。";
     [ObservableProperty]

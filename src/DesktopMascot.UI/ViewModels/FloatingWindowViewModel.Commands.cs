@@ -169,9 +169,9 @@ public partial class FloatingWindowViewModel
     {
         var profile = presetId switch
         {
-            "developer" => new MascotCharacterProfile { Name = "码伴", Role = "开发调试伙伴", AvatarText = "</>", Personality = "直接严谨", Catchphrase = "我会优先帮你定位问题和验证结果。", AccentColor = "#0F766E", BackgroundColor = "#F0FDFA", ImageFolder = "assets/characters/developer" },
-            "operator" => new MascotCharacterProfile { Name = "桌管家", Role = "桌面任务管家", AvatarText = "管", Personality = "有序高效", Catchphrase = "我会把任务拆清楚，再一步步执行。", AccentColor = "#7C2D12", BackgroundColor = "#FFF7ED", ImageFolder = "assets/characters/operator" },
-            "study" => new MascotCharacterProfile { Name = "小研", Role = "阅读研究助手", AvatarText = "研", Personality = "耐心清晰", Catchphrase = "我会帮你提炼重点、整理脉络。", AccentColor = "#7C3AED", BackgroundColor = "#F5F3FF", ImageFolder = "assets/characters/study" },
+            "breeze" or "yan" => new MascotCharacterProfile { Name = "微风", Role = "寻研01桌面助手", AvatarText = "微", Personality = "沉稳可靠", Catchphrase = "我是微风，可以继续接任务。", AccentColor = "#2563EB", BackgroundColor = "#EEF6FF", ImageFolder = "assets/characters/yan" },
+            "moonlight" or "yue guang" => new MascotCharacterProfile { Name = "月光", Role = "寻研01夜间助手", AvatarText = "月", Personality = "安静细致", Catchphrase = "我是月光，会安静地帮你整理任务。", AccentColor = "#7C3AED", BackgroundColor = "#F5F3FF", ImageFolder = "assets/characters/yue guang" },
+            "fisher" or "feng lin yu ren" => new MascotCharacterProfile(),
             _ => new MascotCharacterProfile()
         };
         ApplyCharacterProfile(profile, save: true); CharacterSaveStatus = $"已切换到 {CharacterName}。";

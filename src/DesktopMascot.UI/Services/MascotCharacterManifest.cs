@@ -8,8 +8,8 @@ public sealed class MascotCharacterManifest
 {
     public string Schema { get; init; } = MascotCharacterManifestFactory.Schema;
     public string Version { get; init; } = "1.0";
-    public string Slug { get; init; } = "yan";
-    public string Name { get; init; } = "妍";
+    public string Slug { get; init; } = "feng-lin-yu-ren";
+    public string Name { get; init; } = "枫林渔人";
     public string Kind { get; init; } = "desktop-assistant-character";
     public MascotCharacterPersonaManifest Persona { get; init; } = new();
     public MascotCharacterAppearanceManifest Appearance { get; init; } = new();
@@ -20,7 +20,7 @@ public sealed class MascotCharacterManifest
 
 public sealed class MascotCharacterPersonaManifest
 {
-    public string Role { get; init; } = "寻研桌面助手";
+    public string Role { get; init; } = "寻研01桌面助手";
     public string Description { get; init; } = string.Empty;
     public string Personality { get; init; } = string.Empty;
     public string ToneStyle { get; init; } = "友善";
@@ -34,8 +34,8 @@ public sealed class MascotCharacterPersonaManifest
 
 public sealed class MascotCharacterAppearanceManifest
 {
-    public string AvatarText { get; init; } = "妍";
-    public string ImageFolder { get; init; } = "assets/characters/default";
+    public string AvatarText { get; init; } = "枫";
+    public string ImageFolder { get; init; } = "assets/characters/feng lin yu ren";
     public string AvatarImage { get; init; } = "avatar.png";
     public string AccentColor { get; init; } = "#2563EB";
     public string BackgroundColor { get; init; } = "#EEF6FF";
@@ -180,9 +180,9 @@ public static class MascotCharacterManifestFactory
     {
         var profile = new MascotCharacterProfile
         {
-            Name = CleanText(manifest.Name, "妍"),
-            Role = CleanText(manifest.Persona.Role, "寻研桌面助手"),
-            AvatarText = CleanText(manifest.Appearance.AvatarText, "妍"),
+            Name = CleanText(manifest.Name, "枫林渔人"),
+            Role = CleanText(manifest.Persona.Role, "寻研01桌面助手"),
+            AvatarText = CleanText(manifest.Appearance.AvatarText, "枫"),
             Description = CleanText(manifest.Persona.Description, string.Empty),
             Personality = CleanText(manifest.Persona.Personality, "沉稳可靠"),
             ToneStyle = CleanText(manifest.Persona.ToneStyle, "友善"),
@@ -209,9 +209,14 @@ public static class MascotCharacterManifestFactory
     public static string CreateSlug(string? name)
     {
         var text = string.IsNullOrWhiteSpace(name) ? "character" : name.Trim();
-        if (text.Contains('妍'))
+        if (text.Contains("微风", StringComparison.Ordinal))
         {
-            return "yan";
+            return "wei-feng";
+        }
+
+        if (text.Contains("枫林渔人", StringComparison.Ordinal))
+        {
+            return "feng-lin-yu-ren";
         }
 
         var builder = new StringBuilder();
@@ -251,7 +256,7 @@ public static class MascotCharacterManifestFactory
 
     private static string ResolveImportImageFolder(string? imageFolder, string? manifestPath)
     {
-        var folder = CleanText(imageFolder, "assets/characters/default")
+        var folder = CleanText(imageFolder, "assets/characters/feng lin yu ren")
             .Replace('/', Path.DirectorySeparatorChar);
 
         if (Path.IsPathRooted(folder))

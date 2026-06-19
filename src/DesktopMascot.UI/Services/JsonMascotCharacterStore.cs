@@ -247,13 +247,25 @@ public sealed class JsonMascotCharacterStore : IMascotCharacterStore
     private static void ApplyCurrentBrandDefaults(MascotCharacterProfile profile)
     {
         if (string.Equals(profile.Name, "小桌灵", StringComparison.Ordinal))
-            profile.Name = "妍";
+            profile.Name = "微风";
+
+        if (string.Equals(profile.Name, "妍", StringComparison.Ordinal))
+            profile.Name = "微风";
 
         if (string.Equals(profile.Role, "桌面工作助手", StringComparison.Ordinal))
-            profile.Role = "寻研桌面助手";
+            profile.Role = "寻研01桌面助手";
+
+        if (string.Equals(profile.Role, "寻研桌面助手", StringComparison.Ordinal))
+            profile.Role = "寻研01桌面助手";
+
+        if (string.Equals(profile.Role, "寻研夜间助手", StringComparison.Ordinal))
+            profile.Role = "寻研01夜间助手";
 
         if (string.Equals(profile.AvatarText, "灵", StringComparison.Ordinal))
-            profile.AvatarText = "妍";
+            profile.AvatarText = "微";
+
+        if (string.Equals(profile.AvatarText, "妍", StringComparison.Ordinal))
+            profile.AvatarText = "微";
     }
 
     private static IEnumerable<string> EnumerateCharacterRootCandidates()

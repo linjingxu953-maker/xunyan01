@@ -186,7 +186,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         var key = string.IsNullOrWhiteSpace(section) ? "overview" : section;
         var (title, desc, fallback) = key switch
         {
-            "overview" => ("运行态验收", "集中查看寻研当前配置是否具备运行条件。", "总览只读；具体配置请进入对应页面处理。"),
+            "overview" => ("运行态验收", "集中查看寻研01当前配置是否具备运行条件。", "总览只读；具体配置请进入对应页面处理。"),
             "model" => ("模型设置", "配置 Provider、API Key、Base URL 和默认模型。", "模型配置会保存到本机配置目录。"),
             "mimoCode" => ("Mimo Code", "接入本机 Mimo Code，模型调用仍使用用户自己的 API 配置。", "Mimo Code 接入配置会保存到本机配置目录。"),
             "permission" => ("权限", "查看文件写入、命令执行和高风险工具的确认策略。", "权限确认仍走当前独立确认弹窗体系。"),
@@ -520,7 +520,7 @@ public class MessageItem
     public string Role { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
     public bool IsAssistant => Role != "user";
-    public string RoleText => Role == "user" ? "你" : "妍";
+    public string RoleText => Role == "user" ? "你" : "寻研01";
     public HorizontalAlignment BubbleAlignment => Role == "user" ? HorizontalAlignment.Right : HorizontalAlignment.Left;
     public CornerRadius BubbleCornerRadius => Role == "user" ? new CornerRadius(14, 14, 4, 14) : new CornerRadius(14, 14, 14, 4);
     public IBrush RoleColor => Role == "user" ? new SolidColorBrush(Color.Parse("#93C5FD")) : new SolidColorBrush(Color.Parse("#CBD5E1"));

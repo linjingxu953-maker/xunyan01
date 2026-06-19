@@ -19,7 +19,7 @@ public sealed class CharacterPackageExportCardState
     }
 
     public static CharacterPackageExportCardState Empty { get; } = new(
-        "寻研角色包 · 未命名 · 0 个状态图",
+        "寻研01角色包 · 未命名 · 0 个状态图",
         MascotCharacterManifestFactory.Schema,
         "character/character.manifest.json",
         "Petdex 仅作为可选导入兼容信息",
@@ -41,7 +41,7 @@ public sealed class CharacterPackageExportCardState
             : "Petdex 仅作为可选导入兼容信息";
 
         return new CharacterPackageExportCardState(
-            $"寻研角色包 · {name} · {stateCount} 个状态图",
+            $"寻研01角色包 · {name} · {stateCount} 个状态图",
             CleanText(manifest.Schema, MascotCharacterManifestFactory.Schema),
             $"{slug}/character.manifest.json",
             compatibilityText,

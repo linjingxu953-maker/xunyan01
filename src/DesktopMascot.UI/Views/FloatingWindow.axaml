@@ -4,7 +4,7 @@
         xmlns:controls="using:DesktopMascot.UI.Views.Controls"
         x:Class="DesktopMascot.UI.Views.FloatingWindow"
         x:DataType="vm:FloatingWindowViewModel"
-        Title="寻研"
+        Title="寻研01"
         Width="180"
         Height="240"
         MinWidth="180"
@@ -1307,6 +1307,81 @@
                                                     <TextBlock Text="{Binding InlineSettings.CharacterAssetSuggestionStatus}"
                                                                Classes="inlineSettingsBody"
                                                                TextWrapping="Wrap"/>
+                                                    <Border Classes="inlineSettingsInnerCard">
+                                                        <StackPanel Spacing="8">
+                                                            <Grid ColumnDefinitions="*,Auto"
+                                                                  ColumnSpacing="8">
+                                                                <StackPanel Spacing="2">
+                                                                    <TextBlock Text="角色库"
+                                                                               Classes="inlineSettingsCardTitle"
+                                                                               FontSize="12"/>
+                                                                    <TextBlock Text="{Binding InlineSettings.CharacterLibraryStatus}"
+                                                                               Classes="inlineSettingsBody"
+                                                                               TextWrapping="Wrap"/>
+                                                                </StackPanel>
+                                                                <Button Grid.Column="1"
+                                                                        Content="刷新"
+                                                                        Classes="inlineSettingsBackButton"
+                                                                        Command="{Binding InlineSettings.RefreshCharacterProfileLibraryCommand}"/>
+                                                            </Grid>
+                                                            <TextBlock Text="暂无保存的角色档案。"
+                                                                       Classes="inlineSettingsBody"
+                                                                       IsVisible="{Binding InlineSettings.HasNoCharacterProfiles}"/>
+                                                            <ListBox ItemsSource="{Binding InlineSettings.CharacterProfiles}"
+                                                                     SelectedItem="{Binding InlineSettings.SelectedCharacterProfile}"
+                                                                     IsVisible="{Binding InlineSettings.HasCharacterProfiles}"
+                                                                     MinHeight="88"
+                                                                     MaxHeight="132">
+                                                                <ListBox.ItemTemplate>
+                                                                    <DataTemplate x:DataType="vm:CharacterProfileListItem">
+                                                                        <Grid ColumnDefinitions="34,*,Auto"
+                                                                              ColumnSpacing="8"
+                                                                              Margin="0,4">
+                                                                            <Border Classes="characterSwitchAvatar"
+                                                                                    Background="{Binding AccentBrush}">
+                                                                                <Grid>
+                                                                                    <Image Source="{Binding Thumbnail}"
+                                                                                           Stretch="UniformToFill"
+                                                                                           IsVisible="{Binding HasThumbnail}"/>
+                                                                                    <TextBlock Text="{Binding AvatarText}"
+                                                                                               Classes="characterSwitchAvatarText"
+                                                                                               IsVisible="{Binding HasNoThumbnail}"/>
+                                                                                </Grid>
+                                                                            </Border>
+                                                                            <StackPanel Grid.Column="1"
+                                                                                        Spacing="1"
+                                                                                        VerticalAlignment="Center">
+                                                                                <TextBlock Text="{Binding Name}"
+                                                                                           Classes="characterSwitchName"
+                                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                                <TextBlock Text="{Binding Role}"
+                                                                                           Classes="characterSwitchRole"
+                                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                            </StackPanel>
+                                                                            <TextBlock Grid.Column="2"
+                                                                                       Text="{Binding ActiveText}"
+                                                                                       Classes="characterSwitchActiveText"
+                                                                                       VerticalAlignment="Center"/>
+                                                                        </Grid>
+                                                                    </DataTemplate>
+                                                                </ListBox.ItemTemplate>
+                                                            </ListBox>
+                                                            <Grid ColumnDefinitions="*,Auto,Auto"
+                                                                  ColumnSpacing="8">
+                                                                <TextBox Text="{Binding InlineSettings.CharacterProfileNameDraft}"
+                                                                         PlaceholderText="角色档案名称"
+                                                                         MaxLength="24"/>
+                                                                <Button Grid.Column="1"
+                                                                        Content="载入"
+                                                                        Classes="sendButton"
+                                                                        Command="{Binding InlineSettings.LoadSelectedCharacterProfileCommand}"/>
+                                                                <Button Grid.Column="2"
+                                                                        Content="存入"
+                                                                        Classes="inlineSettingsBackButton"
+                                                                        Command="{Binding InlineSettings.SaveCharacterProfileCommand}"/>
+                                                            </Grid>
+                                                        </StackPanel>
+                                                    </Border>
                                                     <Border Classes="inlineSettingsInnerCard">
                                                         <StackPanel Spacing="8">
                                                             <Grid ColumnDefinitions="*,Auto"

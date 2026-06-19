@@ -12,13 +12,10 @@ public partial class FloatingWindowViewModel
 {
     private static readonly Dictionary<string, CharacterAssetPreset> CharacterAssetPresets = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["default"] = new("妍", "寻研桌面助手", "妍", "#2563EB", "#EEF6FF"),
-        ["yan"] = new("妍", "寻研桌面助手", "妍", "#2563EB", "#EEF6FF"),
-        ["yue guang"] = new("月光", "寻研夜间助手", "月", "#7C3AED", "#F5F3FF"),
-        ["feng lin yu ren"] = new("枫林渔人", "寻研桌面助手", "枫", "#047857", "#ECFDF5"),
-        ["developer"] = new("码伴", "开发调试伙伴", "</>", "#0F766E", "#F0FDFA"),
-        ["operator"] = new("桌管家", "桌面任务管家", "管", "#7C2D12", "#FFF7ED"),
-        ["study"] = new("小研", "阅读研究助手", "研", "#7C3AED", "#F5F3FF")
+        ["default"] = new("微风", "寻研01桌面助手", "微", "#2563EB", "#EEF6FF"),
+        ["yan"] = new("微风", "寻研01桌面助手", "微", "#2563EB", "#EEF6FF"),
+        ["yue guang"] = new("月光", "寻研01夜间助手", "月", "#7C3AED", "#F5F3FF"),
+        ["feng lin yu ren"] = new("枫林渔人", "寻研01桌面助手", "枫", "#047857", "#ECFDF5")
     };
 
     private static readonly HashSet<string> SupportedCharacterImageExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -69,6 +66,11 @@ public partial class FloatingWindowViewModel
         var profile = item.Id.StartsWith("asset:", StringComparison.OrdinalIgnoreCase)
             ? BuildAssetCharacterProfile(item.Entry)
             : _characterStore.LoadProfile(item.Id) ?? BuildAssetCharacterProfile(item.Entry);
+        if (profile is null)
+        {
+            CharacterSaveStatus = "该资源目录还没有登记为角色，已忽略。";
+            return;
+        }
 
         ApplyCharacterProfile(profile, save: true);
         RefreshCharacterSwitchItems(item.Id);
@@ -83,20 +85,20 @@ public partial class FloatingWindowViewModel
         _isApplyingCharacterProfile = true;
         try
         {
-            CharacterName = CleanText(profile.Name, "妍", 12);
-            CharacterRole = CleanText(profile.Role, "寻研桌面助手", 24);
-            CharacterAvatarText = CleanText(profile.AvatarText, "妍", 4);
-            CharacterDescription = CleanText(profile.Description, "主动理解屏幕与任务上下文，清晰地给出下一步。", 120);
+            CharacterName = CleanText(profile.Name, "枫林渔人", 12);
+            CharacterRole = CleanText(profile.Role, "寻研01桌面助手", 24);
+            CharacterAvatarText = CleanText(profile.AvatarText, "枫", 4);
+            CharacterDescription = CleanText(profile.Description, "寻研01默认桌面角色，负责理解屏幕与任务上下文，清晰地给出下一步。", 120);
             CharacterPersonality = CleanText(profile.Personality, "沉稳可靠", 12);
             CharacterToneStyle = CleanText(profile.ToneStyle, "友善", 12);
             CharacterLanguageStyle = CleanText(profile.LanguageStyle, "标准", 12);
             CharacterReplyLength = CleanText(profile.ReplyLength, "平衡", 12);
             CharacterUseEmoji = profile.UseEmoji;
             CharacterSystemPromptSuffix = CleanText(profile.SystemPromptSuffix, string.Empty, 500);
-            CharacterCatchphrase = CleanText(profile.Catchphrase, "我在桌面待命，随时可以接任务。", 40);
-            CharacterAccentColor = NormalizeHexColor(profile.AccentColor, "#2563EB");
-            CharacterBackgroundColor = NormalizeHexColor(profile.BackgroundColor, "#EEF6FF");
-            CharacterImageFolder = CleanPathText(profile.ImageFolder, "assets/characters/default", 160);
+            CharacterCatchphrase = CleanText(profile.Catchphrase, "我是枫林渔人，随时可以接任务。", 40);
+            CharacterAccentColor = NormalizeHexColor(profile.AccentColor, "#047857");
+            CharacterBackgroundColor = NormalizeHexColor(profile.BackgroundColor, "#ECFDF5");
+            CharacterImageFolder = CleanPathText(profile.ImageFolder, "assets/characters/feng lin yu ren", 160);
             CharacterAvatarImage = CleanPathText(profile.AvatarImage, "avatar.png", 80);
             _characterStateImages = new Dictionary<string, string>(profile.StateImages);
             _characterPersonalityTraits = profile.PersonalityTraits.Count == 0 ? ["可靠", "主动"] : [..profile.PersonalityTraits];
@@ -150,7 +152,9 @@ public partial class FloatingWindowViewModel
                 if (!seenFolders.Add(NormalizeCharacterFolderKey(imageFolder)))
                     continue;
 
-                yield return CreateAssetEntry(directory, imageFolder);
+                var entry = CreateAssetEntry(directory, imageFolder);
+                if (entry is not null)
+                    yield return entry;
             }
         }
     }
@@ -189,9 +193,12 @@ public partial class FloatingWindowViewModel
         }
     }
 
-    private MascotCharacterProfileEntry CreateAssetEntry(DirectoryInfo directory, string imageFolder)
+    private MascotCharacterProfileEntry? CreateAssetEntry(DirectoryInfo directory, string imageFolder)
     {
         var profile = CreateAssetCharacterProfile(directory.Name, imageFolder);
+        if (profile is null)
+            return null;
+
         var avatarPath = ResolveFirstCharacterImagePath(directory.FullName, profile.AvatarImage)
             ?? ResolveFirstCharacterImagePath(directory.FullName, "idle.png")
             ?? Directory.EnumerateFiles(directory.FullName)
@@ -216,7 +223,12 @@ public partial class FloatingWindowViewModel
         var profile = entry.Id.StartsWith("asset:", StringComparison.OrdinalIgnoreCase)
             ? BuildAssetCharacterProfile(entry)
             : _characterStore.LoadProfile(entry.Id);
-        var readiness = ResolveCharacterStateImageReadiness(profile ?? BuildAssetCharacterProfile(entry));
+        var readiness = ResolveCharacterStateImageReadiness(profile ?? new MascotCharacterProfile
+        {
+            Name = entry.Name,
+            Role = entry.Role,
+            ImageFolder = entry.ImageFolder
+        });
         return new(
             entry,
             LoadCharacterProfileThumbnail(entry.AvatarImagePath),
@@ -241,24 +253,23 @@ public partial class FloatingWindowViewModel
         }
     }
 
-    private MascotCharacterProfile BuildAssetCharacterProfile(MascotCharacterProfileEntry entry)
+    private MascotCharacterProfile? BuildAssetCharacterProfile(MascotCharacterProfileEntry entry)
     {
         var folderName = ExtractCharacterAssetFolderName(entry.ImageFolder);
         return CreateAssetCharacterProfile(folderName, entry.ImageFolder);
     }
 
-    private static MascotCharacterProfile CreateAssetCharacterProfile(string folderName, string imageFolder)
+    private static MascotCharacterProfile? CreateAssetCharacterProfile(string folderName, string imageFolder)
     {
-        var preset = CharacterAssetPresets.TryGetValue(folderName, out var matched)
-            ? matched
-            : new CharacterAssetPreset(FormatCharacterFolderName(folderName), "寻研桌面助手", FormatAvatarText(folderName), "#2563EB", "#EEF6FF");
+        if (!CharacterAssetPresets.TryGetValue(folderName, out var preset))
+            return null;
 
         var profile = new MascotCharacterProfile
         {
             Name = preset.Name,
             Role = preset.Role,
             AvatarText = preset.AvatarText,
-            Description = $"{preset.Name} 是寻研的可切换桌面角色。",
+            Description = $"{preset.Name} 是寻研01的可切换桌面角色。",
             Personality = "沉稳可靠",
             ToneStyle = "友善",
             LanguageStyle = "标准",
@@ -368,14 +379,11 @@ public partial class FloatingWindowViewModel
         var name = directory.Name;
         var knownIndex = name.ToLowerInvariant() switch
         {
-            "yan" => 0,
-            "yue guang" => 1,
-            "feng lin yu ren" => 2,
-            "developer" => 3,
-            "operator" => 4,
-            "study" => 5,
-            "default" => 6,
-            _ => 20
+            "feng lin yu ren" => 0,
+            "yan" => 1,
+            "default" => 2,
+            "yue guang" => 3,
+            _ => 99
         };
         return $"{knownIndex:D2}-{name}";
     }
@@ -397,13 +405,13 @@ public partial class FloatingWindowViewModel
 
     private MascotCharacterProfile BuildCurrentCharacterProfile() => new()
     {
-        Name = CleanText(CharacterName, "妍", 12), Role = CleanText(CharacterRole, "寻研桌面助手", 24), AvatarText = CleanText(CharacterAvatarText, "妍", 4),
-        Description = CleanText(CharacterDescription, "主动理解屏幕与任务上下文，清晰地给出下一步。", 120), Personality = CleanText(CharacterPersonality, "沉稳可靠", 12),
+        Name = CleanText(CharacterName, "枫林渔人", 12), Role = CleanText(CharacterRole, "寻研01桌面助手", 24), AvatarText = CleanText(CharacterAvatarText, "枫", 4),
+        Description = CleanText(CharacterDescription, "寻研01默认桌面角色，负责理解屏幕与任务上下文，清晰地给出下一步。", 120), Personality = CleanText(CharacterPersonality, "沉稳可靠", 12),
         ToneStyle = CleanText(CharacterToneStyle, "友善", 12), LanguageStyle = CleanText(CharacterLanguageStyle, "标准", 12), ReplyLength = CleanText(CharacterReplyLength, "平衡", 12),
         UseEmoji = CharacterUseEmoji, SystemPromptSuffix = CleanText(CharacterSystemPromptSuffix, string.Empty, 500),
-        PersonalityTraits = [.._characterPersonalityTraits], Catchphrase = CleanText(CharacterCatchphrase, "我在桌面待命，随时可以接任务。", 40),
-        AccentColor = NormalizeHexColor(CharacterAccentColor, "#2563EB"), BackgroundColor = NormalizeHexColor(CharacterBackgroundColor, "#EEF6FF"),
-        ImageFolder = CleanPathText(CharacterImageFolder, "assets/characters/default", 160), AvatarImage = CleanPathText(CharacterAvatarImage, "avatar.png", 80),
+        PersonalityTraits = [.._characterPersonalityTraits], Catchphrase = CleanText(CharacterCatchphrase, "我是枫林渔人，随时可以接任务。", 40),
+        AccentColor = NormalizeHexColor(CharacterAccentColor, "#047857"), BackgroundColor = NormalizeHexColor(CharacterBackgroundColor, "#ECFDF5"),
+        ImageFolder = CleanPathText(CharacterImageFolder, "assets/characters/feng lin yu ren", 160), AvatarImage = CleanPathText(CharacterAvatarImage, "avatar.png", 80),
         StateImages = new Dictionary<string, string>(_characterStateImages)
     };
 

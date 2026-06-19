@@ -176,10 +176,10 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [ObservableProperty] private bool _isHotkeySectionSelected;
     [ObservableProperty] private bool _isDataSectionSelected;
     [ObservableProperty] private bool _isAppearanceSectionSelected;
-    [ObservableProperty] private string _characterName = "妍";
-    [ObservableProperty] private string _characterRole = "寻研桌面助手";
-    [ObservableProperty] private string _characterAvatarText = "妍";
-    [ObservableProperty] private string _characterDescription = "主动理解屏幕与任务上下文，清晰地给出下一步。";
+    [ObservableProperty] private string _characterName = "枫林渔人";
+    [ObservableProperty] private string _characterRole = "寻研01桌面助手";
+    [ObservableProperty] private string _characterAvatarText = "枫";
+    [ObservableProperty] private string _characterDescription = "寻研01默认桌面角色，负责理解屏幕与任务上下文，清晰地给出下一步。";
     [ObservableProperty] private string _characterPersonality = "沉稳可靠";
     [ObservableProperty] private string _characterToneStyle = "友善";
     [ObservableProperty] private string _characterLanguageStyle = "标准";
@@ -187,17 +187,17 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [ObservableProperty] private bool _characterUseEmoji;
     [ObservableProperty] private string _characterSystemPromptSuffix = string.Empty;
     [ObservableProperty] private string _characterStylePreview = "点击预览后会用当前角色设定生成一段示例回复。";
-    [ObservableProperty] private string _characterCatchphrase = "我在桌面待命，随时可以接任务。";
-    [ObservableProperty] private string _characterAccentColor = "#2563EB";
-    [ObservableProperty] private string _characterBackgroundColor = "#EEF6FF";
-    [ObservableProperty] private string _characterImageFolder = "assets/characters/default";
+    [ObservableProperty] private string _characterCatchphrase = "我是枫林渔人，随时可以接任务。";
+    [ObservableProperty] private string _characterAccentColor = "#047857";
+    [ObservableProperty] private string _characterBackgroundColor = "#ECFDF5";
+    [ObservableProperty] private string _characterImageFolder = "assets/characters/feng lin yu ren";
     [ObservableProperty] private string _characterAvatarImage = "avatar.png";
     [ObservableProperty] private string _characterImageStatus = "未找到角色图片时会使用文字头像。";
     [ObservableProperty] private string _characterAssetWarningText = "选择目录后可逐状态检查图片。";
     [ObservableProperty] private string _characterSaveStatus = "角色配置会自动保存在本机。";
     [ObservableProperty] private string _characterLibraryStatus = "角色库会保存多个可切换的角色档案。";
     [ObservableProperty] private string _characterAssetSuggestionStatus = "扫描图片目录后会生成状态图匹配建议。";
-    [ObservableProperty] private string _characterManifestStatus = "角色包格式以寻研主格式为准，Petdex 仅作为可选兼容信息。";
+    [ObservableProperty] private string _characterManifestStatus = "角色包格式以寻研01主格式为准，Petdex 仅作为可选兼容信息。";
     [ObservableProperty] private string _characterManifestPreview = string.Empty;
     [ObservableProperty] private CharacterPackageExportCardState _characterPackageExportCard = CharacterPackageExportCardState.Empty;
 
@@ -405,7 +405,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         $"TTS：{CleanText(TtsVoice, "默认女声", 32)}；识别语言：{CleanText(SpeechRecognitionLanguage, "zh-CN", 16)}";
 
     public string TtsPreviewText =>
-        $"预览文案：你好，我是寻研。当前会使用 {CleanText(TtsVoice, "默认女声", 32)} 的语音配置。";
+        $"预览文案：你好，我是寻研01。当前会使用 {CleanText(TtsVoice, "默认女声", 32)} 的语音配置。";
 
     public string SpeechRecognitionLanguageDescription => SpeechRecognitionLanguage switch
     {
@@ -717,7 +717,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private void UseAppProviderForMimoCode()
     {
         MimoCodeModelConfigMode = "AppProvider";
-        MimoCodeStatus = "已选择使用寻研设置中心的 Provider/API Key。";
+        MimoCodeStatus = "已选择使用寻研01设置中心的 Provider/API Key。";
         RefreshMimoCodeCards();
     }
 
@@ -1779,13 +1779,25 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [RelayCommand]
     private void LoadSelectedCharacterProfile()
     {
-        if (SelectedCharacterProfile is null)
+        LoadCharacterProfileCore(SelectedCharacterProfile);
+    }
+
+    [RelayCommand]
+    private void LoadCharacterProfile(CharacterProfileListItem? item)
+    {
+        LoadCharacterProfileCore(item);
+    }
+
+    private void LoadCharacterProfileCore(CharacterProfileListItem? item)
+    {
+        if (item is null)
         {
             CharacterLibraryStatus = "请先选择一个角色档案。";
             return;
         }
 
-        var profile = _characterStore.LoadProfile(SelectedCharacterProfile.Id);
+        var selectedId = item.Id;
+        var profile = _characterStore.LoadProfile(selectedId);
         if (profile is null)
         {
             CharacterLibraryStatus = "所选角色档案不可用。";
@@ -1794,7 +1806,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         }
 
         ApplyCharacterProfile(profile, save: true);
-        RefreshCharacterProfiles(SelectedCharacterProfile.Id);
+        RefreshCharacterProfiles(selectedId);
         CharacterLibraryStatus = $"已载入角色档案：{CharacterName}。";
         CharacterSaveStatus = "当前小人外观已切换。";
     }
@@ -1835,39 +1847,29 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     {
         var profile = presetId switch
         {
-            "developer" => new MascotCharacterProfile
+            "breeze" or "yan" => new MascotCharacterProfile
             {
-                Name = "码伴",
-                Role = "开发调试伙伴",
-                AvatarText = "</>",
-                Personality = "直接严谨",
-                Catchphrase = "我会优先帮你定位问题和验证结果。",
-                AccentColor = "#0F766E",
-                BackgroundColor = "#F0FDFA",
-                ImageFolder = "assets/characters/developer"
+                Name = "微风",
+                Role = "寻研01桌面助手",
+                AvatarText = "微",
+                Personality = "沉稳可靠",
+                Catchphrase = "我是微风，可以继续接任务。",
+                AccentColor = "#2563EB",
+                BackgroundColor = "#EEF6FF",
+                ImageFolder = "assets/characters/yan"
             },
-            "operator" => new MascotCharacterProfile
+            "moonlight" or "yue guang" => new MascotCharacterProfile
             {
-                Name = "桌管家",
-                Role = "桌面任务管家",
-                AvatarText = "管",
-                Personality = "有序高效",
-                Catchphrase = "我会把任务拆清楚，再一步步执行。",
-                AccentColor = "#7C2D12",
-                BackgroundColor = "#FFF7ED",
-                ImageFolder = "assets/characters/operator"
-            },
-            "study" => new MascotCharacterProfile
-            {
-                Name = "小研",
-                Role = "阅读研究助手",
-                AvatarText = "研",
-                Personality = "耐心清晰",
-                Catchphrase = "我会帮你提炼重点、整理脉络。",
+                Name = "月光",
+                Role = "寻研01夜间助手",
+                AvatarText = "月",
+                Personality = "安静细致",
+                Catchphrase = "我是月光，会安静地帮你整理任务。",
                 AccentColor = "#7C3AED",
                 BackgroundColor = "#F5F3FF",
-                ImageFolder = "assets/characters/study"
+                ImageFolder = "assets/characters/yue guang"
             },
+            "fisher" or "feng lin yu ren" => new MascotCharacterProfile(),
             _ => new MascotCharacterProfile()
         };
 
@@ -1934,7 +1936,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [RelayCommand]
     private void RefreshCharacterManifestPreview()
     {
-        RefreshCharacterManifestPreviewCore("已刷新寻研角色包清单预览。");
+        RefreshCharacterManifestPreviewCore("已刷新寻研01角色包清单预览。");
     }
 
     [RelayCommand]
@@ -1973,7 +1975,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         var preview = CharacterPackageImportPreview;
         if (!preview.CanImport || preview.Profile is null)
         {
-            CharacterPackageImportStatus = "请先选择可导入的寻研角色包清单。";
+            CharacterPackageImportStatus = "请先选择可导入的寻研01角色包清单。";
             return;
         }
 
@@ -2301,7 +2303,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         MimoCodeReadinessItems.Add(new SettingsListItem(
             "接入状态",
             IsMimoCodeEnabled ? "已启用" : "未启用",
-            "开启后寻研可以把代码任务交给本机 Mimo Code connector。"));
+            "开启后寻研01可以把代码任务交给本机 Mimo Code connector。"));
         MimoCodeReadinessItems.Add(new SettingsListItem(
             "模型 API",
             GetMimoCodeModelModeText(MimoCodeModelConfigMode),
@@ -2312,7 +2314,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             "集成或分发时需要保留 Mimo Code 的版权声明和许可证文本。"));
         MimoCodeReadinessItems.Add(new SettingsListItem(
             "权限确认",
-            "走寻研确认体系",
+            "走寻研01确认体系",
             "文件写入、命令执行和记忆保存仍通过当前权限/记忆弹窗确认。"));
         MimoCodeReadinessItems.Add(new SettingsListItem(
             "后续对接",
@@ -2330,7 +2332,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     {
         return NormalizeMimoCodeModelMode(value) == "MimoLocalConfig"
             ? "使用 Mimo Code 本机配置"
-            : "使用寻研 Provider/API Key";
+            : "使用寻研01 Provider/API Key";
     }
 
     private void RefreshHotkeyCards()
@@ -2871,7 +2873,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
                 var role = item.State switch
                 {
                     "user" => "用户",
-                    "assistant" => "妍",
+                    "assistant" => "寻研01",
                     _ => string.IsNullOrWhiteSpace(item.State) ? "事件" : item.State
                 };
                 return $"{FormatTime(item.Timestamp)} {role}: {item.Message.Trim()}";
@@ -2888,7 +2890,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             new[]
             {
                 $"用户: {CleanText(record.Input, "无输入", 500)}",
-                $"妍: {CleanText(record.Result ?? record.Error, "暂无结果", 700)}"
+                $"寻研01: {CleanText(record.Result ?? record.Error, "暂无结果", 700)}"
             });
         return CleanText(fallback, "无对话记录", 1200);
     }
@@ -3488,10 +3490,10 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
 
         try
         {
-            CharacterName = CleanText(profile.Name, "妍", 12);
-            CharacterRole = CleanText(profile.Role, "寻研桌面助手", 24);
-            CharacterAvatarText = CleanText(profile.AvatarText, "妍", 4);
-            CharacterDescription = CleanText(profile.Description, "主动理解屏幕与任务上下文，清晰地给出下一步。", 120);
+            CharacterName = CleanText(profile.Name, "枫林渔人", 12);
+            CharacterRole = CleanText(profile.Role, "寻研01桌面助手", 24);
+            CharacterAvatarText = CleanText(profile.AvatarText, "枫", 4);
+            CharacterDescription = CleanText(profile.Description, "寻研01默认桌面角色，负责理解屏幕与任务上下文，清晰地给出下一步。", 120);
             CharacterPersonality = CleanText(profile.Personality, "沉稳可靠", 12);
             CharacterToneStyle = SelectExistingOption(CharacterToneStyleOptions, profile.ToneStyle, "友善");
             CharacterLanguageStyle = SelectExistingOption(CharacterLanguageStyleOptions, profile.LanguageStyle, "标准");
@@ -3499,11 +3501,11 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             CharacterUseEmoji = profile.UseEmoji;
             CharacterSystemPromptSuffix = CleanText(profile.SystemPromptSuffix, string.Empty, 500);
             ApplyCharacterTraitSelection(profile.PersonalityTraits);
-            CharacterCatchphrase = CleanText(profile.Catchphrase, "我在桌面待命，随时可以接任务。", 40);
+            CharacterCatchphrase = CleanText(profile.Catchphrase, "我是枫林渔人，随时可以接任务。", 40);
             PreviewCharacterStyle();
-            CharacterAccentColor = NormalizeHexColor(profile.AccentColor, "#2563EB");
-            CharacterBackgroundColor = NormalizeHexColor(profile.BackgroundColor, "#EEF6FF");
-            CharacterImageFolder = CleanPathText(profile.ImageFolder, "assets/characters/default", 260);
+            CharacterAccentColor = NormalizeHexColor(profile.AccentColor, "#047857");
+            CharacterBackgroundColor = NormalizeHexColor(profile.BackgroundColor, "#ECFDF5");
+            CharacterImageFolder = CleanPathText(profile.ImageFolder, "assets/characters/feng lin yu ren", 260);
             CharacterAvatarImage = CleanPathText(profile.AvatarImage, "avatar.png", 160);
 
             foreach (var item in CharacterStateImageItems)
@@ -3530,10 +3532,10 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
 
     private MascotCharacterProfile BuildCurrentCharacterProfile() => new()
     {
-        Name = CleanText(CharacterName, "妍", 12),
-        Role = CleanText(CharacterRole, "寻研桌面助手", 24),
-        AvatarText = CleanText(CharacterAvatarText, "妍", 4),
-        Description = CleanText(CharacterDescription, "主动理解屏幕与任务上下文，清晰地给出下一步。", 120),
+        Name = CleanText(CharacterName, "枫林渔人", 12),
+        Role = CleanText(CharacterRole, "寻研01桌面助手", 24),
+        AvatarText = CleanText(CharacterAvatarText, "枫", 4),
+        Description = CleanText(CharacterDescription, "寻研01默认桌面角色，负责理解屏幕与任务上下文，清晰地给出下一步。", 120),
         Personality = CleanText(CharacterPersonality, "沉稳可靠", 12),
         ToneStyle = SelectExistingOption(CharacterToneStyleOptions, CharacterToneStyle, "友善"),
         LanguageStyle = SelectExistingOption(CharacterLanguageStyleOptions, CharacterLanguageStyle, "标准"),
@@ -3544,10 +3546,10 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             .Where(item => item.IsSelected)
             .Select(item => item.Title)
             .ToList(),
-        Catchphrase = CleanText(CharacterCatchphrase, "我在桌面待命，随时可以接任务。", 40),
-        AccentColor = NormalizeHexColor(CharacterAccentColor, "#2563EB"),
-        BackgroundColor = NormalizeHexColor(CharacterBackgroundColor, "#EEF6FF"),
-        ImageFolder = CleanPathText(CharacterImageFolder, "assets/characters/default", 260),
+        Catchphrase = CleanText(CharacterCatchphrase, "我是枫林渔人，随时可以接任务。", 40),
+        AccentColor = NormalizeHexColor(CharacterAccentColor, "#047857"),
+        BackgroundColor = NormalizeHexColor(CharacterBackgroundColor, "#ECFDF5"),
+        ImageFolder = CleanPathText(CharacterImageFolder, "assets/characters/feng lin yu ren", 260),
         AvatarImage = CleanPathText(CharacterAvatarImage, "avatar.png", 160),
         StateImages = CharacterStateImageItems.ToDictionary(
             item => item.StateKey,
@@ -3617,7 +3619,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         CharacterManifestFormatItems.Add(new SettingsListItem(
             "主格式",
             manifest.Schema,
-            "以寻研角色资料、人格设定和状态图为主，不把 Petdex 当作项目主模型。"));
+            "以寻研01角色资料、人格设定和状态图为主，不把 Petdex 当作项目主模型。"));
         CharacterManifestFormatItems.Add(new SettingsListItem(
             "默认角色",
             $"{manifest.Name} / {manifest.Slug}",
@@ -3625,7 +3627,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         CharacterManifestFormatItems.Add(new SettingsListItem(
             "状态资源",
             $"{manifest.States.Count} 个状态",
-            "状态名沿用寻研 UI 状态，缺图时回退到 Idle 或默认头像。"));
+            "状态名沿用寻研01 UI 状态，缺图时回退到 Idle 或默认头像。"));
         CharacterManifestFormatItems.Add(new SettingsListItem(
             "兼容策略",
             manifest.Animation.PetdexCompatibility.Enabled ? "Petdex 启用" : "Petdex 可选",

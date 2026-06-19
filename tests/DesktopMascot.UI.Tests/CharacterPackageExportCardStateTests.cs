@@ -22,7 +22,7 @@ public sealed class CharacterPackageExportCardStateTests
 
         var state = CharacterPackageExportCardState.FromManifest(manifest);
 
-        Assert.Equal("寻研角色包 · 月光 · 2 个状态图", state.SummaryText);
+        Assert.Equal("寻研01角色包 · 月光 · 2 个状态图", state.SummaryText);
         Assert.Equal("yue-guang/character.manifest.json", state.ExportFileName);
         Assert.Equal("Petdex 仅作为可选导入兼容信息", state.CompatibilityText);
     }

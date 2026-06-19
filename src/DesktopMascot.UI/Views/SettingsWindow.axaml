@@ -3,7 +3,7 @@
         xmlns:vm="using:DesktopMascot.UI.ViewModels"
         x:Class="DesktopMascot.UI.Views.SettingsWindow"
         x:DataType="vm:SettingsWindowViewModel"
-        Title="寻研 设置"
+        Title="寻研01 设置"
         Width="1080"
         Height="760"
         MinWidth="900"
@@ -28,7 +28,7 @@
                                    Foreground="{StaticResource Brush.Text.Primary}"
                                    FontSize="20"
                                    FontWeight="SemiBold"/>
-                        <TextBlock Text="寻研的运行配置"
+                        <TextBlock Text="寻研01的运行配置"
                                    Classes="captionText"/>
                     </StackPanel>
 
@@ -86,7 +86,7 @@
                                        Foreground="{StaticResource Brush.Text.Primary}"
                                        FontSize="22"
                                        FontWeight="SemiBold"/>
-                            <TextBlock Text="集中查看寻研当前配置是否具备运行条件。总览只读，具体修改仍在左侧对应页面完成。"
+                            <TextBlock Text="集中查看寻研01当前配置是否具备运行条件。总览只读，具体修改仍在左侧对应页面完成。"
                                        Classes="bodyText"/>
                         </StackPanel>
 
@@ -434,7 +434,7 @@
                                                    Classes="sectionTitle"/>
                                         <Grid ColumnDefinitions="*,*"
                                               ColumnSpacing="10">
-                                            <Button Content="使用寻研 Provider/API Key"
+                                            <Button Content="使用寻研01 Provider/API Key"
                                                     Classes="secondaryAction"
                                                     Command="{Binding UseAppProviderForMimoCodeCommand}"/>
                                             <Button Grid.Column="1"
@@ -1166,7 +1166,7 @@
                                        Foreground="{StaticResource Brush.Text.Primary}"
                                        FontSize="22"
                                        FontWeight="SemiBold"/>
-                            <TextBlock Text="查看寻研执行过的任务、结果、事件流和工具调用记录。"
+                            <TextBlock Text="查看寻研01执行过的任务、结果、事件流和工具调用记录。"
                                        Classes="bodyText"/>
                         </StackPanel>
 
@@ -2197,24 +2197,19 @@
                                         <TextBlock Text="预设"
                                                    Classes="sectionTitle"/>
                                         <WrapPanel>
-                                            <Button Content="默认"
+                                            <Button Content="枫林渔人"
                                                     Command="{Binding UseCharacterPresetCommand}"
-                                                    CommandParameter="default"
+                                                    CommandParameter="fisher"
                                                     Margin="0,0,6,6"
                                                     Padding="10,5"/>
-                                            <Button Content="开发伙伴"
+                                            <Button Content="微风"
                                                     Command="{Binding UseCharacterPresetCommand}"
-                                                    CommandParameter="developer"
+                                                    CommandParameter="breeze"
                                                     Margin="0,0,6,6"
                                                     Padding="10,5"/>
-                                            <Button Content="任务管家"
+                                            <Button Content="月光"
                                                     Command="{Binding UseCharacterPresetCommand}"
-                                                    CommandParameter="operator"
-                                                    Margin="0,0,6,6"
-                                                    Padding="10,5"/>
-                                            <Button Content="阅读研究"
-                                                    Command="{Binding UseCharacterPresetCommand}"
-                                                    CommandParameter="study"
+                                                    CommandParameter="moonlight"
                                                     Margin="0,0,6,6"
                                                     Padding="10,5"/>
                                         </WrapPanel>

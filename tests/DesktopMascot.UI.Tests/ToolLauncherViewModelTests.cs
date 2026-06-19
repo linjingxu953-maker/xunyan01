@@ -161,12 +161,36 @@ public sealed class ToolLauncherViewModelTests
     }
 
     [Fact]
+    public void CharacterSwitchItems_IgnoreUnknownAssetDirectoryCandidates()
+    {
+        using var assetRoot = CharacterAssetTestRoot.Create(
+            ("feng lin yu ren", "avatar.png"),
+            ("unknown role", "avatar.png"));
+        using var viewModel = ToolLauncherViewModelFixture.Create();
+        viewModel.SetCharacterAssetRootCandidates([assetRoot.RootPath]);
+
+        Assert.Contains(viewModel.CharacterSwitchItems, x => x.Name == "枫林渔人");
+        Assert.DoesNotContain(viewModel.CharacterSwitchItems, x => x.ImageFolder.Contains("unknown role", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void DefaultCharacterProfile_UsesFengLinYuRen()
+    {
+        var profile = new MascotCharacterProfile();
+
+        Assert.Equal("枫林渔人", profile.Name);
+        Assert.Equal("寻研01桌面助手", profile.Role);
+        Assert.Equal("枫", profile.AvatarText);
+        Assert.Equal("assets/characters/feng lin yu ren", profile.ImageFolder);
+    }
+
+    [Fact]
     public void SwitchCharacterProfile_AppliesAndSavesSelectedProfile()
     {
         var yueGuang = new MascotCharacterProfile
         {
             Name = "月光",
-            Role = "寻研夜间助手",
+            Role = "寻研01夜间助手",
             AvatarText = "月",
             ImageFolder = "assets/characters/yue guang",
             AvatarImage = "avatar.png",
@@ -180,10 +204,35 @@ public sealed class ToolLauncherViewModelTests
         viewModel.SwitchCharacterProfile(item);
 
         Assert.Equal("月光", viewModel.CharacterName);
-        Assert.Equal("寻研夜间助手", viewModel.CharacterRole);
+        Assert.Equal("寻研01夜间助手", viewModel.CharacterRole);
         Assert.Equal("assets/characters/yue guang", viewModel.CharacterImageFolder);
         Assert.Equal("月光", store.SavedProfile?.Name);
         Assert.Contains("月光", viewModel.CharacterSaveStatus);
+    }
+
+    [Fact]
+    public void InlineSettings_LoadCharacterProfile_AppliesAndSavesSelectedProfile()
+    {
+        var yueGuang = new MascotCharacterProfile
+        {
+            Name = "月光",
+            Role = "寻研01夜间助手",
+            AvatarText = "月",
+            ImageFolder = "assets/characters/yue guang",
+            AvatarImage = "avatar.png",
+            AccentColor = "#7C3AED",
+            BackgroundColor = "#F5F3FF"
+        };
+        var store = new StubMascotCharacterStore(profiles: [("yue-guang", yueGuang)]);
+        using var viewModel = ToolLauncherViewModelFixture.Create(store);
+        var item = viewModel.InlineSettings.CharacterProfiles.First(x => x.Name == "月光");
+
+        viewModel.InlineSettings.LoadCharacterProfileCommand.Execute(item);
+
+        Assert.Equal("月光", viewModel.InlineSettings.CharacterName);
+        Assert.Equal("寻研01夜间助手", viewModel.InlineSettings.CharacterRole);
+        Assert.Equal("月光", store.SavedProfile?.Name);
+        Assert.Contains("月光", viewModel.InlineSettings.CharacterLibraryStatus);
     }
 
     [Fact]
