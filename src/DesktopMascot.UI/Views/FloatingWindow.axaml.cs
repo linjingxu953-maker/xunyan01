@@ -259,6 +259,70 @@ public partial class FloatingWindow : Window
         e.Handled = true;
     }
 
+    private void SelectToolLauncherCategory_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string category })
+        {
+            _viewModel?.SelectToolLauncherCategory(category);
+        }
+
+        e.Handled = true;
+    }
+
+    private void UseToolLauncherItem_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: ToolLauncherItem item })
+        {
+            _viewModel?.UseToolLauncherItem(item);
+            FocusInput();
+        }
+
+        e.Handled = true;
+    }
+
+    private void CharacterSwitchItem_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: CharacterProfileListItem item })
+        {
+            _viewModel?.SwitchCharacterProfile(item);
+        }
+
+        e.Handled = true;
+    }
+
+    private void ApplyToolLauncherForm_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        _viewModel?.ApplyToolLauncherForm();
+        FocusInput();
+        e.Handled = true;
+    }
+
+    private void CancelToolLauncherForm_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        _viewModel?.CancelToolLauncherForm();
+        e.Handled = true;
+    }
+
+    private async void PickToolLauncherFilePath_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (_viewModel is not null)
+        {
+            await _viewModel.PickToolLauncherFilePathAsync();
+        }
+
+        e.Handled = true;
+    }
+
+    private async void PickToolLauncherFolderPath_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (_viewModel is not null)
+        {
+            await _viewModel.PickToolLauncherFolderPathAsync();
+        }
+
+        e.Handled = true;
+    }
+
     private void ToggleScreenScreenshotPreview_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         _viewModel?.ToggleScreenScreenshotPreview();

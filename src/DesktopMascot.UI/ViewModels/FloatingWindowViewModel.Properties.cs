@@ -115,6 +115,31 @@ public partial class FloatingWindowViewModel
     [ObservableProperty] private bool _isSidebarVisible = true;
     [ObservableProperty] private bool _isChatPageVisible = true;
     [ObservableProperty] private bool _isSettingsPageVisible;
+    [ObservableProperty] private bool _isToolLauncherVisible;
+    [ObservableProperty] private string _toolSearchText = string.Empty;
+    [ObservableProperty] private string _selectedToolCategory = ToolLauncherCatalog.AllCategory;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasToolLauncherForm))]
+    [NotifyPropertyChangedFor(nameof(IsToolLauncherPathForm))]
+    [NotifyPropertyChangedFor(nameof(IsToolLauncherCommandForm))]
+    [NotifyPropertyChangedFor(nameof(IsToolLauncherContentForm))]
+    [NotifyPropertyChangedFor(nameof(ToolLauncherFormTitle))]
+    [NotifyPropertyChangedFor(nameof(ToolLauncherFormDescription))]
+    [NotifyPropertyChangedFor(nameof(ToolLauncherPrimaryLabel))]
+    [NotifyPropertyChangedFor(nameof(ToolLauncherPrimaryPlaceholder))]
+    [NotifyPropertyChangedFor(nameof(ToolLauncherSecondaryLabel))]
+    [NotifyPropertyChangedFor(nameof(ToolLauncherSecondaryPlaceholder))]
+    [NotifyPropertyChangedFor(nameof(ToolLauncherFormHint))]
+    [NotifyPropertyChangedFor(nameof(CanApplyToolLauncherForm))]
+    private ToolLauncherItem? _selectedToolLauncherFormItem;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanApplyToolLauncherForm))]
+    private string _toolLauncherPrimaryInput = string.Empty;
+    [ObservableProperty] private string _toolLauncherSecondaryInput = string.Empty;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanApplyToolLauncherForm))]
+    private string _toolLauncherObjectiveInput = string.Empty;
+    [ObservableProperty] private string _toolLauncherOutputInput = string.Empty;
     [ObservableProperty] private string _inlineSettingsTitle = "设置";
     [ObservableProperty] private string _inlineSettingsDescription = "模型、权限、记忆、快捷键、数据目录和角色外观都在这里管理。";
     [ObservableProperty] private string _inlineSettingsStatus = "选择左侧设置项查看当前配置入口。";
@@ -153,6 +178,10 @@ public partial class FloatingWindowViewModel
     public ObservableCollection<TaskToolCallItem> TaskToolCalls { get; } = new();
     public ObservableCollection<ComputerUseActionItem> ComputerUseActions { get; } = new();
     public ObservableCollection<ComputerUseLogItem> ComputerUseLogItems { get; } = new();
+    public ObservableCollection<ToolLauncherItem> ToolLauncherItems { get; } = new();
+    public ObservableCollection<ToolLauncherItem> FilteredToolLauncherItems { get; } = new();
+    public ObservableCollection<string> ToolLauncherCategories { get; } = new();
+    public ObservableCollection<CharacterProfileListItem> CharacterSwitchItems { get; } = new();
     public SettingsWindowViewModel InlineSettings { get; }
 
     // ── 计算属性 ──
@@ -173,6 +202,54 @@ public partial class FloatingWindowViewModel
     public bool HasNoMessages => !HasMessages;
     public bool HasTaskHistory => TaskHistory.Count > 0;
     public bool HasNoTaskHistory => !HasTaskHistory;
+    public bool HasToolLauncherResults => FilteredToolLauncherItems.Count > 0;
+    public bool HasNoToolLauncherResults => !HasToolLauncherResults;
+    public bool HasCharacterSwitchItems => CharacterSwitchItems.Count > 0;
+    public bool HasNoCharacterSwitchItems => !HasCharacterSwitchItems;
+    public bool HasToolLauncherForm => SelectedToolLauncherFormItem is { FormKind: not ToolLauncherFormKind.None };
+    public bool IsToolLauncherPathForm => SelectedToolLauncherFormItem?.FormKind == ToolLauncherFormKind.Path;
+    public bool IsToolLauncherCommandForm => SelectedToolLauncherFormItem?.FormKind == ToolLauncherFormKind.Command;
+    public bool IsToolLauncherContentForm => SelectedToolLauncherFormItem?.FormKind == ToolLauncherFormKind.Content;
+    public string ToolLauncherFormTitle => SelectedToolLauncherFormItem is null ? "工具表单" : $"{SelectedToolLauncherFormItem.Title} 参数";
+    public string ToolLauncherFormDescription => SelectedToolLauncherFormItem?.Description ?? "填写关键字段后生成任务输入。";
+    public string ToolLauncherPrimaryLabel => SelectedToolLauncherFormItem?.FormKind switch
+    {
+        ToolLauncherFormKind.Command => "命令",
+        ToolLauncherFormKind.Path => "路径或文件",
+        ToolLauncherFormKind.Content => "内容或素材",
+        _ => "输入"
+    };
+    public string ToolLauncherPrimaryPlaceholder => SelectedToolLauncherFormItem?.FormKind switch
+    {
+        ToolLauncherFormKind.Command => "例如：dotnet test DesktopMascot.sln",
+        ToolLauncherFormKind.Path => "例如：C:\\Users\\wgmo\\Desktop\\资料.pdf",
+        ToolLauncherFormKind.Content => "粘贴文本、题目、素材路径或网页说明",
+        _ => "填写输入"
+    };
+    public string ToolLauncherSecondaryLabel => SelectedToolLauncherFormItem?.FormKind switch
+    {
+        ToolLauncherFormKind.Command => "工作目录",
+        ToolLauncherFormKind.Path => "范围或格式",
+        ToolLauncherFormKind.Content => "目标格式",
+        _ => "补充信息"
+    };
+    public string ToolLauncherSecondaryPlaceholder => SelectedToolLauncherFormItem?.FormKind switch
+    {
+        ToolLauncherFormKind.Command => "可选，例如：C:\\Users\\wgmo\\Desktop\\项目",
+        ToolLauncherFormKind.Path => "可选，例如：只读、导出 Markdown、输出到指定目录",
+        ToolLauncherFormKind.Content => "可选，例如：中文摘要、表格、Markdown、短答案",
+        _ => "可选"
+    };
+    public string ToolLauncherFormHint => SelectedToolLauncherFormItem is null
+        ? "选择工具后填写参数。"
+        : $"将生成 {SelectedToolLauncherFormItem.ToolName} 任务输入，仍走现有权限确认链路。";
+    public bool CanApplyToolLauncherForm => SelectedToolLauncherFormItem?.FormKind switch
+    {
+        ToolLauncherFormKind.Command => !string.IsNullOrWhiteSpace(ToolLauncherPrimaryInput),
+        ToolLauncherFormKind.Path => !string.IsNullOrWhiteSpace(ToolLauncherPrimaryInput) || !string.IsNullOrWhiteSpace(ToolLauncherObjectiveInput),
+        ToolLauncherFormKind.Content => !string.IsNullOrWhiteSpace(ToolLauncherPrimaryInput) || !string.IsNullOrWhiteSpace(ToolLauncherObjectiveInput),
+        _ => false
+    };
     public bool HasScreenSelectionContext => ScreenSelectionContext.HasRegion;
     public ScreenScreenshotPreviewCardState ScreenScreenshotPreview =>
         ScreenScreenshotPreviewCardState.From(ScreenSelectionContext, IsScreenScreenshotPreviewExpanded);
@@ -213,6 +290,7 @@ public partial class FloatingWindowViewModel
     private DateTime _currentConversationCreatedAt = DateTime.UtcNow;
     private Dictionary<string, string> _characterStateImages = new();
     private List<string> _characterPersonalityTraits = ["可靠", "主动"];
+    private IReadOnlyList<string>? _characterAssetRootCandidates;
     private bool _isApplyingCharacterProfile;
     private bool _hasLoadedInlineSettings;
     private Window? _inlineSettingsOwner;

@@ -125,6 +125,10 @@ public static class ToolRegistryInitializer
             if (browserTool != null)
                 registry.Register(new ExamModeTool(screenTool, computerTool, browserTool));
         }
+
+        // Goal 循环引擎
+        var goalEngine = new Core.Tools.GoalEngine();
+        registry.Register(new GoalTool(goalEngine));
     }
 
     /// <summary>
@@ -186,7 +190,9 @@ public static class ToolRegistryInitializer
             "speech_recognition",
             // 角色
             "character_switch",
-            "character_market"
+            "character_market",
+            // Goal 循环
+            "goal"
         };
     }
 }

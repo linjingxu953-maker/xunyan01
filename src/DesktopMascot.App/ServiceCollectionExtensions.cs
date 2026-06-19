@@ -104,6 +104,9 @@ public static class ServiceCollectionExtensions
         // 错误处理
         services.AddSingleton<ErrorHandler>();
 
+        // Goal 循环引擎
+        services.AddSingleton<Core.Tools.GoalEngine>();
+
         // Agent 人格
         services.AddSingleton(new AgentPersonality());
 

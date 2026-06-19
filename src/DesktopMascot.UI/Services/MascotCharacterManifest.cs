@@ -95,6 +95,7 @@ public static class MascotCharacterManifestFactory
     {
         WriteIndented = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
@@ -167,6 +168,44 @@ public static class MascotCharacterManifestFactory
         return JsonSerializer.Serialize(manifest, SerializerOptions);
     }
 
+    public static MascotCharacterManifest? FromJson(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return null;
+
+        return JsonSerializer.Deserialize<MascotCharacterManifest>(json, SerializerOptions);
+    }
+
+    public static MascotCharacterProfile ToProfile(MascotCharacterManifest manifest, string? manifestPath = null)
+    {
+        var profile = new MascotCharacterProfile
+        {
+            Name = CleanText(manifest.Name, "妍"),
+            Role = CleanText(manifest.Persona.Role, "寻研桌面助手"),
+            AvatarText = CleanText(manifest.Appearance.AvatarText, "妍"),
+            Description = CleanText(manifest.Persona.Description, string.Empty),
+            Personality = CleanText(manifest.Persona.Personality, "沉稳可靠"),
+            ToneStyle = CleanText(manifest.Persona.ToneStyle, "友善"),
+            LanguageStyle = CleanText(manifest.Persona.LanguageStyle, "标准"),
+            ReplyLength = CleanText(manifest.Persona.ReplyLength, "平衡"),
+            UseEmoji = manifest.Persona.UseEmoji,
+            SystemPromptSuffix = manifest.Persona.SystemPromptSuffix ?? string.Empty,
+            PersonalityTraits = [..manifest.Persona.Traits],
+            Catchphrase = CleanText(manifest.Persona.Catchphrase, "我在桌面待命，随时可以接任务。"),
+            AccentColor = CleanText(manifest.Appearance.AccentColor, "#2563EB"),
+            BackgroundColor = CleanText(manifest.Appearance.BackgroundColor, "#EEF6FF"),
+            ImageFolder = ResolveImportImageFolder(manifest.Appearance.ImageFolder, manifestPath),
+            AvatarImage = CleanText(manifest.Appearance.AvatarImage, "avatar.png"),
+            StateImages = manifest.States.ToDictionary(
+                item => item.Key,
+                item => CleanText(item.Value.Image, "avatar.png"),
+                StringComparer.OrdinalIgnoreCase)
+        };
+
+        profile.EnsureImageDefaults();
+        return profile;
+    }
+
     public static string CreateSlug(string? name)
     {
         var text = string.IsNullOrWhiteSpace(name) ? "character" : name.Trim();
@@ -208,5 +247,27 @@ public static class MascotCharacterManifestFactory
         var bytes = Encoding.UTF8.GetBytes(text);
         var hash = Convert.ToHexString(bytes);
         return $"character-{hash[..Math.Min(hash.Length, 8)].ToLowerInvariant()}";
+    }
+
+    private static string ResolveImportImageFolder(string? imageFolder, string? manifestPath)
+    {
+        var folder = CleanText(imageFolder, "assets/characters/default")
+            .Replace('/', Path.DirectorySeparatorChar);
+
+        if (Path.IsPathRooted(folder))
+            return folder;
+
+        var packageRoot = string.IsNullOrWhiteSpace(manifestPath)
+            ? null
+            : Path.GetDirectoryName(manifestPath);
+
+        return string.IsNullOrWhiteSpace(packageRoot)
+            ? folder
+            : Path.GetFullPath(Path.Combine(packageRoot, folder));
+    }
+
+    private static string CleanText(string? value, string fallback)
+    {
+        return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
     }
 }

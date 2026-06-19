@@ -4,10 +4,28 @@ Put customizable mascot images under this folder. The app resolves character ima
 
 ```text
 assets/characters/default
+assets/characters/yan
 assets/characters/developer
 assets/characters/operator
 assets/characters/study
 ```
+
+## Folder Rules
+
+`assets/characters` is the shared character image root. Every role should have one dedicated subfolder:
+
+```text
+assets/characters/
+  yan/          current default character: 妍
+  developer/    developer-style role images
+  operator/     task-operator role images
+  study/        study/research role images
+  <new-role>/   images for one new role
+```
+
+Do not place role images directly in `assets/characters`. Keep images grouped by role folder so the settings center can switch, preview, import, and export a character without mixing files from different roles.
+
+`assets/characters/default` is kept as a compatibility fallback for older profiles. New or actively managed roles should use their own named folder, such as `assets/characters/yan`.
 
 Supported image formats: `.png`, `.jpg`, `.jpeg`, `.bmp`, `.webp`.
 

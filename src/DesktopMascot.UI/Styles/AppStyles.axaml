@@ -371,8 +371,258 @@
         <Setter Property="FontSize" Value="12"/>
     </Style>
 
+    <Style Selector="Button.toolLauncherOpenButton">
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Background" Value="#223B82F6"/>
+        <Setter Property="BorderBrush" Value="#4060A5FA"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="#EFF6FF"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="Button.toolLauncherOpenButton:pointerover">
+        <Setter Property="Background" Value="#334F9BFF"/>
+        <Setter Property="BorderBrush" Value="#7093C5FD"/>
+    </Style>
+
+    <Style Selector="Border.characterSwitchPanel">
+        <Setter Property="Background" Value="#0FFFFFFF"/>
+        <Setter Property="BorderBrush" Value="#18FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Padding" Value="10"/>
+    </Style>
+
+    <Style Selector="Button.characterManageButton">
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="CornerRadius" Value="7"/>
+        <Setter Property="Background" Value="#14FFFFFF"/>
+        <Setter Property="BorderBrush" Value="#20FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="#BFDBFE"/>
+        <Setter Property="FontSize" Value="10"/>
+    </Style>
+
+    <Style Selector="Button.characterManageButton:pointerover">
+        <Setter Property="Background" Value="#223B82F6"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+
+    <Style Selector="Button.characterSwitchButton">
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Padding" Value="7"/>
+        <Setter Property="CornerRadius" Value="9"/>
+        <Setter Property="Background" Value="#10FFFFFF"/>
+        <Setter Property="BorderBrush" Value="#18FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+
+    <Style Selector="Button.characterSwitchButton:pointerover">
+        <Setter Property="Background" Value="#1CFFFFFF"/>
+        <Setter Property="BorderBrush" Value="#32FFFFFF"/>
+    </Style>
+
+    <Style Selector="Button.characterSwitchButton.active">
+        <Setter Property="Background" Value="#243B82F6"/>
+        <Setter Property="BorderBrush" Value="#6093C5FD"/>
+    </Style>
+
+    <Style Selector="Border.characterSwitchAvatar">
+        <Setter Property="Width" Value="34"/>
+        <Setter Property="Height" Value="34"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+    </Style>
+
+    <Style Selector="TextBlock.characterSwitchAvatarText">
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="TextBlock.characterSwitchName">
+        <Setter Property="Foreground" Value="#F8FAFC"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="TextBlock.characterSwitchRole">
+        <Setter Property="Foreground" Value="#94A3B8"/>
+        <Setter Property="FontSize" Value="10"/>
+    </Style>
+
+    <Style Selector="TextBlock.characterSwitchStateStatus">
+        <Setter Property="FontSize" Value="9"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="TextBlock.characterSwitchActiveText">
+        <Setter Property="Foreground" Value="#93C5FD"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
     <Style Selector="Border.messageList">
         <Setter Property="Background" Value="#760B0D12"/>
+    </Style>
+
+    <Style Selector="Border.toolLauncherPanel">
+        <Setter Property="Background" Value="#9A0F172A"/>
+        <Setter Property="BorderBrush" Value="#32FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Padding" Value="12"/>
+    </Style>
+
+    <Style Selector="TextBlock.toolLauncherTitle">
+        <Setter Property="Foreground" Value="#F8FAFC"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="TextBlock.toolLauncherCaption">
+        <Setter Property="Foreground" Value="#94A3B8"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="LineHeight" Value="17"/>
+    </Style>
+
+    <Style Selector="TextBox.toolLauncherSearchBox">
+        <Setter Property="CornerRadius" Value="9"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="#2EFFFFFF"/>
+        <Setter Property="Background" Value="#F8FAFC"/>
+        <Setter Property="Foreground" Value="#0F172A"/>
+        <Setter Property="Padding" Value="10,7"/>
+        <Setter Property="FontSize" Value="12"/>
+    </Style>
+
+    <Style Selector="Button.toolLauncherCategoryButton">
+        <Setter Property="Padding" Value="9,5"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Background" Value="#16FFFFFF"/>
+        <Setter Property="BorderBrush" Value="#24FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="#CBD5E1"/>
+        <Setter Property="FontSize" Value="11"/>
+    </Style>
+
+    <Style Selector="Button.toolLauncherCategoryButton:pointerover">
+        <Setter Property="Background" Value="#263B82F6"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+
+    <Style Selector="Button.toolLauncherItemButton">
+        <Setter Property="Padding" Value="10"/>
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Background" Value="#14FFFFFF"/>
+        <Setter Property="BorderBrush" Value="#22FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    </Style>
+
+    <Style Selector="Button.toolLauncherItemButton:pointerover">
+        <Setter Property="Background" Value="#223B82F6"/>
+        <Setter Property="BorderBrush" Value="#6093C5FD"/>
+    </Style>
+
+    <Style Selector="TextBlock.toolLauncherItemTitle">
+        <Setter Property="Foreground" Value="#F8FAFC"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="TextBlock.toolLauncherItemDescription">
+        <Setter Property="Foreground" Value="#CBD5E1"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="LineHeight" Value="15"/>
+    </Style>
+
+    <Style Selector="TextBlock.toolLauncherItemMeta">
+        <Setter Property="Foreground" Value="#93C5FD"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="Border.toolLauncherBadge">
+        <Setter Property="Background" Value="#243B82F6"/>
+        <Setter Property="CornerRadius" Value="7"/>
+        <Setter Property="Padding" Value="7,2"/>
+    </Style>
+
+    <Style Selector="TextBlock.toolLauncherBadgeText">
+        <Setter Property="Foreground" Value="#BFDBFE"/>
+        <Setter Property="FontSize" Value="9"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="Border.toolLauncherFormCard">
+        <Setter Property="Background" Value="#18FFFFFF"/>
+        <Setter Property="BorderBrush" Value="#2AFFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Padding" Value="10"/>
+    </Style>
+
+    <Style Selector="TextBlock.toolLauncherFormLabel">
+        <Setter Property="Foreground" Value="#CBD5E1"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="TextBox.toolLauncherFormInput">
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="#2EFFFFFF"/>
+        <Setter Property="Background" Value="#F8FAFC"/>
+        <Setter Property="Foreground" Value="#0F172A"/>
+        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="MinHeight" Value="32"/>
+    </Style>
+
+    <Style Selector="Button.toolLauncherPrimaryButton">
+        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Background" Value="#2563EB"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="Button.toolLauncherPrimaryButton:pointerover">
+        <Setter Property="Background" Value="#1D4ED8"/>
+    </Style>
+
+    <Style Selector="Button.toolLauncherSecondaryButton">
+        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Background" Value="#14FFFFFF"/>
+        <Setter Property="BorderBrush" Value="#24FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="#E5E7EB"/>
+        <Setter Property="FontSize" Value="11"/>
+    </Style>
+
+    <Style Selector="Button.toolLauncherPathButton">
+        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Background" Value="#1E3A8A"/>
+        <Setter Property="BorderBrush" Value="#3B82F6"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="#DBEAFE"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="MinWidth" Value="58"/>
+    </Style>
+
+    <Style Selector="Button.toolLauncherPathButton:pointerover">
+        <Setter Property="Background" Value="#2563EB"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
     </Style>
 
     <Style Selector="Border.screenSelectionContextCard">
@@ -677,6 +927,87 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Padding" Value="10"/>
+    </Style>
+
+    <Style Selector="Border.characterStatePreviewCard">
+        <Setter Property="Width" Value="148"/>
+        <Setter Property="Background" Value="#10FFFFFF"/>
+        <Setter Property="BorderBrush" Value="#1EFFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="9"/>
+        <Setter Property="Padding" Value="8"/>
+    </Style>
+
+    <Style Selector="Border.characterStatePreviewImageFrame">
+        <Setter Property="Background" Value="#14000000"/>
+        <Setter Property="BorderBrush" Value="#22FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+    </Style>
+
+    <Style Selector="TextBlock.characterStatePreviewPlaceholder">
+        <Setter Property="Foreground" Value="#64748B"/>
+        <Setter Property="FontSize" Value="22"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="TextBlock.characterStatePreviewTitle">
+        <Setter Property="Foreground" Value="#F8FAFC"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="Border.characterStatePreviewBadge">
+        <Setter Property="CornerRadius" Value="7"/>
+        <Setter Property="Padding" Value="7,2"/>
+    </Style>
+
+    <Style Selector="TextBlock.characterStatePreviewBadgeText">
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+        <Setter Property="FontSize" Value="9"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="TextBlock.characterStatePreviewDetail">
+        <Setter Property="Foreground" Value="#94A3B8"/>
+        <Setter Property="FontSize" Value="9"/>
+        <Setter Property="LineHeight" Value="13"/>
+    </Style>
+
+    <Style Selector="Border.characterPackageFormatItem">
+        <Setter Property="Background" Value="#0EFFFFFF"/>
+        <Setter Property="BorderBrush" Value="#1CFFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="9"/>
+    </Style>
+
+    <Style Selector="TextBlock.characterPackageMetaLabel">
+        <Setter Property="Foreground" Value="#8EA0B8"/>
+        <Setter Property="FontSize" Value="9"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="TextBlock.characterPackageMetaValue">
+        <Setter Property="Foreground" Value="#F8FAFC"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="LineHeight" Value="16"/>
+    </Style>
+
+    <Style Selector="TextBox.characterPackagePreviewTextBox">
+        <Setter Property="Background" Value="#74101520"/>
+        <Setter Property="Foreground" Value="#F8FAFC"/>
+        <Setter Property="BorderBrush" Value="#24FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="FontFamily" Value="Consolas, Cascadia Mono, monospace"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="LineHeight" Value="15"/>
     </Style>
 
     <Style Selector="Border.computerUsePanel">

@@ -298,4 +298,64 @@ public sealed class ScreenSelectionContextStateTests
             File.Delete(screenshotPath);
         }
     }
+
+    [Fact]
+    public void BuildReferenceInput_IncludesScreenshotResultTextAndFollowUpQuestion()
+    {
+        var state = ScreenSelectionContextState.From(new ScreenSelectionResult
+        {
+            X = 12,
+            Y = 24,
+            Width = 320,
+            Height = 180,
+            IsConfirmed = true
+        }).WithResult(
+            success: true,
+            content: """
+            {
+              "identification": "PowerShell error dialog",
+              "understanding": "The user needs to diagnose why a CLI failed to start.",
+              "extractedText": "The specified executable is not a valid application for this OS platform.",
+              "contentType": "terminal",
+              "screenshotPath": "C:\\tmp\\screen-area.png"
+            }
+            """,
+            error: null);
+
+        var input = state.BuildReferenceInput("How should I fix it?");
+
+        Assert.Contains("screen_understanding_reference", input);
+        Assert.Contains("screen-area.png", input);
+        Assert.Contains("12, 24", input);
+        Assert.Contains("320 x 180", input);
+        Assert.Contains("PowerShell error dialog", input);
+        Assert.Contains("The specified executable is not a valid application for this OS platform.", input);
+        Assert.Contains("How should I fix it?", input);
+    }
+
+    [Fact]
+    public void BuildReferenceInput_UsesFallbackQuestionWhenFollowUpIsEmpty()
+    {
+        var state = ScreenSelectionContextState.From(new ScreenSelectionResult
+        {
+            X = 12,
+            Y = 24,
+            Width = 320,
+            Height = 180,
+            IsConfirmed = true
+        }).WithResult(
+            success: true,
+            content: """
+            {
+              "identification": "Table region",
+              "screenshotPath": "C:\\tmp\\screen-area.png"
+            }
+            """,
+            error: null);
+
+        var input = state.BuildReferenceInput(" ");
+
+        Assert.Contains("followUpQuestion", input);
+        Assert.Contains("请继续分析", input);
+    }
 }

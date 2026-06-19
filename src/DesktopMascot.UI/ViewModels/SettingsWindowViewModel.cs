@@ -199,6 +199,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [ObservableProperty] private string _characterAssetSuggestionStatus = "扫描图片目录后会生成状态图匹配建议。";
     [ObservableProperty] private string _characterManifestStatus = "角色包格式以寻研主格式为准，Petdex 仅作为可选兼容信息。";
     [ObservableProperty] private string _characterManifestPreview = string.Empty;
+    [ObservableProperty] private CharacterPackageExportCardState _characterPackageExportCard = CharacterPackageExportCardState.Empty;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasCharacterAvatarImageSuggestion))]
@@ -3533,6 +3534,8 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
 
     private void RefreshCharacterManifestFormatItems(MascotCharacterManifest manifest)
     {
+        CharacterPackageExportCard = CharacterPackageExportCardState.FromManifest(manifest);
+
         CharacterManifestFormatItems.Clear();
         CharacterManifestFormatItems.Add(new SettingsListItem(
             "主格式",

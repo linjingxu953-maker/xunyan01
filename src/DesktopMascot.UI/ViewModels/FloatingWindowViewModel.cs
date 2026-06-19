@@ -52,8 +52,12 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         _characterStore.ProfileChanged += OnCharacterProfileChanged;
         ApplyCharacterProfile(_characterStore.Load(), save: false);
         ComputerUseActions.CollectionChanged += (_, _) => NotifyComputerUseActionStateChanged();
+        FilteredToolLauncherItems.CollectionChanged += (_, _) => NotifyToolLauncherResultStateChanged();
+        CharacterSwitchItems.CollectionChanged += (_, _) => RefreshCharacterSwitchState();
         MessageItems.CollectionChanged += (_, _) => NotifyMessageStateChanged();
         TaskHistory.CollectionChanged += (_, _) => NotifyTaskHistoryStateChanged();
+        RefreshCharacterSwitchItems();
+        InitializeToolLauncher();
 
         _eventBus.TaskEventPublished += OnTaskEventPublished;
         _eventStreamSubscription = _eventStream.SubscribeAll().Subscribe(new TaskEventObserver(OnTaskStreamEvent));
@@ -260,11 +264,11 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         if (!ScreenSelectionContext.HasScreenshotEvidence)
             return;
 
-        InputText = $"请基于这张屏幕截图继续分析：{ScreenSelectionContext.ScreenshotPath}";
+        InputText = ScreenSelectionContext.BuildReferenceInput(InputText);
         IsChatVisible = true;
         IsChatPageVisible = true;
         IsSettingsPageVisible = false;
-        TaskActionStatus = $"已引用截图：{ScreenSelectionContext.ScreenshotFileName}";
+        TaskActionStatus = $"已引用截图和识别结果：{ScreenSelectionContext.ScreenshotFileName}";
         StatusMessage = "检查输入内容后可直接发送。";
     }
 

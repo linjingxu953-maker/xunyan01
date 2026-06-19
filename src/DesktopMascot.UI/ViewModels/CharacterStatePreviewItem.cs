@@ -44,6 +44,8 @@ public sealed class CharacterStatePreviewItem
     public IBrush StatusBrush { get; }
     public string PreviewText => string.IsNullOrWhiteSpace(DisplayName) ? "图" : DisplayName[..1];
     public string ResolvedFileName => string.IsNullOrWhiteSpace(FilePath) ? "未解析" : Path.GetFileName(FilePath);
+    public string DetailText =>
+        $"配置：{(string.IsNullOrWhiteSpace(ConfiguredFileName) ? "未配置" : ConfiguredFileName)}；实际：{ResolvedFileName}";
 
     private static IBrush BrushFrom(string color)
     {

@@ -1,5 +1,6 @@
 using DesktopMascot.UI.Services;
 using System.IO;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 
 namespace DesktopMascot.UI.ViewModels;
@@ -15,7 +16,10 @@ public sealed class ScreenSelectionContextState
         detailText: "选择屏幕区域后会显示坐标和尺寸。",
         screenshotPath: string.Empty,
         suggestedActions: [],
-        detailItems: []);
+        detailItems: [],
+        recognitionSummary: string.Empty,
+        extractedText: string.Empty,
+        rawResultContent: string.Empty);
 
     private ScreenSelectionContextState(
         bool hasRegion,
@@ -26,7 +30,10 @@ public sealed class ScreenSelectionContextState
         string detailText,
         string screenshotPath,
         IReadOnlyList<ScreenContextActionItem> suggestedActions,
-        IReadOnlyList<ScreenContextDetailItem> detailItems)
+        IReadOnlyList<ScreenContextDetailItem> detailItems,
+        string recognitionSummary,
+        string extractedText,
+        string rawResultContent)
     {
         HasRegion = hasRegion;
         Title = title;
@@ -37,6 +44,9 @@ public sealed class ScreenSelectionContextState
         ScreenshotPath = screenshotPath;
         SuggestedActions = suggestedActions;
         DetailItems = detailItems;
+        RecognitionSummary = recognitionSummary;
+        ExtractedText = extractedText;
+        RawResultContent = rawResultContent;
     }
 
     public bool HasRegion { get; }
@@ -55,6 +65,9 @@ public sealed class ScreenSelectionContextState
     public bool HasSuggestedActions => SuggestedActions.Count > 0;
     public IReadOnlyList<ScreenContextDetailItem> DetailItems { get; }
     public bool HasDetailItems => DetailItems.Count > 0;
+    public string RecognitionSummary { get; }
+    public string ExtractedText { get; }
+    public string RawResultContent { get; }
 
     public static ScreenSelectionContextState From(ScreenSelectionResult? result, string? statusText = null)
     {
@@ -71,7 +84,10 @@ public sealed class ScreenSelectionContextState
             detailText: $"将把该屏幕区域交给视觉理解：({result.X}, {result.Y}) {result.Width}x{result.Height}",
             screenshotPath: string.Empty,
             suggestedActions: [],
-            detailItems: []);
+            detailItems: [],
+            recognitionSummary: string.Empty,
+            extractedText: string.Empty,
+            rawResultContent: string.Empty);
     }
 
     public ScreenSelectionContextState WithStatus(string statusText, string? detailText = null)
@@ -88,7 +104,10 @@ public sealed class ScreenSelectionContextState
             detailText: Clean(detailText, DetailText),
             screenshotPath: ScreenshotPath,
             suggestedActions: SuggestedActions,
-            detailItems: DetailItems);
+            detailItems: DetailItems,
+            recognitionSummary: RecognitionSummary,
+            extractedText: ExtractedText,
+            rawResultContent: RawResultContent);
     }
 
     public ScreenSelectionContextState WithResult(bool success, string? content, string? error)
@@ -108,20 +127,59 @@ public sealed class ScreenSelectionContextState
                 detailText: Clean(error, Clean(content, "屏幕理解失败，可以重试。")),
                 screenshotPath: failureScreenshotPath,
                 suggestedActions: [],
-                detailItems: []);
+                detailItems: [],
+                recognitionSummary: string.Empty,
+                extractedText: string.Empty,
+                rawResultContent: Clean(content, string.Empty));
         }
 
         var screenshotPath = Clean(BuildScreenshotPath(content), ScreenshotPath);
+        var recognitionSummary = BuildReadableResultSummary(content);
         return new ScreenSelectionContextState(
             hasRegion: true,
             title: Title,
             regionText: RegionText,
             sizeText: SizeText,
             statusText: "识别完成",
-            detailText: BuildReadableResultSummary(content),
+            detailText: recognitionSummary,
             screenshotPath: screenshotPath,
             suggestedActions: BuildSuggestedActions(content),
-            detailItems: BuildDetailItems(content));
+            detailItems: BuildDetailItems(content),
+            recognitionSummary: recognitionSummary,
+            extractedText: BuildExtractedText(content),
+            rawResultContent: Clean(content, string.Empty));
+    }
+
+    public string BuildReferenceInput(string? followUpQuestion)
+    {
+        var question = Clean(followUpQuestion, "请继续分析这段屏幕引用上下文。");
+        var payload = new
+        {
+            type = "screen_understanding_reference",
+            screenshotPath = ScreenshotPath,
+            screenshotFileName = ScreenshotFileName,
+            region = new
+            {
+                text = RegionText,
+                size = SizeText
+            },
+            status = StatusText,
+            recognitionSummary = Clean(RecognitionSummary, DetailText),
+            extractedText = ExtractedText,
+            details = DetailItems.Select(item => new
+            {
+                label = item.Label,
+                value = item.Value
+            }).ToArray(),
+            followUpQuestion = question
+        };
+
+        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+        {
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            WriteIndented = true
+        });
+        return $"请基于以下屏幕理解引用上下文回答用户后续问题。不要只根据 screenshotPath 推断，优先使用 recognitionSummary 和 extractedText。{Environment.NewLine}{json}";
     }
 
     private static string BuildReadableResultSummary(string? content)
@@ -186,6 +244,25 @@ public sealed class ScreenSelectionContextState
         }
 
         return confidence.ValueKind == JsonValueKind.String ? confidence.GetString() ?? string.Empty : string.Empty;
+    }
+
+    private static string BuildExtractedText(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+            return string.Empty;
+
+        try
+        {
+            using var document = JsonDocument.Parse(content);
+            var root = document.RootElement;
+            return root.ValueKind == JsonValueKind.Object
+                ? GetFirstJsonString(root, "extractedText", "ocrText", "visibleText", "text")
+                : string.Empty;
+        }
+        catch (JsonException)
+        {
+            return string.Empty;
+        }
     }
 
     private static IReadOnlyList<ScreenContextDetailItem> BuildDetailItems(string? content)

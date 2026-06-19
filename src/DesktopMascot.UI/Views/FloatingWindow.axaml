@@ -111,7 +111,7 @@
                     <Border Grid.Column="0"
                             Classes="sidebarPanel"
                             IsVisible="{Binding IsSidebarVisible}">
-                        <Grid RowDefinitions="Auto,Auto,*,Auto">
+                        <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
                             <TextBlock Grid.Row="0"
                                        Text="历史"
                                        Classes="sidebarTitle"
@@ -121,12 +121,84 @@
                                     Classes="newChatButton"
                                     Command="{Binding NewChatCommand}"
                                     Margin="12,8,12,10"/>
-                            <TextBlock Grid.Row="2"
+                            <Button Grid.Row="2"
+                                    Content="工具入口"
+                                    Classes="toolLauncherOpenButton"
+                                    Command="{Binding ToggleToolLauncherCommand}"
+                                    Margin="12,0,12,10"/>
+                            <Border Grid.Row="3"
+                                    Classes="characterSwitchPanel"
+                                    Margin="12,0,12,10">
+                                <StackPanel Spacing="8">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="角色"
+                                                   Classes="sidebarTitle"
+                                                   VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1"
+                                                Content="管理"
+                                                Classes="characterManageButton"
+                                                Command="{Binding OpenAppearanceSettingsCommand}"/>
+                                    </Grid>
+                                    <TextBlock Text="暂无可切换角色"
+                                               Classes="sidebarEmptyText"
+                                               IsVisible="{Binding HasNoCharacterSwitchItems}"/>
+                                    <ScrollViewer MaxHeight="132"
+                                                  VerticalScrollBarVisibility="Auto"
+                                                  IsVisible="{Binding HasCharacterSwitchItems}">
+                                        <ItemsControl ItemsSource="{Binding CharacterSwitchItems}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:CharacterProfileListItem">
+                                                    <Button Classes="characterSwitchButton"
+                                                            Classes.active="{Binding IsActive}"
+                                                            Tag="{Binding}"
+                                                            Click="CharacterSwitchItem_Click"
+                                                            Margin="0,0,0,6">
+                                                        <Grid ColumnDefinitions="34,*,Auto"
+                                                              ColumnSpacing="8">
+                                                            <Border Classes="characterSwitchAvatar"
+                                                                    Background="{Binding AccentBrush}">
+                                                                <Grid>
+                                                                    <Image Source="{Binding Thumbnail}"
+                                                                           Stretch="UniformToFill"
+                                                                           IsVisible="{Binding HasThumbnail}"/>
+                                                                    <TextBlock Text="{Binding AvatarText}"
+                                                                               Classes="characterSwitchAvatarText"
+                                                                               IsVisible="{Binding HasNoThumbnail}"/>
+                                                                </Grid>
+                                                            </Border>
+                                                            <StackPanel Grid.Column="1"
+                                                                        Spacing="1"
+                                                                        VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding Name}"
+                                                                           Classes="characterSwitchName"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Text="{Binding Role}"
+                                                                           Classes="characterSwitchRole"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Text="{Binding StateImageStatusText}"
+                                                                           Classes="characterSwitchStateStatus"
+                                                                           Foreground="{Binding StateImageStatusBrush}"
+                                                                           ToolTip.Tip="{Binding MissingStateImageText}"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                            </StackPanel>
+                                                            <TextBlock Grid.Column="2"
+                                                                       Text="{Binding ActiveText}"
+                                                                       Classes="characterSwitchActiveText"
+                                                                       VerticalAlignment="Center"/>
+                                                        </Grid>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </StackPanel>
+                            </Border>
+                            <TextBlock Grid.Row="4"
                                        Text="暂无历史对话"
                                        Classes="sidebarEmptyText"
                                        IsVisible="{Binding HasNoTaskHistory}"
                                        Margin="16,10,16,0"/>
-                            <ScrollViewer Grid.Row="2"
+                            <ScrollViewer Grid.Row="4"
                                           VerticalScrollBarVisibility="Auto"
                                           IsVisible="{Binding HasTaskHistory}">
                                 <ItemsControl ItemsSource="{Binding TaskHistory}">
@@ -185,7 +257,7 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </ScrollViewer>
-                            <TextBlock Grid.Row="3"
+                            <TextBlock Grid.Row="5"
                                        Text="{Binding StateHint}"
                                        Classes="sidebarFooterText"
                                        Margin="16,10,16,14"/>
@@ -197,7 +269,7 @@
                           IsVisible="{Binding IsChatPageVisible}">
                         <Border Grid.Row="0"
                                 Classes="messageList">
-                            <Grid RowDefinitions="Auto,*">
+                            <Grid RowDefinitions="Auto,Auto,*">
                                 <Border Grid.Row="0"
                                         Classes="screenSelectionContextCard"
                                         IsVisible="{Binding HasScreenSelectionContext}"
@@ -344,7 +416,193 @@
                                     </Grid>
                                 </Border>
 
-                            <Grid Grid.Row="1">
+                                <Border Grid.Row="1"
+                                        Classes="toolLauncherPanel"
+                                        IsVisible="{Binding IsToolLauncherVisible}"
+                                        Margin="18,10,18,6">
+                                    <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+                                          RowSpacing="10">
+                                        <Grid Grid.Row="0"
+                                              ColumnDefinitions="*,Auto"
+                                              ColumnSpacing="10">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="工具入口"
+                                                           Classes="toolLauncherTitle"/>
+                                                <TextBlock Text="选择一个工具后，会把任务模板填入输入框，继续走现有权限和 Agent 链路。"
+                                                           Classes="toolLauncherCaption"
+                                                           TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                            <TextBox Grid.Column="1"
+                                                     Text="{Binding ToolSearchText}"
+                                                     Classes="toolLauncherSearchBox"
+                                                     PlaceholderText="搜索工具"
+                                                     Width="190"/>
+                                        </Grid>
+
+                                        <ScrollViewer Grid.Row="1"
+                                                      HorizontalScrollBarVisibility="Auto"
+                                                      VerticalScrollBarVisibility="Disabled">
+                                            <ItemsControl ItemsSource="{Binding ToolLauncherCategories}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <StackPanel Orientation="Horizontal"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Button Content="{Binding}"
+                                                                Tag="{Binding}"
+                                                                Classes="toolLauncherCategoryButton"
+                                                                Click="SelectToolLauncherCategory_Click"
+                                                                Margin="0,0,6,0"/>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+
+                                        <Border Grid.Row="2"
+                                                Classes="toolLauncherFormCard"
+                                                IsVisible="{Binding HasToolLauncherForm}">
+                                            <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+                                                  RowSpacing="8">
+                                                <Grid Grid.Row="0"
+                                                      ColumnDefinitions="*,Auto"
+                                                      ColumnSpacing="10">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="{Binding ToolLauncherFormTitle}"
+                                                                   Classes="toolLauncherItemTitle"/>
+                                                        <TextBlock Text="{Binding ToolLauncherFormDescription}"
+                                                                   Classes="toolLauncherItemDescription"
+                                                                   TextWrapping="Wrap"/>
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding SelectedToolLauncherFormItem.RiskText}"
+                                                               Classes="toolLauncherItemMeta"
+                                                               VerticalAlignment="Top"/>
+                                                </Grid>
+                                                <Grid Grid.Row="1"
+                                                      ColumnDefinitions="*,*"
+                                                      ColumnSpacing="8">
+                                                    <StackPanel Spacing="4">
+                                                        <TextBlock Text="{Binding ToolLauncherPrimaryLabel}"
+                                                                   Classes="toolLauncherFormLabel"/>
+                                                        <Grid ColumnDefinitions="*,Auto,Auto"
+                                                              ColumnSpacing="6">
+                                                            <TextBox Text="{Binding ToolLauncherPrimaryInput}"
+                                                                     Classes="toolLauncherFormInput"
+                                                                     PlaceholderText="{Binding ToolLauncherPrimaryPlaceholder}"/>
+                                                            <Button Grid.Column="1"
+                                                                    Content="选文件"
+                                                                    Classes="toolLauncherPathButton"
+                                                                    IsVisible="{Binding IsToolLauncherPathForm}"
+                                                                    Click="PickToolLauncherFilePath_Click"/>
+                                                            <Button Grid.Column="2"
+                                                                    Content="选目录"
+                                                                    Classes="toolLauncherPathButton"
+                                                                    IsVisible="{Binding IsToolLauncherPathForm}"
+                                                                    Click="PickToolLauncherFolderPath_Click"/>
+                                                        </Grid>
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1"
+                                                                Spacing="4">
+                                                        <TextBlock Text="{Binding ToolLauncherSecondaryLabel}"
+                                                                   Classes="toolLauncherFormLabel"/>
+                                                        <TextBox Text="{Binding ToolLauncherSecondaryInput}"
+                                                                 Classes="toolLauncherFormInput"
+                                                                 PlaceholderText="{Binding ToolLauncherSecondaryPlaceholder}"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                                <Grid Grid.Row="2"
+                                                      ColumnDefinitions="*,*"
+                                                      ColumnSpacing="8">
+                                                    <StackPanel Spacing="4">
+                                                        <TextBlock Text="处理目标"
+                                                                   Classes="toolLauncherFormLabel"/>
+                                                        <TextBox Text="{Binding ToolLauncherObjectiveInput}"
+                                                                 Classes="toolLauncherFormInput"
+                                                                 PlaceholderText="例如：总结重点、修复问题、生成可提交结果"/>
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1"
+                                                                Spacing="4">
+                                                        <TextBlock Text="期望输出"
+                                                                   Classes="toolLauncherFormLabel"/>
+                                                        <TextBox Text="{Binding ToolLauncherOutputInput}"
+                                                                 Classes="toolLauncherFormInput"
+                                                                 PlaceholderText="例如：简洁结论、Markdown、可执行步骤"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                                <Grid Grid.Row="3"
+                                                      ColumnDefinitions="*,Auto"
+                                                      ColumnSpacing="8">
+                                                    <TextBlock Text="{Binding ToolLauncherFormHint}"
+                                                               Classes="toolLauncherCaption"
+                                                               TextWrapping="Wrap"
+                                                               VerticalAlignment="Center"/>
+                                                    <StackPanel Grid.Column="1"
+                                                                Orientation="Horizontal"
+                                                                Spacing="6">
+                                                        <Button Content="取消"
+                                                                Classes="toolLauncherSecondaryButton"
+                                                                Click="CancelToolLauncherForm_Click"/>
+                                                        <Button Content="填入输入框"
+                                                                Classes="toolLauncherPrimaryButton"
+                                                                IsEnabled="{Binding CanApplyToolLauncherForm}"
+                                                                Click="ApplyToolLauncherForm_Click"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Grid>
+                                        </Border>
+
+                                        <Grid Grid.Row="3">
+                                            <TextBlock Text="没有匹配的工具入口"
+                                                       Classes="toolLauncherCaption"
+                                                       IsVisible="{Binding HasNoToolLauncherResults}"/>
+                                            <ScrollViewer MaxHeight="188"
+                                                          VerticalScrollBarVisibility="Auto"
+                                                          IsVisible="{Binding HasToolLauncherResults}">
+                                                <ItemsControl ItemsSource="{Binding FilteredToolLauncherItems}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:ToolLauncherItem">
+                                                            <Button Classes="toolLauncherItemButton"
+                                                                    Tag="{Binding}"
+                                                                    Click="UseToolLauncherItem_Click"
+                                                                    ToolTip.Tip="{Binding LaunchPrompt}"
+                                                                    Margin="0,0,8,8">
+                                                                <StackPanel Spacing="5"
+                                                                            Width="184">
+                                                                    <Grid ColumnDefinitions="*,Auto">
+                                                                        <TextBlock Text="{Binding Title}"
+                                                                                   Classes="toolLauncherItemTitle"
+                                                                                   TextTrimming="CharacterEllipsis"/>
+                                                                        <Border Grid.Column="1"
+                                                                                Classes="toolLauncherBadge">
+                                                                            <TextBlock Text="{Binding CategoryBadgeText}"
+                                                                                       Classes="toolLauncherBadgeText"/>
+                                                                        </Border>
+                                                                    </Grid>
+                                                                    <TextBlock Text="{Binding Description}"
+                                                                               Classes="toolLauncherItemDescription"
+                                                                               MaxLines="2"
+                                                                               TextWrapping="Wrap"/>
+                                                                    <TextBlock Text="{Binding RiskText}"
+                                                                               Classes="toolLauncherItemMeta"
+                                                                               TextTrimming="CharacterEllipsis"/>
+                                                                </StackPanel>
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+
+                            <Grid Grid.Row="2">
                                 <StackPanel IsVisible="{Binding HasNoMessages}"
                                             VerticalAlignment="Center"
                                             HorizontalAlignment="Center"
@@ -1049,6 +1307,178 @@
                                                     <TextBlock Text="{Binding InlineSettings.CharacterAssetSuggestionStatus}"
                                                                Classes="inlineSettingsBody"
                                                                TextWrapping="Wrap"/>
+                                                    <Border Classes="inlineSettingsInnerCard">
+                                                        <StackPanel Spacing="8">
+                                                            <Grid ColumnDefinitions="*,Auto"
+                                                                  ColumnSpacing="8">
+                                                                <StackPanel Spacing="2">
+                                                                    <TextBlock Text="状态图预览"
+                                                                               Classes="inlineSettingsCardTitle"
+                                                                               FontSize="12"/>
+                                                                    <TextBlock Text="{Binding InlineSettings.CharacterStatePreviewStatus}"
+                                                                               Classes="inlineSettingsBody"
+                                                                               TextWrapping="Wrap"/>
+                                                                </StackPanel>
+                                                                <Button Grid.Column="1"
+                                                                        Content="刷新状态图"
+                                                                        Classes="inlineSettingsBackButton"
+                                                                        Command="{Binding InlineSettings.RefreshCharacterStatePreviewCommand}"/>
+                                                            </Grid>
+                                                            <ItemsControl ItemsSource="{Binding InlineSettings.CharacterStatePreviewItems}"
+                                                                          IsVisible="{Binding InlineSettings.HasCharacterStatePreviews}">
+                                                                <ItemsControl.ItemsPanel>
+                                                                    <ItemsPanelTemplate>
+                                                                        <WrapPanel/>
+                                                                    </ItemsPanelTemplate>
+                                                                </ItemsControl.ItemsPanel>
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate x:DataType="vm:CharacterStatePreviewItem">
+                                                                        <Border Classes="characterStatePreviewCard"
+                                                                                Margin="0,0,8,8">
+                                                                            <Grid RowDefinitions="86,Auto,Auto"
+                                                                                  RowSpacing="6">
+                                                                                <Border Classes="characterStatePreviewImageFrame">
+                                                                                    <Grid>
+                                                                                        <Image Source="{Binding Image}"
+                                                                                               Stretch="Uniform"
+                                                                                               IsVisible="{Binding HasImage}"/>
+                                                                                        <TextBlock Text="{Binding PreviewText}"
+                                                                                                   Classes="characterStatePreviewPlaceholder"
+                                                                                                   IsVisible="{Binding HasNoImage}"/>
+                                                                                    </Grid>
+                                                                                </Border>
+                                                                                <Grid Grid.Row="1"
+                                                                                      ColumnDefinitions="*,Auto"
+                                                                                      ColumnSpacing="6">
+                                                                                    <TextBlock Text="{Binding DisplayName}"
+                                                                                               Classes="characterStatePreviewTitle"
+                                                                                               TextTrimming="CharacterEllipsis"/>
+                                                                                    <Border Grid.Column="1"
+                                                                                            Classes="characterStatePreviewBadge"
+                                                                                            Background="{Binding StatusBrush}">
+                                                                                        <TextBlock Text="{Binding StatusText}"
+                                                                                                   Classes="characterStatePreviewBadgeText"/>
+                                                                                    </Border>
+                                                                                </Grid>
+                                                                                <TextBlock Grid.Row="2"
+                                                                                           Text="{Binding DetailText}"
+                                                                                           Classes="characterStatePreviewDetail"
+                                                                                           TextWrapping="Wrap"/>
+                                                                            </Grid>
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Classes="inlineSettingsInnerCard">
+                                                        <StackPanel Spacing="9">
+                                                            <Grid ColumnDefinitions="*,Auto"
+                                                                  ColumnSpacing="8">
+                                                                <StackPanel Spacing="2">
+                                                                    <TextBlock Text="角色包"
+                                                                               Classes="inlineSettingsCardTitle"
+                                                                               FontSize="12"/>
+                                                                    <TextBlock Text="{Binding InlineSettings.CharacterPackageExportCard.SummaryText}"
+                                                                               Classes="inlineSettingsBody"
+                                                                               TextWrapping="Wrap"/>
+                                                                </StackPanel>
+                                                                <WrapPanel Grid.Column="1"
+                                                                           HorizontalAlignment="Right">
+                                                                    <Button Content="刷新清单"
+                                                                            Classes="inlineSettingsBackButton"
+                                                                            Command="{Binding InlineSettings.RefreshCharacterManifestPreviewCommand}"
+                                                                            Margin="0,0,8,0"/>
+                                                                    <Button Content="导出角色包"
+                                                                            Classes="sendButton"
+                                                                            Command="{Binding InlineSettings.ExportCharacterManifestCommand}"/>
+                                                                </WrapPanel>
+                                                            </Grid>
+                                                            <Grid ColumnDefinitions="*,*"
+                                                                  RowDefinitions="Auto,Auto"
+                                                                  ColumnSpacing="8"
+                                                                  RowSpacing="8">
+                                                                <Border Classes="characterPackageFormatItem">
+                                                                    <StackPanel Spacing="2">
+                                                                        <TextBlock Text="主格式"
+                                                                                   Classes="characterPackageMetaLabel"/>
+                                                                        <TextBlock Text="{Binding InlineSettings.CharacterPackageExportCard.SchemaText}"
+                                                                                   Classes="characterPackageMetaValue"
+                                                                                   TextTrimming="CharacterEllipsis"/>
+                                                                    </StackPanel>
+                                                                </Border>
+                                                                <Border Grid.Column="1"
+                                                                        Classes="characterPackageFormatItem">
+                                                                    <StackPanel Spacing="2">
+                                                                        <TextBlock Text="导出文件"
+                                                                                   Classes="characterPackageMetaLabel"/>
+                                                                        <TextBlock Text="{Binding InlineSettings.CharacterPackageExportCard.ExportFileName}"
+                                                                                   Classes="characterPackageMetaValue"
+                                                                                   TextTrimming="CharacterEllipsis"/>
+                                                                    </StackPanel>
+                                                                </Border>
+                                                                <Border Grid.Row="1"
+                                                                        Grid.ColumnSpan="2"
+                                                                        Classes="characterPackageFormatItem">
+                                                                    <StackPanel Spacing="2">
+                                                                        <TextBlock Text="兼容策略"
+                                                                                   Classes="characterPackageMetaLabel"/>
+                                                                        <TextBlock Text="{Binding InlineSettings.CharacterPackageExportCard.CompatibilityText}"
+                                                                                   Classes="characterPackageMetaValue"
+                                                                                   TextWrapping="Wrap"/>
+                                                                    </StackPanel>
+                                                                </Border>
+                                                            </Grid>
+                                                            <ItemsControl ItemsSource="{Binding InlineSettings.CharacterManifestFormatItems}">
+                                                                <ItemsControl.ItemsPanel>
+                                                                    <ItemsPanelTemplate>
+                                                                        <WrapPanel/>
+                                                                    </ItemsPanelTemplate>
+                                                                </ItemsControl.ItemsPanel>
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate x:DataType="vm:SettingsListItem">
+                                                                        <Border Classes="characterPackageFormatItem"
+                                                                                Width="172"
+                                                                                Margin="0,0,8,8">
+                                                                            <StackPanel Spacing="3">
+                                                                                <TextBlock Text="{Binding Title}"
+                                                                                           Classes="characterPackageMetaLabel"/>
+                                                                                <TextBlock Text="{Binding Value}"
+                                                                                           Classes="characterPackageMetaValue"
+                                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                                <TextBlock Text="{Binding Description}"
+                                                                                           Classes="characterStatePreviewDetail"
+                                                                                           TextWrapping="Wrap"/>
+                                                                            </StackPanel>
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                            <TextBox Text="{Binding InlineSettings.CharacterManifestPreview}"
+                                                                     Classes="characterPackagePreviewTextBox"
+                                                                     IsReadOnly="True"
+                                                                     AcceptsReturn="True"
+                                                                     TextWrapping="Wrap"
+                                                                     MinHeight="96"
+                                                                     MaxHeight="150"
+                                                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+                                                            <Grid ColumnDefinitions="*,Auto"
+                                                                  ColumnSpacing="8">
+                                                                <TextBlock Text="{Binding InlineSettings.CharacterManifestStatus}"
+                                                                           Classes="inlineSettingsBody"
+                                                                           TextWrapping="Wrap"
+                                                                           VerticalAlignment="Center"/>
+                                                                <Button Grid.Column="1"
+                                                                        Content="导入资源"
+                                                                        Classes="inlineSettingsBackButton"
+                                                                        Command="{Binding InlineSettings.ImportCharacterAssetsCommand}"/>
+                                                            </Grid>
+                                                            <TextBlock Text="{Binding InlineSettings.CharacterPackageExportCard.ImportHint}"
+                                                                       Classes="characterStatePreviewDetail"
+                                                                       TextWrapping="Wrap"/>
+                                                        </StackPanel>
+                                                    </Border>
                                                     <ItemsControl ItemsSource="{Binding InlineSettings.CharacterStateImageItems}">
                                                         <ItemsControl.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:CharacterStateImageItem">
