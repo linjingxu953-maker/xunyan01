@@ -288,6 +288,132 @@ public class SummarizePageTests
     }
 
     [Fact]
+    public async Task ScreenUnderstandTool_WithRegion_ShouldCaptureSelectedRegion()
+    {
+        var mockContext = new MockContextProvider
+        {
+            MockScreenshotPath = Path.Combine(Path.GetTempPath(), $"full_{Guid.NewGuid():N}.png"),
+            MockRegionScreenshotPath = Path.Combine(Path.GetTempPath(), $"region_{Guid.NewGuid():N}.png")
+        };
+        var mockLlm = new Mock<ILlmProvider>();
+        mockLlm.Setup(x => x.ChatAsync(
+                It.IsAny<IEnumerable<LlmMessage>>(),
+                It.IsAny<IEnumerable<ToolDefinition>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new LlmResponse
+            {
+                Success = true,
+                Content = """
+                {
+                    "identification": "圈选区域",
+                    "understanding": "正在分析用户圈选的屏幕部分",
+                    "needsAction": false,
+                    "confidence": 0.8
+                }
+                """
+            });
+
+        var tool = new ScreenUnderstandTool(mockContext, mockLlm.Object);
+
+        try
+        {
+            File.WriteAllBytes(mockContext.MockScreenshotPath, [0x89, 0x50, 0x4E, 0x47]);
+            File.WriteAllBytes(mockContext.MockRegionScreenshotPath, [0x89, 0x50, 0x4E, 0x47, 0x01]);
+
+            var result = await tool.ExecuteAsync("""
+            {
+                "region": { "x": -120, "y": 80, "width": 320, "height": 180 },
+                "user_hint": "用户圈选的屏幕区域"
+            }
+            """);
+
+            Assert.True(result.Success);
+            Assert.Equal((-120, 80, 320, 180), mockContext.LastCapturedRegion);
+            Assert.Equal(0, mockContext.FullScreenshotCaptureCount);
+            Assert.Equal(1, mockContext.RegionScreenshotCaptureCount);
+        }
+        finally
+        {
+            if (File.Exists(mockContext.MockScreenshotPath))
+                File.Delete(mockContext.MockScreenshotPath);
+            if (File.Exists(mockContext.MockRegionScreenshotPath))
+                File.Delete(mockContext.MockRegionScreenshotPath);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ScreenUnderstand_WithUiRegionParameters_ShouldCaptureRegionAndReturnScreenshotPath()
+    {
+        var mockLlm = new Mock<ILlmProvider>();
+        var registry = new ToolRegistry();
+        var mockContext = new MockContextProvider
+        {
+            MockScreenshotPath = Path.Combine(Path.GetTempPath(), $"full_{Guid.NewGuid():N}.png"),
+            MockRegionScreenshotPath = Path.Combine(Path.GetTempPath(), $"region_{Guid.NewGuid():N}.png")
+        };
+
+        registry.SetContextProvider(mockContext);
+        registry.Register(new ScreenUnderstandTool(mockContext, mockLlm.Object));
+
+        var orchestrator = new AgentOrchestrator(
+            mockLlm.Object, registry, _mockEventBus.Object, _mockLogger.Object);
+
+        var task = new AgentTask
+        {
+            Title = "Screen understand selected region",
+            Input = "Analyze selected area",
+            Type = TaskType.ScreenUnderstand,
+            Parameters = new Dictionary<string, object>
+            {
+                ["TaskType"] = TaskType.ScreenUnderstand,
+                ["Region"] = new
+                {
+                    region = new
+                    {
+                        x = -120,
+                        y = 80,
+                        width = 320,
+                        height = 180
+                    }
+                },
+                ["UserHint"] = "selected screen area"
+            }
+        };
+
+        mockLlm.Setup(x => x.ChatAsync(
+                It.IsAny<IEnumerable<LlmMessage>>(),
+                It.IsAny<IEnumerable<ToolDefinition>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new LlmResponse
+            {
+                Success = true,
+                Content = """{"identification":"selected region","understanding":"selected region understanding","suggestions":["check details"],"needsAction":false,"confidence":0.9}"""
+            });
+
+        try
+        {
+            File.WriteAllBytes(mockContext.MockScreenshotPath, [0x89, 0x50, 0x4E, 0x47]);
+            File.WriteAllBytes(mockContext.MockRegionScreenshotPath, [0x89, 0x50, 0x4E, 0x47, 0x01]);
+
+            var result = await orchestrator.ExecuteAsync(task);
+
+            Assert.True(result.Success, result.Error);
+            Assert.Equal((-120, 80, 320, 180), mockContext.LastCapturedRegion);
+            Assert.Equal(0, mockContext.FullScreenshotCaptureCount);
+            Assert.Equal(1, mockContext.RegionScreenshotCaptureCount);
+            Assert.Contains("screenshotPath", result.Content);
+            Assert.Contains(Path.GetFileName(mockContext.MockRegionScreenshotPath), result.Content);
+        }
+        finally
+        {
+            if (File.Exists(mockContext.MockScreenshotPath))
+                File.Delete(mockContext.MockScreenshotPath);
+            if (File.Exists(mockContext.MockRegionScreenshotPath))
+                File.Delete(mockContext.MockRegionScreenshotPath);
+        }
+    }
+
+    [Fact]
     public async Task ScreenUnderstandTool_LlmFailure_ShouldReturnError()
     {
         var mockContext = new MockContextProvider

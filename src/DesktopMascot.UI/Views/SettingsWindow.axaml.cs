@@ -34,4 +34,14 @@ public partial class SettingsWindow : Window
 
         e.Handled = true;
     }
+
+    private void CharacterStatePreview_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is Border { Tag: CharacterStatePreviewItem item } &&
+            DataContext is SettingsWindowViewModel vm)
+        {
+            vm.SelectCharacterStatePreviewCommand.Execute(item);
+            e.Handled = true;
+        }
+    }
 }

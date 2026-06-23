@@ -42,6 +42,11 @@ public partial class App : Application
                 services.AddSingleton<ICharacterImageService, CharacterImageService>();
                 services.AddSingleton<ICharacterAssetImportService, CharacterAssetImportService>();
                 services.AddSingleton<ITaskResultActionService, TaskResultActionService>();
+                services.AddSingleton<IAudioPlaybackService, MciAudioPlaybackService>();
+                services.AddSingleton<ITextToSpeechPreviewService, TextToSpeechPreviewService>();
+                services.AddSingleton<IVoiceInputService, WindowsVoiceInputService>();
+                services.AddSingleton<ComputerUseControlService>();
+                services.AddSingleton<IComputerUseControlService>(sp => sp.GetRequiredService<ComputerUseControlService>());
                 services.AddSingleton<PermissionPromptService>();
                 services.AddSingleton<IConfirmationHandler>(sp => sp.GetRequiredService<PermissionPromptService>());
                 services.AddSingleton<IMemoryConfirmationHandler>(sp => sp.GetRequiredService<PermissionPromptService>());

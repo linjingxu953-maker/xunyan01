@@ -22,6 +22,25 @@ Desktop.ini
 ## Logs
 *.log
 
+## Local tooling
+.codegraph/daemon.pid
+.codegraph/cache/
+.codegraph/*.db
+.codegraph/*.db-wal
+.codegraph/*.db-shm
+.codegraph/*.log
+.codegraph/.dirty
+
+## Generated promo workspaces
+promos/**/node_modules/
+promos/**/.hyperframes/shims/
+promos/**/renders/
+promos/desktopmascot-douyin-error-agent/
+promos/desktopmascot-douyin-student-agent/
+
+## Local documents accidentally dropped into asset folders
+assets/characters/**/*.doc
+
 ## Scripts (may contain API keys)
 scripts/*
 !scripts/run-full-tests-safe.ps1

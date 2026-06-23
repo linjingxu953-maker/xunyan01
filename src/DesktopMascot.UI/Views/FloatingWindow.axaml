@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:DesktopMascot.UI.ViewModels"
         xmlns:controls="using:DesktopMascot.UI.Views.Controls"
@@ -9,8 +9,8 @@
         Height="240"
         MinWidth="180"
         MinHeight="240"
-        MaxWidth="980"
-        MaxHeight="660"
+        MaxWidth="1240"
+        MaxHeight="820"
         WindowStartupLocation="Manual"
         Background="Transparent"
         Topmost="True"
@@ -22,47 +22,6 @@
 
     <Grid x:Name="WindowRoot"
           ClipToBounds="False">
-                <Border x:Name="MascotHost"
-                        Classes="mascotIcon"
-                        Classes.busy="{Binding IsMascotBusy}"
-                        Classes.waiting="{Binding IsMascotWaiting}"
-                        Classes.error="{Binding IsMascotError}"
-                        Classes.completed="{Binding IsMascotCompleted}"
-                        IsVisible="{Binding IsMascotIconVisible}"
-                        PointerPressed="MascotIcon_PointerPressed"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Bottom"
-                ZIndex="2"
-                Margin="0,0,4,4">
-            <Grid>
-                <Border x:Name="MascotHalo"
-                        Classes="mascotHalo"/>
-                <Border Classes="mascotPortrait">
-                    <Image Source="{Binding CharacterImageSource}"
-                           Stretch="Uniform"
-                           UseLayoutRounding="True"
-                           RenderOptions.BitmapInterpolationMode="HighQuality"
-                           Margin="0"/>
-                </Border>
-                <TextBlock Text="{Binding CharacterAvatarText}"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           FontSize="30"
-                           FontWeight="Bold"
-                           Foreground="{Binding StateAccentBrush}"
-                           IsVisible="{Binding HasNoCharacterImage}"
-                           IsHitTestVisible="False"/>
-                <Border x:Name="MascotStateChip"
-                        Classes="mascotStateChip"
-                        Background="{Binding StateAccentBrush}">
-                    <TextBlock Text="{Binding StateHint}"
-                               Foreground="White"
-                               FontSize="10"
-                               FontWeight="SemiBold"/>
-                </Border>
-            </Grid>
-        </Border>
-
         <Border Classes="chatDialog"
                 IsVisible="{Binding IsChatDialogVisible}"
                 IsHitTestVisible="{Binding IsChatDialogHitTestVisible}"
@@ -747,7 +706,7 @@
                         </Border>
 
                         <Grid Grid.Row="1"
-                              ColumnDefinitions="142,*">
+                              ColumnDefinitions="160,*">
                             <Border Grid.Column="0"
                                     Classes="inlineSettingsNav">
                                 <StackPanel Margin="12,14"
@@ -1159,10 +1118,11 @@
                                     <StackPanel Spacing="12"
                                                 IsVisible="{Binding InlineSettings.IsAppearanceSectionSelected}">
                                         <Border Classes="inlineSettingsCard">
-                                            <Grid ColumnDefinitions="150,*"
-                                                  ColumnSpacing="14">
-                                                <Border Width="134"
-                                                        Height="188"
+                                            <Grid RowDefinitions="Auto,Auto"
+                                                  RowSpacing="14">
+                                                <Border Width="220"
+                                                        Height="292"
+                                                        HorizontalAlignment="Center"
                                                         Classes="characterDropZone"
                                                         Background="Transparent"
                                                         ClipToBounds="False"
@@ -1192,8 +1152,8 @@
                                                         </Border>
                                                     </Grid>
                                                 </Border>
-                                                <StackPanel Grid.Column="1"
-                                                            Spacing="9">
+                                                <StackPanel Grid.Row="1"
+                                                            Spacing="12">
                                                     <Grid ColumnDefinitions="*,*"
                                                           RowDefinitions="Auto,Auto,Auto,Auto"
                                                           ColumnSpacing="8"
@@ -1288,16 +1248,93 @@
                                                                 Classes="inlineSettingsBackButton"
                                                                 Command="{Binding InlineSettings.PickCharacterAvatarImageCommand}"/>
                                                     </Grid>
-                                                    <Grid ColumnDefinitions="*,Auto"
-                                                          ColumnSpacing="8">
-                                                        <ComboBox ItemsSource="{Binding InlineSettings.CharacterStateImageItems}"
-                                                                  SelectedItem="{Binding InlineSettings.SelectedCharacterStateImage}"
-                                                                  MinWidth="180"/>
-                                                        <Button Grid.Column="1"
-                                                                Content="选择状态图"
-                                                                Classes="inlineSettingsBackButton"
-                                                                Command="{Binding InlineSettings.PickSelectedStateImageCommand}"/>
-                                                    </Grid>
+                                                    <Border Classes="selectedCharacterStateEditor">
+                                                        <StackPanel Spacing="8">
+                                                            <TextBlock Text="当前选中状态图"
+                                                                       Classes="inlineSettingsCardTitle"
+                                                                       FontSize="12"/>
+                                                            <Grid ColumnDefinitions="*,Auto"
+                                                                  ColumnSpacing="8">
+                                                                <ComboBox ItemsSource="{Binding InlineSettings.CharacterStateImageItems}"
+                                                                          SelectedItem="{Binding InlineSettings.SelectedCharacterStateImage}"
+                                                                          MinWidth="220"/>
+                                                                <Button Grid.Column="1"
+                                                                        Content="选择图片"
+                                                                        Classes="inlineSettingsBackButton"
+                                                                        Command="{Binding InlineSettings.PickSelectedStateImageCommand}"/>
+                                                            </Grid>
+                                                            <TextBox Text="{Binding InlineSettings.SelectedCharacterStateImage.FileName}"
+                                                                     PlaceholderText="点击下方状态图后编辑文件名"
+                                                                     MaxLength="160"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Classes="inlineSettingsInnerCard">
+                                                        <StackPanel Spacing="8">
+                                                            <Grid ColumnDefinitions="*,Auto"
+                                                                  ColumnSpacing="8">
+                                                                <StackPanel Spacing="2">
+                                                                    <TextBlock Text="状态图预览"
+                                                                               Classes="inlineSettingsCardTitle"
+                                                                               FontSize="12"/>
+                                                                    <TextBlock Text="{Binding InlineSettings.CharacterStatePreviewStatus}"
+                                                                               Classes="inlineSettingsBody"
+                                                                               TextWrapping="Wrap"/>
+                                                                </StackPanel>
+                                                                <Button Grid.Column="1"
+                                                                        Content="刷新状态图"
+                                                                        Classes="inlineSettingsBackButton"
+                                                                        Command="{Binding InlineSettings.RefreshCharacterStatePreviewCommand}"/>
+                                                            </Grid>
+                                                            <ItemsControl ItemsSource="{Binding InlineSettings.CharacterStatePreviewItems}"
+                                                                          IsVisible="{Binding InlineSettings.HasCharacterStatePreviews}">
+                                                                <ItemsControl.ItemsPanel>
+                                                                    <ItemsPanelTemplate>
+                                                                        <WrapPanel/>
+                                                                    </ItemsPanelTemplate>
+                                                                </ItemsControl.ItemsPanel>
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate x:DataType="vm:CharacterStatePreviewItem">
+                                                                        <Border Classes="characterStatePreviewCard"
+                                                                                Margin="0,0,8,8"
+                                                                                Cursor="Hand"
+                                                                                Tag="{Binding}"
+                                                                                PointerPressed="InlineCharacterStatePreview_PointerPressed">
+                                                                            <Grid RowDefinitions="96,Auto,Auto"
+                                                                                  RowSpacing="6">
+                                                                                <Border Classes="characterStatePreviewImageFrame">
+                                                                                    <Grid>
+                                                                                        <Image Source="{Binding Image}"
+                                                                                               Stretch="Uniform"
+                                                                                               IsVisible="{Binding HasImage}"/>
+                                                                                        <TextBlock Text="{Binding PreviewText}"
+                                                                                                   Classes="characterStatePreviewPlaceholder"
+                                                                                                   IsVisible="{Binding HasNoImage}"/>
+                                                                                    </Grid>
+                                                                                </Border>
+                                                                                <Grid Grid.Row="1"
+                                                                                      ColumnDefinitions="*,Auto"
+                                                                                      ColumnSpacing="6">
+                                                                                    <TextBlock Text="{Binding DisplayName}"
+                                                                                               Classes="characterStatePreviewTitle"
+                                                                                               TextTrimming="CharacterEllipsis"/>
+                                                                                    <Border Grid.Column="1"
+                                                                                            Classes="characterStatePreviewBadge"
+                                                                                            Background="{Binding StatusBrush}">
+                                                                                        <TextBlock Text="{Binding StatusText}"
+                                                                                                   Classes="characterStatePreviewBadgeText"/>
+                                                                                    </Border>
+                                                                                </Grid>
+                                                                                <TextBlock Grid.Row="2"
+                                                                                           Text="{Binding DetailText}"
+                                                                                           Classes="characterStatePreviewDetail"
+                                                                                           TextWrapping="Wrap"/>
+                                                                            </Grid>
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </StackPanel>
+                                                    </Border>
                                                     <TextBlock Text="{Binding InlineSettings.CharacterSaveStatus}"
                                                                Classes="inlineSettingsBody"
                                                                TextWrapping="Wrap"/>
@@ -1380,70 +1417,6 @@
                                                                         Classes="inlineSettingsBackButton"
                                                                         Command="{Binding InlineSettings.SaveCharacterProfileCommand}"/>
                                                             </Grid>
-                                                        </StackPanel>
-                                                    </Border>
-                                                    <Border Classes="inlineSettingsInnerCard">
-                                                        <StackPanel Spacing="8">
-                                                            <Grid ColumnDefinitions="*,Auto"
-                                                                  ColumnSpacing="8">
-                                                                <StackPanel Spacing="2">
-                                                                    <TextBlock Text="状态图预览"
-                                                                               Classes="inlineSettingsCardTitle"
-                                                                               FontSize="12"/>
-                                                                    <TextBlock Text="{Binding InlineSettings.CharacterStatePreviewStatus}"
-                                                                               Classes="inlineSettingsBody"
-                                                                               TextWrapping="Wrap"/>
-                                                                </StackPanel>
-                                                                <Button Grid.Column="1"
-                                                                        Content="刷新状态图"
-                                                                        Classes="inlineSettingsBackButton"
-                                                                        Command="{Binding InlineSettings.RefreshCharacterStatePreviewCommand}"/>
-                                                            </Grid>
-                                                            <ItemsControl ItemsSource="{Binding InlineSettings.CharacterStatePreviewItems}"
-                                                                          IsVisible="{Binding InlineSettings.HasCharacterStatePreviews}">
-                                                                <ItemsControl.ItemsPanel>
-                                                                    <ItemsPanelTemplate>
-                                                                        <WrapPanel/>
-                                                                    </ItemsPanelTemplate>
-                                                                </ItemsControl.ItemsPanel>
-                                                                <ItemsControl.ItemTemplate>
-                                                                    <DataTemplate x:DataType="vm:CharacterStatePreviewItem">
-                                                                        <Border Classes="characterStatePreviewCard"
-                                                                                Margin="0,0,8,8">
-                                                                            <Grid RowDefinitions="86,Auto,Auto"
-                                                                                  RowSpacing="6">
-                                                                                <Border Classes="characterStatePreviewImageFrame">
-                                                                                    <Grid>
-                                                                                        <Image Source="{Binding Image}"
-                                                                                               Stretch="Uniform"
-                                                                                               IsVisible="{Binding HasImage}"/>
-                                                                                        <TextBlock Text="{Binding PreviewText}"
-                                                                                                   Classes="characterStatePreviewPlaceholder"
-                                                                                                   IsVisible="{Binding HasNoImage}"/>
-                                                                                    </Grid>
-                                                                                </Border>
-                                                                                <Grid Grid.Row="1"
-                                                                                      ColumnDefinitions="*,Auto"
-                                                                                      ColumnSpacing="6">
-                                                                                    <TextBlock Text="{Binding DisplayName}"
-                                                                                               Classes="characterStatePreviewTitle"
-                                                                                               TextTrimming="CharacterEllipsis"/>
-                                                                                    <Border Grid.Column="1"
-                                                                                            Classes="characterStatePreviewBadge"
-                                                                                            Background="{Binding StatusBrush}">
-                                                                                        <TextBlock Text="{Binding StatusText}"
-                                                                                                   Classes="characterStatePreviewBadgeText"/>
-                                                                                    </Border>
-                                                                                </Grid>
-                                                                                <TextBlock Grid.Row="2"
-                                                                                           Text="{Binding DetailText}"
-                                                                                           Classes="characterStatePreviewDetail"
-                                                                                           TextWrapping="Wrap"/>
-                                                                            </Grid>
-                                                                        </Border>
-                                                                    </DataTemplate>
-                                                                </ItemsControl.ItemTemplate>
-                                                            </ItemsControl>
                                                         </StackPanel>
                                                     </Border>
                                                     <Border Classes="inlineSettingsInnerCard">
@@ -1587,24 +1560,31 @@
                                                                        TextWrapping="Wrap"/>
                                                         </StackPanel>
                                                     </Border>
-                                                    <ItemsControl ItemsSource="{Binding InlineSettings.CharacterStateImageItems}">
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate x:DataType="vm:CharacterStateImageItem">
-                                                                <Grid ColumnDefinitions="96,*"
-                                                                      ColumnSpacing="8"
-                                                                      Margin="0,0,0,6">
-                                                                    <TextBlock Text="{Binding DisplayName}"
-                                                                               Classes="inlineSettingsBody"
-                                                                               VerticalAlignment="Center"
-                                                                               TextTrimming="CharacterEllipsis"/>
-                                                                    <TextBox Grid.Column="1"
-                                                                             Text="{Binding FileName}"
-                                                                             PlaceholderText="状态图片文件名"
-                                                                             MaxLength="160"/>
-                                                                </Grid>
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
+                                                    <Border Classes="inlineSettingsInnerCard">
+                                                        <StackPanel Spacing="8">
+                                                            <TextBlock Text="全部状态文件"
+                                                                       Classes="inlineSettingsCardTitle"
+                                                                       FontSize="12"/>
+                                                            <ItemsControl ItemsSource="{Binding InlineSettings.CharacterStateImageItems}">
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate x:DataType="vm:CharacterStateImageItem">
+                                                                        <Grid ColumnDefinitions="112,*"
+                                                                              ColumnSpacing="10"
+                                                                              Margin="0,0,0,7">
+                                                                            <TextBlock Text="{Binding DisplayName}"
+                                                                                       Classes="inlineSettingsBody"
+                                                                                       VerticalAlignment="Center"
+                                                                                       TextTrimming="CharacterEllipsis"/>
+                                                                            <TextBox Grid.Column="1"
+                                                                                     Text="{Binding FileName}"
+                                                                                     PlaceholderText="状态图片文件名"
+                                                                                     MaxLength="160"/>
+                                                                        </Grid>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </StackPanel>
+                                                    </Border>
                                                     <WrapPanel>
                                                         <Button Content="桌面图片"
                                                                 Classes="inlineSettingsBackButton"
@@ -1735,6 +1715,85 @@
                     </Grid>
                     </Grid>
                 </Grid>
+                <Border x:Name="DockedMascotHost"
+                        Grid.RowSpan="2"
+                        Classes="mascotDockedIcon"
+                        Classes.busy="{Binding IsMascotBusy}"
+                        Classes.waiting="{Binding IsMascotWaiting}"
+                        Classes.error="{Binding IsMascotError}"
+                        Classes.completed="{Binding IsMascotCompleted}"
+                        IsVisible="{Binding IsDockedMascotVisible}"
+                        PointerPressed="MascotIcon_PointerPressed"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
+                        ZIndex="30"
+                        Margin="0,0,20,72">
+                    <Grid>
+                        <Border Classes="mascotDockedHalo"/>
+                        <Border Classes="mascotDockedPortrait">
+                            <Image Source="{Binding CharacterImageSource}"
+                                   Stretch="Uniform"
+                                   UseLayoutRounding="True"
+                                   RenderOptions.BitmapInterpolationMode="HighQuality"
+                                   Margin="0"/>
+                        </Border>
+                        <TextBlock Text="{Binding CharacterAvatarText}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   FontSize="22"
+                                   FontWeight="Bold"
+                                   Foreground="{Binding StateAccentBrush}"
+                                   IsVisible="{Binding HasNoCharacterImage}"
+                                   IsHitTestVisible="False"/>
+                        <Border Classes="mascotDockedStateChip"
+                                Background="{Binding StateAccentBrush}">
+                            <TextBlock Text="{Binding StateHint}"
+                                       Foreground="White"
+                                       FontSize="9"
+                                       FontWeight="SemiBold"/>
+                        </Border>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+        <Border x:Name="MascotHost"
+                Classes="mascotIcon"
+                Classes.busy="{Binding IsMascotBusy}"
+                Classes.waiting="{Binding IsMascotWaiting}"
+                Classes.error="{Binding IsMascotError}"
+                Classes.completed="{Binding IsMascotCompleted}"
+                IsVisible="{Binding IsFloatingMascotVisible}"
+                PointerPressed="MascotIcon_PointerPressed"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                ZIndex="20"
+                Margin="0,0,4,4">
+            <Grid>
+                <Border x:Name="MascotHalo"
+                        Classes="mascotHalo"/>
+                <Border Classes="mascotPortrait">
+                    <Image Source="{Binding CharacterImageSource}"
+                           Stretch="Uniform"
+                           UseLayoutRounding="True"
+                           RenderOptions.BitmapInterpolationMode="HighQuality"
+                           Margin="0"/>
+                </Border>
+                <TextBlock Text="{Binding CharacterAvatarText}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           FontSize="30"
+                           FontWeight="Bold"
+                           Foreground="{Binding StateAccentBrush}"
+                           IsVisible="{Binding HasNoCharacterImage}"
+                           IsHitTestVisible="False"/>
+                <Border x:Name="MascotStateChip"
+                        Classes="mascotStateChip"
+                        Background="{Binding StateAccentBrush}">
+                    <TextBlock Text="{Binding StateHint}"
+                               Foreground="White"
+                               FontSize="10"
+                               FontWeight="SemiBold"/>
+                </Border>
             </Grid>
         </Border>
     </Grid>

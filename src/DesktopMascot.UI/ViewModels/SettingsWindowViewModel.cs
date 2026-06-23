@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using Avalonia.Media;
@@ -66,8 +66,12 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private readonly IMemoryStore? _memoryStore;
     private readonly ITaskHistoryStore? _taskHistoryStore;
     private readonly ITaskResultActionService? _taskResultActionService;
+    private readonly ITextToSpeechPreviewService _textToSpeechPreviewService;
+    private readonly IAudioPlaybackService _audioPlaybackService;
     private bool _isApplyingProvider;
     private bool _isApplyingCharacterProfile;
+    private bool _isRefreshingCharacterProfiles;
+    private IReadOnlyList<string>? _characterAssetRootCandidates;
     private AppSettings _settings = new();
     private PermissionSettings _permissionSettings = new();
     private List<AuditLogEntry> _recentAuditLogs = [];
@@ -141,7 +145,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(SpeechRecognitionLanguageDescription))]
     private string _speechRecognitionLanguage = "zh-CN";
 
-    [ObservableProperty] private string _voiceSettingsStatus = "语音配置会保存到本机，录音和播放服务接入后会直接读取。";
+    [ObservableProperty] private string _voiceSettingsStatus = "语音配置会保存到本机，TTS 试听和消息朗读会直接读取；录音转写会使用已配置的 Provider/API Key。";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPendingMemoryReviewSelected))]
@@ -242,7 +246,9 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         IAuditLogStore? auditLogStore = null,
         IMemoryStore? memoryStore = null,
         ITaskHistoryStore? taskHistoryStore = null,
-        ITaskResultActionService? taskResultActionService = null)
+        ITaskResultActionService? taskResultActionService = null,
+        ITextToSpeechPreviewService? textToSpeechPreviewService = null,
+        IAudioPlaybackService? audioPlaybackService = null)
     {
         _configurationManager = configurationManager;
         _diagnosticsService = diagnosticsService;
@@ -257,6 +263,8 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         _memoryStore = memoryStore;
         _taskHistoryStore = taskHistoryStore;
         _taskResultActionService = taskResultActionService;
+        _textToSpeechPreviewService = textToSpeechPreviewService ?? new UnavailableTextToSpeechPreviewService();
+        _audioPlaybackService = audioPlaybackService ?? new MciAudioPlaybackService();
 
         Sections =
         [
@@ -410,11 +418,11 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     public string SpeechRecognitionLanguageDescription => SpeechRecognitionLanguage switch
     {
         "zh-CN" => "普通话识别，适合中文桌面任务和日常问答。",
-        "zh-HK" => "粤语/繁体中文场景预留，实际效果取决于后续 STT Provider。",
+        "zh-HK" => "粤语/繁体中文场景预留，实际效果取决于当前 Provider 的语音识别支持。",
         "en-US" => "英文识别，适合英文网页、代码和学习任务。",
         "ja-JP" => "日语识别预留。",
         "ko-KR" => "韩语识别预留。",
-        _ => "自定义识别语言，实际支持范围取决于后续 STT Provider。"
+        _ => "自定义识别语言，实际支持范围取决于当前 Provider 的语音识别支持。"
     };
 
     public bool IsNotModelSectionSelected => !IsModelSectionSelected;
@@ -446,6 +454,13 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     public bool HasCharacterPackageImportPreview => CharacterPackageImportPreview.HasPreview;
     public bool CanImportCharacterPackage => CharacterPackageImportPreview.CanImport;
     public bool IsNotBusy => !IsBusy;
+
+    public void SetCharacterAssetRootCandidates(IReadOnlyList<string>? rootCandidates)
+    {
+        _characterAssetRootCandidates = rootCandidates;
+        RefreshCharacterProfiles();
+        RefreshCharacterImagePreview();
+    }
 
     public async Task LoadAsync(CancellationToken ct = default)
     {
@@ -587,10 +602,27 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void PreviewTtsVoice()
+    private async Task PreviewTtsVoice()
     {
-        VoiceSettingsStatus =
-            $"{TtsPreviewText} TTS 服务接入后会播放这段预览；当前先保存选择和展示状态。";
+        try
+        {
+            VoiceSettingsStatus = $"正在生成试听：{TtsPreviewText}";
+            var result = await _textToSpeechPreviewService.SynthesizePreviewAsync(TtsPreviewText, TtsVoice);
+            if (!result.Success || string.IsNullOrWhiteSpace(result.AudioFilePath))
+            {
+                VoiceSettingsStatus = $"试听生成失败：{result.Error ?? result.Message}";
+                return;
+            }
+
+            var playResult = _audioPlaybackService.Play(result.AudioFilePath);
+            VoiceSettingsStatus = playResult.Success
+                ? $"正在播放试听：{Path.GetFileName(result.AudioFilePath)}"
+                : $"试听播放失败：{playResult.Error ?? playResult.Message}";
+        }
+        catch (Exception ex)
+        {
+            VoiceSettingsStatus = $"试听失败：{ex.Message}";
+        }
     }
 
     [RelayCommand]
@@ -1797,7 +1829,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         }
 
         var selectedId = item.Id;
-        var profile = _characterStore.LoadProfile(selectedId);
+        var profile = LoadCharacterProfileForItem(item);
         if (profile is null)
         {
             CharacterLibraryStatus = "所选角色档案不可用。";
@@ -1809,6 +1841,13 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         RefreshCharacterProfiles(selectedId);
         CharacterLibraryStatus = $"已载入角色档案：{CharacterName}。";
         CharacterSaveStatus = "当前小人外观已切换。";
+    }
+
+    private MascotCharacterProfile? LoadCharacterProfileForItem(CharacterProfileListItem item)
+    {
+        return item.Id.StartsWith("asset:", StringComparison.OrdinalIgnoreCase)
+            ? BuildAssetCharacterProfile(item.Entry)
+            : _characterStore.LoadProfile(item.Id);
     }
 
     [RelayCommand]
@@ -1931,6 +1970,24 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     {
         RefreshCharacterImagePreview();
         CharacterStatePreviewStatus = "已检查全部状态图。";
+    }
+
+    [RelayCommand]
+    private void SelectCharacterStatePreview(CharacterStatePreviewItem? item)
+    {
+        if (item is null)
+            return;
+
+        var stateItem = CharacterStateImageItems.FirstOrDefault(
+            x => string.Equals(x.StateKey, item.StateKey, StringComparison.OrdinalIgnoreCase));
+        if (stateItem is null)
+        {
+            CharacterStatePreviewStatus = "该状态图没有可编辑的状态配置。";
+            return;
+        }
+
+        SelectedCharacterStateImage = stateItem;
+        CharacterStatePreviewStatus = $"已选中 {stateItem.DisplayName}，可在上方编辑文件名或重新选择图片。";
     }
 
     [RelayCommand]
@@ -2235,6 +2292,10 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     partial void OnSelectedCharacterProfileChanged(CharacterProfileListItem? value)
     {
         CharacterProfileNameDraft = value?.Name ?? CharacterName;
+        if (_isRefreshingCharacterProfiles)
+            return;
+
+        LoadCharacterProfileCore(value);
     }
 
     private void ApplyProviderDefaultsIfEmpty()
@@ -3022,8 +3083,8 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
 
         RuntimeOverviewItems.Add(new SettingsListItem(
             "语音 UI",
-            "状态壳就绪",
-            $"{VoiceConfigurationSummary}。真实 STT/TTS 录制、转写和播放仍等待服务接入。"));
+            "TTS 已接入",
+            $"{VoiceConfigurationSummary}。TTS 预览和消息朗读会生成音频并交给内置播放服务；语音录制会转成 WAV 并使用已配置 Provider/API Key 转写。"));
 
         RuntimeOverviewItems.Add(new SettingsListItem(
             "权限确认",
@@ -3424,18 +3485,124 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private void RefreshCharacterProfiles(string? selectedId = null)
     {
         selectedId ??= SelectedCharacterProfile?.Id;
-        CharacterProfiles.Clear();
-
-        foreach (var entry in _characterStore.ListProfiles())
+        _isRefreshingCharacterProfiles = true;
+        try
         {
-            CharacterProfiles.Add(CreateCharacterProfileListItem(entry));
-        }
+            CharacterProfiles.Clear();
+            var seenFolders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        SelectedCharacterProfile = !string.IsNullOrWhiteSpace(selectedId)
-            ? CharacterProfiles.FirstOrDefault(x => x.Id == selectedId)
-            : CharacterProfiles.FirstOrDefault();
+            foreach (var entry in _characterStore.ListProfiles())
+            {
+                CharacterProfiles.Add(CreateCharacterProfileListItem(entry));
+                if (!string.IsNullOrWhiteSpace(entry.ImageFolder))
+                {
+                    seenFolders.Add(NormalizeCharacterFolderKey(entry.ImageFolder));
+                }
+            }
+
+            foreach (var entry in EnumerateCharacterAssetEntries(seenFolders))
+            {
+                CharacterProfiles.Add(CreateCharacterProfileListItem(entry));
+            }
+
+            SelectedCharacterProfile = !string.IsNullOrWhiteSpace(selectedId)
+                ? CharacterProfiles.FirstOrDefault(x => x.Id == selectedId)
+                : CharacterProfiles.FirstOrDefault();
+        }
+        finally
+        {
+            _isRefreshingCharacterProfiles = false;
+        }
         RefreshCharacterProfileState();
     }
+
+    private IEnumerable<MascotCharacterProfileEntry> EnumerateCharacterAssetEntries(ISet<string> seenFolders)
+    {
+        foreach (var charactersRoot in EnumerateCharacterAssetRoots())
+        {
+            DirectoryInfo root;
+            try
+            {
+                root = new DirectoryInfo(charactersRoot);
+            }
+            catch
+            {
+                continue;
+            }
+
+            if (!root.Exists)
+                continue;
+
+            foreach (var directory in root.EnumerateDirectories().OrderBy(KnownMascotCharacterAssets.GetDirectorySortKey))
+            {
+                var folderName = directory.Name;
+                var imageFolder = $"assets/characters/{folderName}";
+                if (!seenFolders.Add(NormalizeCharacterFolderKey(imageFolder)))
+                    continue;
+
+                var entry = CreateAssetEntry(directory, imageFolder);
+                if (entry is not null)
+                    yield return entry;
+            }
+        }
+    }
+
+    private IEnumerable<string> EnumerateCharacterAssetRoots()
+    {
+        var roots = _characterAssetRootCandidates ?? EnumerateDefaultCharacterRootCandidates().ToArray();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var root in roots)
+        {
+            if (string.IsNullOrWhiteSpace(root))
+                continue;
+
+            var direct = Path.Combine(root, "assets", "characters");
+            if (seen.Add(direct))
+                yield return direct;
+
+            var normalized = root.Replace('/', Path.DirectorySeparatorChar);
+            if (Path.GetFileName(normalized).Equals("characters", StringComparison.OrdinalIgnoreCase) &&
+                seen.Add(normalized))
+            {
+                yield return normalized;
+            }
+        }
+    }
+
+    private MascotCharacterProfileEntry? CreateAssetEntry(DirectoryInfo directory, string imageFolder)
+    {
+        var profile = KnownMascotCharacterAssets.CreateProfile(directory.Name, imageFolder);
+        if (profile is null)
+            return null;
+
+        var avatarPath = ResolveFirstCharacterImagePath(directory.FullName, profile.AvatarImage)
+            ?? ResolveFirstCharacterImagePath(directory.FullName, "idle.png")
+            ?? Directory.EnumerateFiles(directory.FullName)
+                .FirstOrDefault(file => SupportedCharacterImageExtensions.Contains(Path.GetExtension(file)))
+            ?? string.Empty;
+
+        return new MascotCharacterProfileEntry
+        {
+            Id = $"asset:{directory.Name}",
+            Name = profile.Name,
+            Role = profile.Role,
+            ImageFolder = profile.ImageFolder,
+            AvatarImagePath = avatarPath,
+            AccentColor = profile.AccentColor,
+            IsActive = IsCurrentCharacterAsset(profile),
+            UpdatedAt = directory.LastWriteTimeUtc
+        };
+    }
+
+    private MascotCharacterProfile? BuildAssetCharacterProfile(MascotCharacterProfileEntry entry)
+    {
+        var folderName = ExtractCharacterAssetFolderName(entry.ImageFolder);
+        return KnownMascotCharacterAssets.CreateProfile(folderName, entry.ImageFolder);
+    }
+
+    private bool IsCurrentCharacterAsset(MascotCharacterProfile profile) =>
+        string.Equals(NormalizeCharacterFolderKey(profile.ImageFolder), NormalizeCharacterFolderKey(CharacterImageFolder), StringComparison.OrdinalIgnoreCase)
+        || string.Equals(profile.Name, CharacterName, StringComparison.OrdinalIgnoreCase);
 
     private void RefreshCharacterProfileState()
     {
@@ -3462,6 +3629,27 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         {
             return null;
         }
+    }
+
+    private static string? ResolveFirstCharacterImagePath(string folder, string imageFile)
+    {
+        if (string.IsNullOrWhiteSpace(folder) || string.IsNullOrWhiteSpace(imageFile))
+            return null;
+
+        var path = Path.Combine(folder, imageFile.Replace('/', Path.DirectorySeparatorChar));
+        return File.Exists(path) && SupportedCharacterImageExtensions.Contains(Path.GetExtension(path))
+            ? path
+            : null;
+    }
+
+    private static string NormalizeCharacterFolderKey(string value) =>
+        (value ?? string.Empty).Trim().Replace('\\', '/').TrimEnd('/').ToLowerInvariant();
+
+    private static string ExtractCharacterAssetFolderName(string imageFolder)
+    {
+        var normalized = (imageFolder ?? string.Empty).Replace('\\', '/').TrimEnd('/');
+        var index = normalized.LastIndexOf('/');
+        return index >= 0 ? normalized[(index + 1)..] : normalized;
     }
 
     private string CreateUniqueDuplicateProfileName(string name)
@@ -3861,7 +4049,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
                SupportedCharacterImageExtensions.Contains(Path.GetExtension(candidate));
     }
 
-    private static string? ResolveCharacterFolder(string folder)
+    private string? ResolveCharacterFolder(string folder)
     {
         if (string.IsNullOrWhiteSpace(folder))
             return null;
@@ -3871,9 +4059,9 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             return Directory.Exists(folder) ? folder : null;
         }
 
+        var normalizedFolder = folder.Replace('/', Path.DirectorySeparatorChar);
         foreach (var root in EnumerateCharacterRootCandidates())
         {
-            var normalizedFolder = folder.Replace('/', Path.DirectorySeparatorChar);
             var direct = Path.GetFullPath(Path.Combine(root, normalizedFolder));
             if (Directory.Exists(direct))
                 return direct;
@@ -3881,12 +4069,31 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             var underCharacters = Path.GetFullPath(Path.Combine(root, "assets", "characters", normalizedFolder));
             if (Directory.Exists(underCharacters))
                 return underCharacters;
+
+            var normalizedRoot = root.Replace('/', Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar);
+            if (Path.GetFileName(normalizedRoot).Equals("characters", StringComparison.OrdinalIgnoreCase))
+            {
+                var underAssetRoot = Path.GetFullPath(Path.Combine(root, ExtractCharacterAssetFolderName(normalizedFolder)));
+                if (Directory.Exists(underAssetRoot))
+                    return underAssetRoot;
+            }
         }
 
         return null;
     }
 
-    private static IEnumerable<string> EnumerateCharacterRootCandidates()
+    private IEnumerable<string> EnumerateCharacterRootCandidates()
+    {
+        var roots = _characterAssetRootCandidates ?? EnumerateDefaultCharacterRootCandidates().ToArray();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var root in roots)
+        {
+            if (!string.IsNullOrWhiteSpace(root) && seen.Add(root))
+                yield return root;
+        }
+    }
+
+    private static IEnumerable<string> EnumerateDefaultCharacterRootCandidates()
     {
         yield return Environment.CurrentDirectory;
 

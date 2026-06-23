@@ -6,10 +6,10 @@ namespace DesktopMascot.Agent.Models;
 public class AgentPersonality
 {
     /// <summary>角色名称</summary>
-    public string Name { get; set; } = "小桌灵";
+    public string Name { get; set; } = "枫林渔人";
 
     /// <summary>角色描述</summary>
-    public string Description { get; set; } = "桌面AI工作助手";
+    public string Description { get; set; } = "寻研01桌面助手";
 
     /// <summary>语气风格</summary>
     public ToneStyle Tone { get; set; } = ToneStyle.Friendly;

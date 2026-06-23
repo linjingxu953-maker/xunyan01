@@ -24,6 +24,8 @@ public sealed class SettingsWindowService : ISettingsWindowService
     private readonly IMemoryStore _memoryStore;
     private readonly ITaskHistoryStore _taskHistoryStore;
     private readonly ITaskResultActionService _taskResultActionService;
+    private readonly ITextToSpeechPreviewService _textToSpeechPreviewService;
+    private readonly IAudioPlaybackService _audioPlaybackService;
     private SettingsWindow? _window;
 
     public SettingsWindowService(
@@ -38,7 +40,9 @@ public sealed class SettingsWindowService : ISettingsWindowService
         IAuditLogStore auditLogStore,
         IMemoryStore memoryStore,
         ITaskHistoryStore taskHistoryStore,
-        ITaskResultActionService taskResultActionService)
+        ITaskResultActionService taskResultActionService,
+        ITextToSpeechPreviewService textToSpeechPreviewService,
+        IAudioPlaybackService audioPlaybackService)
     {
         _configurationManager = configurationManager;
         _diagnosticsService = diagnosticsService;
@@ -52,6 +56,8 @@ public sealed class SettingsWindowService : ISettingsWindowService
         _memoryStore = memoryStore;
         _taskHistoryStore = taskHistoryStore;
         _taskResultActionService = taskResultActionService;
+        _textToSpeechPreviewService = textToSpeechPreviewService;
+        _audioPlaybackService = audioPlaybackService;
     }
 
     public void ShowSettingsWindow(string? sectionId = null)
@@ -84,7 +90,9 @@ public sealed class SettingsWindowService : ISettingsWindowService
             _auditLogStore,
             _memoryStore,
             _taskHistoryStore,
-            _taskResultActionService);
+            _taskResultActionService,
+            _textToSpeechPreviewService,
+            _audioPlaybackService);
         _window = window;
         _window.DataContext = viewModel;
         SelectSection(viewModel, sectionId);

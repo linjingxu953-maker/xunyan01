@@ -91,15 +91,16 @@ public class ScreenUnderstandTool : ITool
                 contentType = ScreenPromptBuilder.DetectContentType(snapshot.ActiveWindowTitle, snapshot.ActiveApplication);
             }
 
-            // 截图
-            var screenshotPath = await _contextProvider.CaptureScreenshotAsync(ct: ct);
+            var screenshotPath = region is not null
+                ? await _contextProvider.CaptureScreenshotRegionAsync(region.X, region.Y, region.Width, region.Height, ct: ct)
+                : await _contextProvider.CaptureScreenshotAsync(ct: ct);
             if (string.IsNullOrEmpty(screenshotPath) || screenshotPath.StartsWith("["))
             {
                 return new ToolResult
                 {
                     Name = Name,
                     Success = false,
-                    Error = "截图失败"
+                    Error = string.IsNullOrWhiteSpace(screenshotPath) ? "截图失败" : screenshotPath
                 };
             }
 
@@ -131,6 +132,7 @@ public class ScreenUnderstandTool : ITool
             }
 
             var result = ParseResponse(response.Content, userHint, contentType.Value);
+            result.ScreenshotPath = screenshotPath;
 
             return new ToolResult
             {

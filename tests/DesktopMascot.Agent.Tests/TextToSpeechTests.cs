@@ -142,4 +142,77 @@ public class TextToSpeechTests
         Assert.Contains("voice", tool.ParametersSchema);
         Assert.Contains("speed", tool.ParametersSchema);
     }
+
+    [Fact]
+    public void TextToSpeechTool_ShouldNotLaunchExternalPlayer()
+    {
+        var sourcePath = FindTextToSpeechToolSourcePath();
+        var source = File.ReadAllText(sourcePath);
+
+        Assert.DoesNotContain("Process.Start", source);
+        Assert.DoesNotContain("tts_play_", source);
+    }
+
+    [Fact]
+    public void TtsAudioFileValidator_RejectsTinyMp3File()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"xunyan_tiny_{Guid.NewGuid():N}.mp3");
+        try
+        {
+            File.WriteAllBytes(path, [0x49, 0x44, 0x33]);
+
+            var result = TtsAudioFileValidator.Validate(path);
+
+            Assert.False(result.IsValid);
+            Assert.Contains("音频文件异常", result.Error);
+        }
+        finally
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void TtsAudioFileValidator_AcceptsMp3FrameHeader()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"xunyan_mp3_{Guid.NewGuid():N}.mp3");
+        try
+        {
+            var bytes = new byte[1024];
+            bytes[0] = 0xFF;
+            bytes[1] = 0xFB;
+            File.WriteAllBytes(path, bytes);
+
+            var result = TtsAudioFileValidator.Validate(path);
+
+            Assert.True(result.IsValid);
+            Assert.Null(result.Error);
+        }
+        finally
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+    }
+
+    private static string FindTextToSpeechToolSourcePath()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            var candidate = Path.Combine(
+                directory.FullName,
+                "src",
+                "DesktopMascot.Agent",
+                "Tools",
+                "TextToSpeechTool.cs");
+            if (File.Exists(candidate))
+                return candidate;
+
+            directory = directory.Parent;
+        }
+
+        throw new FileNotFoundException("无法定位 TextToSpeechTool.cs");
+    }
 }

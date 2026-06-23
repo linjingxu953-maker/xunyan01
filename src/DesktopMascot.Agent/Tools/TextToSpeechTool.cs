@@ -1,5 +1,4 @@
 using DesktopMascot.Core.Tools;
-using System.Diagnostics;
 using System.Text.Json;
 using DesktopMascot.Agent.Models;
 using DesktopMascot.Agent.Providers;
@@ -105,9 +104,6 @@ public class TextToSpeechTool : ITool
                 };
             }
 
-            // 自动播放生成的音频
-            PlayAudioFile(result.AudioFilePath);
-
             return new ToolResult
             {
                 Name = Name,
@@ -123,36 +119,6 @@ public class TextToSpeechTool : ITool
                 Success = false,
                 Error = $"文本转语音失败: {ex.Message}"
             };
-        }
-    }
-
-    private static void PlayAudioFile(string? filePath)
-    {
-        if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return;
-
-        try
-        {
-            // 复制到临时目录播放，避免 AppData 路径安全策略限制
-            var tempFile = Path.Combine(Path.GetTempPath(), $"tts_play_{Guid.NewGuid():N}.mp3");
-            File.Copy(filePath, tempFile, true);
-
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = tempFile,
-                UseShellExecute = true,
-                CreateNoWindow = true,
-                Verb = "open"
-            });
-
-            // 延迟清理临时文件
-            Task.Delay(10000).ContinueWith(_ =>
-            {
-                try { File.Delete(tempFile); } catch { }
-            });
-        }
-        catch
-        {
-            // 播放失败不影响返回结果
         }
     }
 }

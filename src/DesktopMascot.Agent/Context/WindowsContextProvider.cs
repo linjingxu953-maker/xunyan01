@@ -187,6 +187,43 @@ public class WindowsContextProvider : IContextProvider
         }
     }
 
+    public Task<string?> CaptureScreenshotRegionAsync(
+        int x,
+        int y,
+        int width,
+        int height,
+        string? outputPath = null,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return Task.FromResult<string?>(null);
+
+            if (width <= 0 || height <= 0)
+                return Task.FromResult<string?>("[截图失败: 区域宽高必须大于 0]");
+
+            using var bitmap = new Bitmap(width, height);
+            using var graphics = Graphics.FromImage(bitmap);
+            graphics.CopyFromScreen(x, y, 0, 0, new Size(width, height));
+
+            var fileName = outputPath ?? Path.Combine(
+                _screenshotDirectory,
+                $"region_{DateTime.UtcNow:yyyyMMdd_HHmmss_fff}.png");
+
+            var directory = Path.GetDirectoryName(fileName);
+            if (!string.IsNullOrWhiteSpace(directory))
+                Directory.CreateDirectory(directory);
+
+            bitmap.Save(fileName, ImageFormat.Png);
+            return Task.FromResult<string?>(fileName);
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult<string?>($"[区域截图失败: {ex.Message}]");
+        }
+    }
+
     public Task<string?> GetBrowserContentAsync(CancellationToken ct = default)
     {
         // 浏览器内容读取需要浏览器扩展或自动化工具支持
@@ -299,7 +336,11 @@ public class MockContextProvider : IContextProvider
     public string MockSelectedText { get; set; } = string.Empty;
     public string? MockFileContent { get; set; }
     public string? MockScreenshotPath { get; set; }
+    public string? MockRegionScreenshotPath { get; set; }
     public string? MockBrowserContent { get; set; }
+    public int FullScreenshotCaptureCount { get; private set; }
+    public int RegionScreenshotCaptureCount { get; private set; }
+    public (int X, int Y, int Width, int Height)? LastCapturedRegion { get; private set; }
 
     public Task<ContextSnapshot> GetActiveWindowContextAsync(CancellationToken ct = default)
     {
@@ -322,7 +363,21 @@ public class MockContextProvider : IContextProvider
 
     public Task<string?> CaptureScreenshotAsync(string? outputPath = null, CancellationToken ct = default)
     {
+        FullScreenshotCaptureCount++;
         return Task.FromResult(MockScreenshotPath);
+    }
+
+    public Task<string?> CaptureScreenshotRegionAsync(
+        int x,
+        int y,
+        int width,
+        int height,
+        string? outputPath = null,
+        CancellationToken ct = default)
+    {
+        RegionScreenshotCaptureCount++;
+        LastCapturedRegion = (x, y, width, height);
+        return Task.FromResult(MockRegionScreenshotPath ?? MockScreenshotPath);
     }
 
     public Task<string?> GetBrowserContentAsync(CancellationToken ct = default)

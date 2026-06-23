@@ -35,18 +35,27 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         IOnboardingWindowService onboardingWindowService, ICharacterAssetImportService characterAssetImportService,
         IGlobalHotkeyService hotkeyService, IPermissionManager permissionManager,
         IAuditLogStore auditLogStore, IMemoryStore memoryStore,
-        ITaskHistoryStore taskHistoryStore)
+        ITaskHistoryStore taskHistoryStore,
+        ITextToSpeechPreviewService? textToSpeechPreviewService = null,
+        IAudioPlaybackService? audioPlaybackService = null,
+        IVoiceInputService? voiceInputService = null,
+        IComputerUseControlService? computerUseControlService = null)
     {
         _taskRouter = taskRouter; _eventBus = eventBus; _eventStream = eventStream;
         _taskHistoryStore = taskHistoryStore;
         _characterStore = characterStore; _characterImageService = characterImageService;
         _taskResultActionService = taskResultActionService;
         _confirmationHandler = confirmationHandler; _memoryConfirmationHandler = memoryConfirmationHandler;
+        _textToSpeechPreviewService = textToSpeechPreviewService ?? new UnavailableTextToSpeechPreviewService();
+        _audioPlaybackService = audioPlaybackService ?? new MciAudioPlaybackService();
+        _voiceInputService = voiceInputService ?? new UnavailableVoiceInputService();
+        _computerUseControlService = computerUseControlService ?? new UnavailableComputerUseControlService();
 
         InlineSettings = new SettingsWindowViewModel(configurationManager, settingsDiagnosticsService,
             onboardingWindowService, characterStore, characterImageService, characterAssetImportService,
             new CharacterAssetPickerService(() => _inlineSettingsOwner), hotkeyService,
-            permissionManager, auditLogStore, memoryStore, taskHistoryStore, taskResultActionService);
+            permissionManager, auditLogStore, memoryStore, taskHistoryStore, taskResultActionService,
+            _textToSpeechPreviewService, _audioPlaybackService);
         InlineSettings.PropertyChanged += OnInlineSettingsPropertyChanged;
 
         _characterStore.ProfileChanged += OnCharacterProfileChanged;
@@ -239,11 +248,58 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     }
 
     // ── 公开方法 ──
+    public async Task PlayMessageAudioAsync(string? content)
+    {
+        var text = CleanText(content, string.Empty, 2000);
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            IsVoiceReplyPlaying = false;
+            VoiceReplyStatus = "当前消息没有可朗读内容。";
+            return;
+        }
+
+        VoiceReplyStatus = $"正在准备 {InlineSettings.TtsVoice} 语音。";
+        var audioPath = AudioFilePathExtractor.ExtractExistingPath(content);
+        if (audioPath is null)
+        {
+            try
+            {
+                var result = await _textToSpeechPreviewService.SynthesizePreviewAsync(text, InlineSettings.TtsVoice);
+                if (!result.Success || string.IsNullOrWhiteSpace(result.AudioFilePath))
+                {
+                    IsVoiceReplyPlaying = false;
+                    VoiceReplyStatus = $"语音生成失败：{result.Error ?? result.Message}";
+                    return;
+                }
+
+                audioPath = result.AudioFilePath;
+            }
+            catch (Exception ex)
+            {
+                IsVoiceReplyPlaying = false;
+                VoiceReplyStatus = $"语音生成失败：{ex.Message}";
+                return;
+            }
+        }
+
+        try
+        {
+            var playResult = _audioPlaybackService.Play(audioPath);
+            IsVoiceReplyPlaying = playResult.Success;
+            VoiceReplyStatus = playResult.Success
+                ? $"正在播放：{Path.GetFileName(audioPath)}"
+                : $"语音播放失败：{playResult.Error ?? playResult.Message}（音频文件：{audioPath}）";
+        }
+        catch (Exception ex)
+        {
+            IsVoiceReplyPlaying = false;
+            VoiceReplyStatus = $"语音播放失败：{ex.Message}（音频文件：{audioPath}）";
+        }
+    }
+
     public void PlayMessageAudio(string? content)
     {
-        IsVoiceReplyPlaying = true;
-        VoiceReplyStatus =
-            $"准备使用 {InlineSettings.TtsVoice} 朗读：{CleanText(content, "当前消息", 60)}。TTS 服务接入后播放。";
+        _ = PlayMessageAudioAsync(content);
     }
 
     public void UseScreenSuggestedAction(ScreenContextActionItem? action)
@@ -491,6 +547,12 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
     private static string ExtractReadableTarget(string input, string fallback) => CleanText(input, fallback, 80).ReplaceLineEndings(" ");
     private static string ResolveComputerUseTarget(AgentTask task, string userMessage) => task.Type == TaskType.ScreenUnderstand || task.Parameters.ContainsKey("Region") ? "屏幕圈选区域" : ExtractReadableTarget(userMessage, "当前桌面");
     private static string ResolveResultText(TaskResult result) => result.Success ? (string.IsNullOrWhiteSpace(result.Content) ? "任务已完成。" : result.Content) : (!string.IsNullOrWhiteSpace(result.Error) ? result.Error : (string.IsNullOrWhiteSpace(result.Content) ? "处理失败。" : result.Content));
+    private static string BuildComputerUseResumeInput(string lastUserMessage)
+    {
+        const string prefix = "继续此前 Computer Use 目标：";
+        var input = CleanText(lastUserMessage, "继续桌面自动操作", 240);
+        return input.StartsWith(prefix, StringComparison.Ordinal) ? input : $"{prefix}{input}";
+    }
     private static (TaskType Type, PermissionLevel Permission, string Title, string TypeText) BuildTaskMetadata(string input) { var lower = input.ToLowerInvariant(); if (input.Contains("总结") || lower.Contains("summarize")) return (TaskType.SummarizePage, PermissionLevel.L2_ScreenBrowser, "总结当前内容", "网页/屏幕总结"); if (input.Contains("报错") || input.Contains("错误") || lower.Contains("error") || lower.Contains("exception")) return (TaskType.AnalyzeError, PermissionLevel.L1_WindowTitle, "分析当前报错", "报错分析"); if (ContainsComputerUseSignal(input)) return (TaskType.ComputerUse, PermissionLevel.L2_ScreenBrowser, "桌面自动操作", "Computer Use"); if (input.Contains("项目") || input.Contains("目录") || lower.Contains("project") || lower.Contains("repo")) return (TaskType.InspectProject, PermissionLevel.L3_FileRead, "诊断项目目录", "项目诊断"); if (input.Contains("写入") || input.Contains("生成文件") || input.Contains("保存")) return (TaskType.WriteFile, PermissionLevel.L4_FileWrite, "生成文件", "文件写入"); if (input.Contains("执行命令") || input.Contains("运行命令") || lower.Contains("terminal") || lower.Contains("command")) return (TaskType.RunCommand, PermissionLevel.L5_CommandExec, "执行命令", "命令执行"); if (input.Contains("记住") || input.Contains("记忆")) return (TaskType.UpdateMemory, PermissionLevel.L0_Chat, "记忆更新", "记忆确认"); return (TaskType.Chat, PermissionLevel.L0_Chat, "用户对话", "普通问答"); }
 
     // ── 文档生成 ──

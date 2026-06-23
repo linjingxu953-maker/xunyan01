@@ -323,7 +323,7 @@ dotnet test DesktopMascot.sln
 - [x] 单元测试（10 个）
 - [x] 250 个测试全部通过
 
-### M32: 屏幕理解 🔄 Agent层完成，等UI
+### M32: 屏幕理解 ✅ 已完成
 
 **目标**：用户圈选屏幕任意区域 → AI 识别理解 → 帮用户解决问题
 
@@ -335,16 +335,16 @@ dotnet test DesktopMascot.sln
 **Agent 层（MiMo 负责）**：
 - [x] ScreenUnderstandTool — 区域截图 + 视觉 LLM 理解
 - [x] ScreenUnderstandPrompt — 三层 prompt（识别→理解→行动）
-- [x] ScreenUnderstandResult — 结构化返回模型
+- [x] ScreenUnderstandResult — 结构化返回模型 + 截图证据路径
 - [x] AgentOrchestrator 集成 ScreenUnderstand 路径
 - [x] 单元测试
 
 **UI 层（Codex 负责）**：
-- [ ] ScreenOverlay — Avalonia 全屏透明遮罩窗口
-- [ ] 鼠标拖拽画框交互
-- [ ] 框选完成回调 → 截取区域坐标
-- [ ] ScreenSelectViewModel — 管理圈选状态
-- [ ] 快捷键 Ctrl+Shift+S 触发
+- [x] ScreenOverlay — Avalonia 全屏透明遮罩窗口
+- [x] 鼠标拖拽画框交互
+- [x] 框选完成回调 → 截取区域坐标
+- [x] ScreenSelectViewModel — 管理圈选状态
+- [x] 快捷键 Ctrl+Shift+S 触发
 
 **快捷键**：Ctrl+Shift+S 触发屏幕理解
 
@@ -478,11 +478,14 @@ AgentOrchestrator.ExecuteAsync()
 
 #### 等待中
 
-- [ ] M32: 屏幕理解 UI - 等待 Codex 完成全屏遮罩 + 圈选交互
-- [ ] Computer Use UI - 等待 Codex 完成控制面板壳子
 - [ ] M31+: 封测包 - 等用户验收功能后再规划
-- [ ] **TTS 播放修复（Codex 负责）** — EdgeTtsProvider 已能生成 MP3 到 `%AppData%/DesktopMascot/tts/`，但 UI 层触发播放时弹出播放器窗口报"无法访问本地存储"。Core/Agent 层 PlayAudioFile 已改为复制到临时目录再播放。需要 Codex 修复 UI 层：FloatingWindowViewModel 处理 TTS 结果时不弹系统播放器，改为直接播放音频文件或使用内置播放组件。
-- [ ] **屏幕圈选崩溃（Codex 负责）** — 用户点击屏幕圈选功能时应用崩溃。ScreenSelectionOverlayWindow 可能存在 null reference 或窗口生命周期问题。需要 Codex 排查并修复。
+
+#### 近期完成（Codex）
+
+- [x] M32: 屏幕理解 UI - 全屏遮罩、圈选交互、Ctrl+Shift+S 快捷键、区域参数链路
+- [x] Computer Use UI - 控制面板、审批卡、暂停/继续/接管/停止、截图预览/日志
+- [x] TTS 播放修复 - 消息朗读与设置试听接入 Edge TTS 生成 MP3 + 本地播放
+- [x] 屏幕圈选崩溃修复 - overlay 生命周期与关闭/取消路径已加固
 
 #### 未来规划
 
@@ -539,16 +542,17 @@ AgentOrchestrator.ExecuteAsync()
 | 指标 | 数值 |
 |------|------|
 | 已完成模块 | 55+ 个（M1-M2, M4-M20, M22-M28, M31-M42, 快速迭代22项, 角色包3项, P1-P5工具增强） |
-| 单元测试 | 652 个全部通过（Agent 341 + Core 302 + UI 19） |
+| 单元测试 | 740 个全部通过（Agent 348 + Core 302 + UI 90） |
 | 代码行数 | 约 25000+ 行 |
 | 核心模块 | Core, Agent, App |
 | 内置工具 | 34 个（全部注册到 ToolRegistry） |
-| 待完成 | M3（UI）、M32 UI、Computer Use UI、封测包 |
+| 待完成 | M3（托盘等桌面体验收尾）、封测包 |
 
 ## 更新日志
 
 | 日期 | 更新内容 |
 |------|----------|
+| 2026-06-23 | M32 屏幕圈选参数链路修复 + 截图证据路径回传 + 流式取消属性修复 + Computer Use 审批测试稳定；740测试全绿（Agent 348 + Core 302 + UI 90） |
 | 2026-06-16-17 | 视频处理工具 + HyperFrames 集成（VideoProcessingTool + ShortVideoMakerTool） |
 | 2026-06-16-17 | Petdex 调研 + 角色包格式（CharacterModels + CharacterPackageLoader + PetdexImportConverter） |
 | 2026-06-16-17 | DI 注册补全（LearningEngine + ConversationManager + AgentPersonality + EdgeTts + CharacterPackage） |

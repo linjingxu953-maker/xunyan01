@@ -266,7 +266,13 @@ public sealed class JsonMascotCharacterStore : IMascotCharacterStore
 
         if (string.Equals(profile.AvatarText, "妍", StringComparison.Ordinal))
             profile.AvatarText = "微";
+
+        if (string.Equals(NormalizeFolder(profile.ImageFolder), "assets/characters/default", StringComparison.OrdinalIgnoreCase))
+            profile.ImageFolder = "assets/characters/yan";
     }
+
+    private static string NormalizeFolder(string? value) =>
+        (value ?? string.Empty).Trim().Replace('\\', '/').TrimEnd('/');
 
     private static IEnumerable<string> EnumerateCharacterRootCandidates()
     {

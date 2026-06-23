@@ -240,6 +240,17 @@ public sealed class DesktopShellService : IDisposable
                 _viewModel.CancelScreenSelection();
             }
         }
+        catch (Exception ex)
+        {
+            if (shouldRestoreWindow)
+            {
+                ShowWindow(openChat: true);
+            }
+
+            _viewModel.CancelScreenSelection();
+            _viewModel.StatusMessage = $"屏幕圈选失败：{ex.Message}";
+            _viewModel.TaskActionStatus = "屏幕圈选失败，请重试。";
+        }
         finally
         {
             _isSelectingScreenRegion = false;

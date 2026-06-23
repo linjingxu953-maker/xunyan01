@@ -67,17 +67,20 @@ public class EdgeTtsProvider : ITextToSpeechProvider
             };
 
             process.Start();
+            var outputTask = process.StandardOutput.ReadToEndAsync(ct);
+            var errorTask = process.StandardError.ReadToEndAsync(ct);
             await process.WaitForExitAsync(ct);
+            var output = await outputTask;
+            var error = await errorTask;
 
             stopwatch.Stop();
 
             if (process.ExitCode != 0)
             {
-                var error = await process.StandardError.ReadToEndAsync();
                 return new TextToSpeechResult
                 {
                     Success = false,
-                    Error = $"Edge TTS 失败: {error}",
+                    Error = $"Edge TTS 失败: {(!string.IsNullOrWhiteSpace(error) ? error : output)}",
                     Duration = stopwatch.Elapsed
                 };
             }
@@ -88,6 +91,17 @@ public class EdgeTtsProvider : ITextToSpeechProvider
                 {
                     Success = false,
                     Error = "音频文件未生成",
+                    Duration = stopwatch.Elapsed
+                };
+            }
+
+            var validation = TtsAudioFileValidator.Validate(outputPath);
+            if (!validation.IsValid)
+            {
+                return new TextToSpeechResult
+                {
+                    Success = false,
+                    Error = validation.Error ?? "音频文件异常，生成结果不可播放。",
                     Duration = stopwatch.Elapsed
                 };
             }
@@ -203,7 +217,10 @@ public class EdgeTtsProvider : ITextToSpeechProvider
             };
 
             process.Start();
+            var outputTask = process.StandardOutput.ReadToEndAsync();
+            var errorTask = process.StandardError.ReadToEndAsync();
             await process.WaitForExitAsync();
+            await Task.WhenAll(outputTask, errorTask);
             return process.ExitCode == 0;
         }
         catch

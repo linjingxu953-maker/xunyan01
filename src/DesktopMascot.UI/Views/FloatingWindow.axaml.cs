@@ -15,8 +15,10 @@ public partial class FloatingWindow : Window
 {
     private const double CollapsedWidth = 180;
     private const double CollapsedHeight = 240;
-    private const double ExpandedWidth = 980;
-    private const double ExpandedHeight = 660;
+    private const double ChatWidth = 1120;
+    private const double ChatHeight = 760;
+    private const double SettingsWidth = 1320;
+    private const double SettingsHeight = 820;
 
     private readonly DispatcherTimer _animationTimer;
     private readonly DateTime _animationStart = DateTime.UtcNow;
@@ -61,11 +63,12 @@ public partial class FloatingWindow : Window
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(FloatingWindowViewModel.IsChatDialogVisible))
+        if (e.PropertyName == nameof(FloatingWindowViewModel.IsChatDialogVisible) ||
+            e.PropertyName == nameof(FloatingWindowViewModel.IsSettingsPageVisible))
         {
             ApplyWindowMode(IsExpanded);
 
-            if (IsExpanded)
+            if (IsExpanded && e.PropertyName == nameof(FloatingWindowViewModel.IsChatDialogVisible))
             {
                 Dispatcher.UIThread.Post(FocusInput, DispatcherPriority.Background);
                 QueueScrollMessagesToEnd();
@@ -85,8 +88,9 @@ public partial class FloatingWindow : Window
 
     private void ApplyWindowMode(bool expanded)
     {
-        var targetWidth = expanded ? ExpandedWidth : CollapsedWidth;
-        var targetHeight = expanded ? ExpandedHeight : CollapsedHeight;
+        var settingsMode = expanded && _viewModel?.IsSettingsPageVisible == true;
+        var targetWidth = expanded ? (settingsMode ? SettingsWidth : ChatWidth) : CollapsedWidth;
+        var targetHeight = expanded ? (settingsMode ? SettingsHeight : ChatHeight) : CollapsedHeight;
         var anchorRight = Position.X + ToPixelWidth(Math.Max(Width, 1));
         var anchorBottom = Position.Y + ToPixelHeight(Math.Max(Height, 1));
 
@@ -233,11 +237,14 @@ public partial class FloatingWindow : Window
         e.Handled = true;
     }
 
-    private void PlayMessageButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private async void PlayMessageButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (sender is Button { Tag: string content })
         {
-            _viewModel?.PlayMessageAudio(content);
+            if (_viewModel is not null)
+            {
+                await _viewModel.PlayMessageAudioAsync(content);
+            }
         }
     }
 
@@ -250,6 +257,15 @@ public partial class FloatingWindow : Window
         }
 
         e.Handled = true;
+    }
+
+    private void InlineCharacterStatePreview_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is Border { Tag: CharacterStatePreviewItem item })
+        {
+            _viewModel?.InlineSettings.SelectCharacterStatePreviewCommand.Execute(item);
+            e.Handled = true;
+        }
     }
 
     private void UseScreenScreenshotEvidence_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

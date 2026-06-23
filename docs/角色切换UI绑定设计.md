@@ -172,7 +172,7 @@ Schema / Name / Slug / Version
 
 ```
 %AppData%/DesktopMascot/characters/
-├── default/          ← 默认角色（妍）
+├── feng-lin-yu-ren/  ← 默认角色（枫林渔人）
 │   ├── character.json
 │   ├── assets/
 │   │   ├── avatar.png
@@ -181,6 +181,9 @@ Schema / Name / Slug / Version
 │   │   ├── completed.png
 │   │   ├── error.png
 │   │   └── waiting.png
+├── yan/              ← 旧首角色（微风）
+│   ├── character.json
+│   └── assets/
 ├── boba/             ← 导入的 Petdex 角色
 │   ├── character.json
 │   └── assets/

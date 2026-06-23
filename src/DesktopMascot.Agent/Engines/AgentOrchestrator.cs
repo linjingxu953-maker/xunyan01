@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Runtime.CompilerServices;
 using DesktopMascot.Agent.Context;
 using DesktopMascot.Agent.Memory;
 using DesktopMascot.Agent.Models;
@@ -315,17 +317,7 @@ public class AgentOrchestrator : IAgentEngine
             return TaskResult.Failed(task.Id, "屏幕理解工具未注册");
         }
 
-        var arguments = task.Parameters.TryGetValue("Region", out var regionObj)
-            ? JsonSerializer.Serialize(regionObj)
-            : "{}";
-
-        if (task.Parameters.TryGetValue("UserHint", out var hintObj) && hintObj is string hint)
-        {
-            var doc = JsonDocument.Parse(arguments);
-            var dict = doc.RootElement.EnumerateObject().ToDictionary(p => p.Name, p => p.Value.GetRawText());
-            dict["user_hint"] = $"\"{hint}\"";
-            arguments = JsonSerializer.Serialize(dict);
-        }
+        var arguments = BuildScreenUnderstandArguments(task);
 
         _eventBus.Publish(new TaskEvent
         {
@@ -356,6 +348,49 @@ public class AgentOrchestrator : IAgentEngine
             Success = true,
             Content = toolResult.Content
         };
+    }
+
+    private static string BuildScreenUnderstandArguments(AgentTask task)
+    {
+        var payload = new JsonObject();
+
+        if (task.Parameters.TryGetValue("Region", out var regionObj))
+        {
+            using var regionDoc = JsonDocument.Parse(JsonSerializer.Serialize(regionObj));
+            var root = regionDoc.RootElement;
+
+            if (root.ValueKind == JsonValueKind.Object)
+            {
+                if (LooksLikeScreenRegion(root))
+                {
+                    payload["region"] = JsonNode.Parse(root.GetRawText());
+                }
+                else
+                {
+                    foreach (var property in root.EnumerateObject())
+                    {
+                        payload[property.Name] = JsonNode.Parse(property.Value.GetRawText());
+                    }
+                }
+            }
+        }
+
+        if (task.Parameters.TryGetValue("UserHint", out var hintObj)
+            && hintObj is string hint
+            && !string.IsNullOrWhiteSpace(hint))
+        {
+            payload["user_hint"] = hint;
+        }
+
+        return payload.Count == 0 ? "{}" : payload.ToJsonString();
+    }
+
+    private static bool LooksLikeScreenRegion(JsonElement element)
+    {
+        return element.TryGetProperty("x", out _)
+            && element.TryGetProperty("y", out _)
+            && element.TryGetProperty("width", out _)
+            && element.TryGetProperty("height", out _);
     }
 
     private async Task<TaskResult> ExecuteGenericTaskAsync(AgentTask task, CancellationToken ct)
@@ -884,9 +919,3 @@ public class AgentOrchestrator : IAgentEngine
         return _learningEngine.GenerateReport();
     }
 }
-
-/// <summary>
-/// IAsyncEnumerable 的 EnumeratorCancellation 特性
-/// </summary>
-[AttributeUsage(AttributeTargets.Parameter)]
-internal sealed class EnumeratorCancellationAttribute : Attribute { }

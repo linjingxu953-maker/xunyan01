@@ -15,6 +15,12 @@ namespace DesktopMascot.UI.ViewModels;
 /// <summary>FloatingWindowViewModel — 可观察属性和计算属性</summary>
 public partial class FloatingWindowViewModel
 {
+    private readonly ITextToSpeechPreviewService _textToSpeechPreviewService;
+    private readonly IAudioPlaybackService _audioPlaybackService;
+    private readonly IVoiceInputService _voiceInputService;
+    private readonly IComputerUseControlService _computerUseControlService;
+    private bool _isComputerUsePanelDismissedByUser;
+
     // ── 状态 ──
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsMascotBusy))]
@@ -61,11 +67,12 @@ public partial class FloatingWindowViewModel
     // ── Computer Use 面板 ──
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasPendingComputerUseApproval))]
+    [NotifyPropertyChangedFor(nameof(CanResolvePendingConfirmation))]
     private bool _isComputerUsePanelVisible;
-    [ObservableProperty] private string _computerUseModeText = "未接入";
+    [ObservableProperty] private string _computerUseModeText = "待命";
     [ObservableProperty] private string _computerUseStatusText = "等待 Computer Use 事件";
     [ObservableProperty] private string _computerUseTargetText = "暂无目标";
-    [ObservableProperty] private string _computerUseControlStatus = "等待 MiMo Computer Use 接入事件流。";
+    [ObservableProperty] private string _computerUseControlStatus = "等待 Computer Use 事件。";
     [ObservableProperty] private string _computerUseScreenshotStatus = "等待屏幕观察截图。";
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasComputerUseScreenshot))]
@@ -109,8 +116,14 @@ public partial class FloatingWindowViewModel
     [ObservableProperty] private string _voiceReplyStatus = "语音回复待命";
     [ObservableProperty] private bool _isMainAreaHitTestVisible = true;
     [ObservableProperty] private bool _isChatPanelHitTestVisible = true;
-    [ObservableProperty] private bool _isMascotIconVisible = true;
-    [ObservableProperty] private bool _isChatDialogVisible;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsFloatingMascotVisible))]
+    [NotifyPropertyChangedFor(nameof(IsDockedMascotVisible))]
+    private bool _isMascotIconVisible = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsFloatingMascotVisible))]
+    [NotifyPropertyChangedFor(nameof(IsDockedMascotVisible))]
+    private bool _isChatDialogVisible;
     [ObservableProperty] private bool _isChatDialogHitTestVisible = true;
     [ObservableProperty] private bool _isSidebarVisible = true;
     [ObservableProperty] private bool _isChatPageVisible = true;
@@ -258,7 +271,12 @@ public partial class FloatingWindowViewModel
     public string VoiceReplyButtonText => IsVoiceReplyPlaying ? "停止朗读" : "朗读待命";
     public bool CanStopVoiceReply => IsVoiceReplyPlaying;
     public bool CanRetryCurrentTask => CanRetryTask && !IsBusy && !IsWaitingForUserConfirmation && !string.IsNullOrWhiteSpace(_lastUserMessage);
-    public bool CanResolvePendingConfirmation => IsWaitingForUserConfirmation && _pendingConfirmationTask is not null && !IsBusy;
+    public bool CanResolvePendingConfirmation =>
+        IsWaitingForUserConfirmation &&
+        ((_pendingConfirmationTask is not null && !IsBusy) ||
+         (IsComputerUsePanelVisible && _computerUseControlService.HasPendingApproval));
+    public bool IsFloatingMascotVisible => IsMascotIconVisible && !IsChatDialogVisible;
+    public bool IsDockedMascotVisible => IsMascotIconVisible && IsChatDialogVisible;
     public bool IsMascotBusy => IsBusy || CurrentState is MascotState.Understanding or MascotState.ReadingContext or MascotState.Planning or MascotState.Working or MascotState.Reporting;
     public bool IsMascotWaiting => CurrentState is MascotState.WaitingApproval or MascotState.MemoryConfirm;
     public bool IsMascotError => CurrentState == MascotState.Error;

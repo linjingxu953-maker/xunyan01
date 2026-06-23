@@ -88,7 +88,7 @@ public partial class ScreenSelectionOverlayWindow : Window
 
         _isCompleted = true;
         _completion.TrySetResult(result);
-        Close();
+        TryCloseOverlay();
     }
 
     private void Cancel()
@@ -98,7 +98,20 @@ public partial class ScreenSelectionOverlayWindow : Window
 
         _isCompleted = true;
         _completion.TrySetResult(null);
-        Close();
+        TryCloseOverlay();
+    }
+
+    private void TryCloseOverlay()
+    {
+        try
+        {
+            Close();
+        }
+        catch
+        {
+            // The selection result is already delivered. Avoid surfacing
+            // transparent-window shutdown failures through pointer events.
+        }
     }
 
     private Point GetClampedPosition(PointerEventArgs e)

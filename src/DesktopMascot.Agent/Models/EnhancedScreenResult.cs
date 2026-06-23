@@ -24,6 +24,7 @@ public class EnhancedScreenResult
 {
     public string Identification { get; set; } = string.Empty;
     public string Understanding { get; set; } = string.Empty;
+    public string? ScreenshotPath { get; set; }
     public string? UserIntent { get; set; }
     public ScreenContentType ContentType { get; set; }
     public string? DetectedLanguage { get; set; }

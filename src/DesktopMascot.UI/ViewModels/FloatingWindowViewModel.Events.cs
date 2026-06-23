@@ -194,17 +194,21 @@ public partial class FloatingWindowViewModel
     // ── Computer Use 事件 ──
     private void ResetComputerUsePanel(bool isVisible)
     {
+        if (isVisible)
+            _isComputerUsePanelDismissedByUser = false;
+
         ComputerUseActions.Clear(); ComputerUseLogItems.Clear(); IsComputerUsePanelVisible = isVisible;
-        ComputerUseModeText = isVisible ? "待执行" : "未接入"; ComputerUseStatusText = isVisible ? "等待动作事件" : "等待 Computer Use 事件";
+        ComputerUseModeText = isVisible ? "待执行" : "待命"; ComputerUseStatusText = isVisible ? "等待动作事件" : "等待 Computer Use 事件";
         ComputerUseTargetText = isVisible ? "当前桌面" : "暂无目标"; ComputerUseScreenshotImage = null;
         ComputerUseScreenshotStatus = isVisible ? "等待屏幕观察截图。" : "等待 Computer Use 事件。";
-        ComputerUseControlStatus = isVisible ? "Computer Use 控制入口已准备。" : "等待 MiMo Computer Use 接入事件流。";
+        ComputerUseControlStatus = isVisible ? "Computer Use 控制入口已准备。" : "等待 Computer Use 事件。";
         NotifyComputerUseActionStateChanged();
         NotifyComputerUseLogStateChanged();
     }
 
     private void PrimeComputerUsePanel(string actionName, string target, string statusText, string detail)
     {
+        _isComputerUsePanelDismissedByUser = false;
         if (!IsComputerUsePanelVisible) { IsComputerUsePanelVisible = true; ComputerUseStatusText = "人工控制请求"; ComputerUseTargetText = target; }
         AddComputerUseActionRecord(actionName, target, statusText, detail, DateTime.UtcNow);
         AddComputerUseLogRecord(actionName, detail, statusText, DateTime.UtcNow);
@@ -214,7 +218,8 @@ public partial class FloatingWindowViewModel
     {
         var isCuEvent = IsComputerUseEvent(taskEvent);
         if (!isCuEvent && !IsComputerUsePanelVisible) return;
-        IsComputerUsePanelVisible = true;
+        if (!_isComputerUsePanelDismissedByUser)
+            IsComputerUsePanelVisible = true;
         ComputerUseModeText = ResolveComputerUseModeText(taskEvent); ComputerUseStatusText = CleanText(message, GetEventStepText(taskEvent), 80);
         ComputerUseTargetText = ResolveComputerUseTarget(taskEvent, ComputerUseTargetText); ComputerUseControlStatus = ResolveComputerUseControlStatus(taskEvent, message);
         UpdateComputerUseScreenshot(taskEvent);
@@ -258,11 +263,28 @@ public partial class FloatingWindowViewModel
         catch (Exception ex) { ComputerUseScreenshotImage = null; ComputerUseScreenshotStatus = $"截图加载失败：{ex.Message}"; }
     }
 
-    private void TryCancelComputerUseTask(string requestedStatus)
+    private string TryCancelComputerUseTask(string requestedStatus)
     {
-        if (string.IsNullOrWhiteSpace(ActiveTaskId)) { ComputerUseControlStatus = $"{requestedStatus} 当前没有活动任务 ID。"; return; }
-        if (_taskRouter.CancelTask(ActiveTaskId)) { CanCancelTask = false; ComputerUseControlStatus = $"{requestedStatus} 已向任务路由发送取消请求。"; TaskActionStatus = "已请求中断 Computer Use。"; StatusMessage = "正在中断 Computer Use..."; return; }
-        ComputerUseControlStatus = $"{requestedStatus} 当前任务路由未接受取消请求，可能任务已结束。";
+        if (string.IsNullOrWhiteSpace(ActiveTaskId))
+        {
+            var status = $"{requestedStatus} 当前没有活动任务 ID。";
+            ComputerUseControlStatus = status;
+            return status;
+        }
+
+        if (_taskRouter.CancelTask(ActiveTaskId))
+        {
+            CanCancelTask = false;
+            TaskActionStatus = "已请求中断 Computer Use。";
+            StatusMessage = "正在中断 Computer Use...";
+            var status = $"{requestedStatus} 已向任务路由发送取消请求。";
+            ComputerUseControlStatus = status;
+            return status;
+        }
+
+        var rejectedStatus = $"{requestedStatus} 当前任务路由未接受取消请求，可能任务已结束。";
+        ComputerUseControlStatus = rejectedStatus;
+        return rejectedStatus;
     }
 
     private void NotifyComputerUseActionStateChanged() { OnPropertyChanged(nameof(HasComputerUseActions)); OnPropertyChanged(nameof(HasNoComputerUseActions)); }

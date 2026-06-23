@@ -5,9 +5,8 @@ Put customizable mascot images under this folder. The app resolves character ima
 ```text
 assets/characters/default
 assets/characters/yan
-assets/characters/developer
-assets/characters/operator
-assets/characters/study
+assets/characters/yue guang
+assets/characters/feng lin yu ren
 ```
 
 ## Folder Rules
@@ -16,16 +15,15 @@ assets/characters/study
 
 ```text
 assets/characters/
-  yan/          current default character: 妍
-  developer/    developer-style role images
-  operator/     task-operator role images
-  study/        study/research role images
+  feng lin yu ren/  current default character: 枫林渔人
+  yan/              legacy first character: 微风
+  yue guang/        月光
   <new-role>/   images for one new role
 ```
 
 Do not place role images directly in `assets/characters`. Keep images grouped by role folder so the settings center can switch, preview, import, and export a character without mixing files from different roles.
 
-`assets/characters/default` is kept as a compatibility fallback for older profiles. New or actively managed roles should use their own named folder, such as `assets/characters/yan`.
+`assets/characters/default` is kept only as a compatibility fallback for older profiles. It is not shown as a separate selectable role. The legacy first character now uses `assets/characters/yan` and is named 微风.
 
 Supported image formats: `.png`, `.jpg`, `.jpeg`, `.bmp`, `.webp`.
 

@@ -18,6 +18,9 @@ public class ComputerUseOrchestrator
     private readonly ITaskEventBus _eventBus;
     private readonly ILogger<ComputerUseOrchestrator> _logger;
     private readonly ComputerUseSession _session = new();
+    private readonly object _approvalLock = new();
+    private PlannedAction? _pendingApprovalAction;
+    private string? _approvalDeniedReason;
 
     public event EventHandler<ComputerUseEvent>? ComputerUseEventOccurred;
 
@@ -32,6 +35,16 @@ public class ComputerUseOrchestrator
     }
 
     public ComputerUseSession Session => _session;
+    public bool HasPendingApproval
+    {
+        get
+        {
+            lock (_approvalLock)
+            {
+                return _pendingApprovalAction is not null;
+            }
+        }
+    }
 
     /// <summary>
     /// 执行 Computer Use 任务
@@ -142,6 +155,7 @@ public class ComputerUseOrchestrator
                 if (action.RequiresApproval)
                 {
                     action.Status = ActionStatus.WaitingApproval;
+                    SetPendingApproval(action);
 
                     EmitEvent(new ComputerUseEvent
                     {
@@ -162,6 +176,25 @@ public class ComputerUseOrchestrator
                     });
 
                     await WaitForApprovalAsync(action, ct);
+                    var deniedReason = ConsumeApprovalDeniedReason();
+                    if (action.Status == ActionStatus.Failed)
+                    {
+                        var reason = deniedReason ?? "用户拒绝了 Computer Use 动作。";
+                        EmitEvent(new ComputerUseEvent
+                        {
+                            TaskId = taskId,
+                            EventType = ComputerUseEventType.ComputerUseFailed,
+                            Message = reason,
+                            Action = action.ActionName,
+                            ToolName = action.ToolName,
+                            Target = ExtractTarget(action),
+                            Detail = action.Arguments,
+                            Status = "denied",
+                            Progress = 40 + (i * 50 / plan.Count),
+                            ErrorMessage = reason
+                        });
+                        return TaskResult.Failed(taskId, reason);
+                    }
                 }
 
                 var result = await ExecuteActionAsync(action, ct);
@@ -231,7 +264,41 @@ public class ComputerUseOrchestrator
 
     public void Pause() => _session.IsPaused = true;
     public void Resume() => _session.IsPaused = false;
-    public void Takeover() => _session.UserHasTakeover = true;
+    public void Takeover()
+    {
+        _session.UserHasTakeover = true;
+        DenyCurrentAction("用户已接管 Computer Use。");
+    }
+
+    public bool ApproveCurrentAction()
+    {
+        lock (_approvalLock)
+        {
+            if (_pendingApprovalAction is null)
+                return false;
+
+            _pendingApprovalAction.Status = ActionStatus.Executing;
+            _pendingApprovalAction = null;
+            _approvalDeniedReason = null;
+            return true;
+        }
+    }
+
+    public bool DenyCurrentAction(string? reason = null)
+    {
+        lock (_approvalLock)
+        {
+            if (_pendingApprovalAction is null)
+                return false;
+
+            _approvalDeniedReason = string.IsNullOrWhiteSpace(reason)
+                ? "用户拒绝了 Computer Use 动作。"
+                : reason.Trim();
+            _pendingApprovalAction.Status = ActionStatus.Failed;
+            _pendingApprovalAction = null;
+            return true;
+        }
+    }
 
     private async Task<string> CaptureScreenAsync(CancellationToken ct)
     {
@@ -321,7 +388,7 @@ public class ComputerUseOrchestrator
                     ActionName = item.TryGetProperty("actionName", out var a) ? a.GetString() ?? "" : "",
                     Description = item.TryGetProperty("description", out var d) ? d.GetString() ?? "" : "",
                     ToolName = item.TryGetProperty("toolName", out var t) ? t.GetString() ?? "computer_use" : "computer_use",
-                    Arguments = item.TryGetProperty("arguments", out var ar) ? ar.GetRawText() : "{}",
+                    Arguments = item.TryGetProperty("arguments", out var ar) ? ReadActionArguments(ar) : "{}",
                     RequiresApproval = item.TryGetProperty("requiresApproval", out var ra) && ra.GetBoolean()
                 });
             }
@@ -357,6 +424,17 @@ public class ComputerUseOrchestrator
         if (start >= 0 && end > start)
             return content[start..(end + 1)];
         return content;
+    }
+
+    private static string ReadActionArguments(System.Text.Json.JsonElement element)
+    {
+        if (element.ValueKind == System.Text.Json.JsonValueKind.String)
+        {
+            var value = element.GetString();
+            return string.IsNullOrWhiteSpace(value) ? "{}" : value;
+        }
+
+        return element.GetRawText();
     }
 
     private static string ExtractTarget(PlannedAction action)
@@ -523,8 +601,80 @@ public class ComputerUseOrchestrator
             EventType = MapEventType(evt.EventType),
             State = MapState(evt.EventType),
             Message = evt.Message,
-            Progress = evt.Progress
+            Progress = evt.Progress,
+            Metadata = BuildTaskEventMetadata(evt)
         });
+    }
+
+    private void SetPendingApproval(PlannedAction action)
+    {
+        lock (_approvalLock)
+        {
+            _pendingApprovalAction = action;
+            _approvalDeniedReason = null;
+        }
+    }
+
+    private string? ConsumeApprovalDeniedReason()
+    {
+        lock (_approvalLock)
+        {
+            var reason = _approvalDeniedReason;
+            _approvalDeniedReason = null;
+            return reason;
+        }
+    }
+
+    private static Dictionary<string, object> BuildTaskEventMetadata(ComputerUseEvent evt)
+    {
+        var metadata = new Dictionary<string, object>
+        {
+            ["computerUseEventType"] = evt.EventType.ToString()
+        };
+
+        AddIfPresent(metadata, "action", evt.Action);
+        AddIfPresent(metadata, "computerAction", evt.Action);
+        AddIfPresent(metadata, "toolName", evt.ToolName);
+        AddIfPresent(metadata, "target", evt.Target);
+        AddIfPresent(metadata, "detail", evt.Detail);
+        AddIfPresent(metadata, "status", evt.Status);
+        if (evt.EventType is ComputerUseEventType.ScreenObserved or ComputerUseEventType.ActionPlanned)
+            metadata["screenshotPath"] = evt.ScreenshotPath ?? string.Empty;
+        AddIfPresent(metadata, "result", evt.ActionResult);
+        AddIfPresent(metadata, "output", evt.ActionResult);
+        AddIfPresent(metadata, "error", evt.ErrorMessage);
+
+        if (evt.CurrentAction is not null)
+        {
+            metadata["currentActionDescription"] = evt.CurrentAction.Description;
+            AddIfPresent(metadata, "step", evt.CurrentAction.Step.ToString());
+        }
+
+        if (evt.PlannedActions is { Count: > 0 })
+        {
+            metadata["plannedActionCount"] = evt.PlannedActions.Count;
+            metadata["plannedActions"] = string.Join("；", evt.PlannedActions.Select(action =>
+                $"{action.Step}. {action.Description} [{action.ActionName}]"));
+        }
+
+        if (evt.ApprovalRequest is not null)
+        {
+            metadata["approvalRequestId"] = evt.ApprovalRequest.RequestId;
+            metadata["approvalActionName"] = evt.ApprovalRequest.ActionName;
+            metadata["approvalDescription"] = evt.ApprovalRequest.Description;
+            metadata["riskLevel"] = evt.ApprovalRequest.RiskLevel;
+            metadata["permissionType"] = "ComputerUse";
+            metadata["scope"] = string.IsNullOrWhiteSpace(evt.Target) ? "当前桌面" : evt.Target;
+            metadata["reason"] = evt.ApprovalRequest.Description;
+        }
+
+        return metadata;
+    }
+
+    private static void AddIfPresent(Dictionary<string, object> metadata, string key, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+            metadata[key] = value;
     }
 
     private static TaskEventType MapEventType(ComputerUseEventType type) => type switch

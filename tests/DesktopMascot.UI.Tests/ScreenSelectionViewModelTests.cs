@@ -1,4 +1,5 @@
 using Avalonia;
+using DesktopMascot.UI.Services;
 using DesktopMascot.UI.ViewModels;
 
 namespace DesktopMascot.UI.Tests;
@@ -38,5 +39,13 @@ public sealed class ScreenSelectionViewModelTests
         Assert.False(viewModel.HasValidSelection);
         Assert.False(viewModel.HasSelectionRegionSummary);
         Assert.Equal("区域至少需要 12 x 12", viewModel.SelectionRegionSummary);
+    }
+
+    [Fact]
+    public void OverlayOwnerPolicy_DoesNotUseHiddenOwnerWindow()
+    {
+        Assert.False(ScreenSelectionOverlayService.ShouldUseOwnerForOverlay(hasOwner: true, ownerIsVisible: false));
+        Assert.False(ScreenSelectionOverlayService.ShouldUseOwnerForOverlay(hasOwner: false, ownerIsVisible: true));
+        Assert.True(ScreenSelectionOverlayService.ShouldUseOwnerForOverlay(hasOwner: true, ownerIsVisible: true));
     }
 }

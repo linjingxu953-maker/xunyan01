@@ -35,6 +35,7 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
     private readonly ErrorHandler? _errorHandler;
     private readonly AgentPersonality? _personality;
     private readonly ICharacterManager? _characterManager;
+    private readonly ComputerUseControlService? _computerUseControlService;
 
     public ConfiguredAgentEngine(
         IConfigurationManager configurationManager,
@@ -49,7 +50,8 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
         IAuditLogStore? auditLogStore = null,
         ErrorHandler? errorHandler = null,
         AgentPersonality? personality = null,
-        ICharacterManager? characterManager = null)
+        ICharacterManager? characterManager = null,
+        ComputerUseControlService? computerUseControlService = null)
     {
         _configurationManager = configurationManager;
         _toolRegistry = toolRegistry;
@@ -64,6 +66,7 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
         _errorHandler = errorHandler;
         _personality = personality;
         _characterManager = characterManager;
+        _computerUseControlService = computerUseControlService;
     }
 
     public async Task<TaskResult> ExecuteAsync(AgentTask task, CancellationToken ct = default)
@@ -114,6 +117,7 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
 
         var computerUseLogger = new Logger<ComputerUseOrchestrator>(NullLoggerFactory.Instance);
         var computerUseOrchestrator = new ComputerUseOrchestrator(provider, _eventBus, computerUseLogger);
+        _computerUseControlService?.Attach(computerUseOrchestrator);
         return new AgentOrchestrator(new AgentOrchestratorOptions
         {
             LlmProvider = provider,

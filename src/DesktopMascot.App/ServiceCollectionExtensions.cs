@@ -168,11 +168,13 @@ public static class ServiceCollectionExtensions
             var auditStore = sp.GetService<IAuditLogStore>();
             var errorHandler = sp.GetService<ErrorHandler>();
             var characterManager = sp.GetService<ICharacterManager>();
+            var computerUseControlService = sp.GetService<ComputerUseControlService>();
 
             return new ConfiguredAgentEngine(
                 configManager, toolRegistry, eventBus, eventStream, logger,
                 memoryService, historyStore, convManager, learnEngine,
-                auditStore, errorHandler, characterManager: characterManager);
+                auditStore, errorHandler, characterManager: characterManager,
+                computerUseControlService: computerUseControlService);
         });
 
         // 任务路由

@@ -4,10 +4,10 @@
         x:Class="DesktopMascot.UI.Views.SettingsWindow"
         x:DataType="vm:SettingsWindowViewModel"
         Title="寻研01 设置"
-        Width="1080"
-        Height="760"
-        MinWidth="900"
-        MinHeight="620"
+        Width="1280"
+        Height="840"
+        MinWidth="1080"
+        MinHeight="720"
         Background="Transparent"
         TransparencyLevelHint="Transparent"
         WindowStartupLocation="CenterOwner">
@@ -1656,22 +1656,22 @@
                     <StackPanel Spacing="14"
                                 IsVisible="{Binding IsAppearanceSectionSelected}">
                         <Border Classes="toolCard">
-                            <Grid ColumnDefinitions="190,*"
-                                  ColumnSpacing="18">
+                            <Grid RowDefinitions="Auto,Auto"
+                                  RowSpacing="18">
                                 <StackPanel Spacing="12">
                                     <TextBlock Text="角色设定"
                                                Foreground="{StaticResource Brush.Text.Primary}"
                                                FontSize="22"
                                                FontWeight="SemiBold"/>
-                                    <Border Width="160"
-                                            Height="210"
+                                    <Border Width="220"
+                                            Height="292"
                                             Classes="characterDropZone"
                                             Background="{Binding CharacterBackgroundBrush}"
                                             BorderBrush="{Binding CharacterAccentBrush}"
                                             BorderThickness="2"
-                                            ClipToBounds="True"
+                                            ClipToBounds="False"
                                             CornerRadius="8"
-                                            HorizontalAlignment="Left"
+                                            HorizontalAlignment="Center"
                                             DragDrop.AllowDrop="True"
                                             DragDrop.DragOver="CharacterAssetDropZone_DragOver"
                                             DragDrop.Drop="CharacterAssetDropZone_Drop">
@@ -1701,7 +1701,8 @@
                                     </Border>
                                     <ComboBox ItemsSource="{Binding CharacterStateImageItems}"
                                               SelectedItem="{Binding SelectedCharacterStateImage}"
-                                              MinWidth="160"/>
+                                              HorizontalAlignment="Center"
+                                              MinWidth="240"/>
                                     <Button Content="选择当前状态图"
                                             Classes="secondaryAction"
                                             Command="{Binding PickSelectedStateImageCommand}"
@@ -1816,7 +1817,7 @@
                                     </StackPanel>
                                 </StackPanel>
 
-                                <StackPanel Grid.Column="1"
+                                <StackPanel Grid.Row="1"
                                             Spacing="14">
                                      <Grid ColumnDefinitions="*,*"
                                           RowDefinitions="Auto,Auto,Auto,Auto"
@@ -2072,52 +2073,39 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="vm:CharacterStatePreviewItem">
-                                                    <Border Width="132"
-                                                            MinHeight="162"
+                                                    <Border Classes="characterStatePreviewCard"
+                                                            MinHeight="190"
                                                             Margin="0,0,8,8"
-                                                            Padding="8"
-                                                            CornerRadius="8"
-                                                            Background="{StaticResource Brush.Surface.Subtle}"
-                                                            BorderBrush="{StaticResource Brush.Border.Subtle}"
-                                                            BorderThickness="1">
+                                                            Cursor="Hand"
+                                                            Tag="{Binding}"
+                                                            PointerPressed="CharacterStatePreview_PointerPressed">
                                                         <StackPanel Spacing="6">
-                                                            <Border Height="72"
-                                                                    CornerRadius="6"
-                                                                    Background="{StaticResource Brush.Surface.Panel}"
-                                                                    ClipToBounds="True">
+                                                            <Border Height="96"
+                                                                    Classes="characterStatePreviewImageFrame">
                                                                 <Grid>
                                                                     <Image Source="{Binding Image}"
                                                                            Stretch="Uniform"
                                                                            IsVisible="{Binding HasImage}"/>
                                                                     <TextBlock Text="{Binding PreviewText}"
-                                                                               Foreground="{StaticResource Brush.Text.Muted}"
-                                                                               FontSize="18"
-                                                                               FontWeight="SemiBold"
-                                                                               HorizontalAlignment="Center"
-                                                                               VerticalAlignment="Center"
+                                                                               Classes="characterStatePreviewPlaceholder"
                                                                                IsVisible="{Binding HasNoImage}"/>
                                                                 </Grid>
                                                             </Border>
                                                             <Grid ColumnDefinitions="*,Auto"
                                                                   ColumnSpacing="6">
                                                                 <TextBlock Text="{Binding DisplayName}"
-                                                                           Classes="sectionTitle"
+                                                                           Classes="characterStatePreviewTitle"
                                                                            TextTrimming="CharacterEllipsis"/>
                                                                 <Border Grid.Column="1"
-                                                                        Padding="6,2"
-                                                                        CornerRadius="6"
+                                                                        Classes="characterStatePreviewBadge"
                                                                         Background="{Binding StatusBrush}">
                                                                     <TextBlock Text="{Binding StatusText}"
-                                                                               Foreground="{StaticResource Brush.White}"
-                                                                               FontSize="10"/>
+                                                                               Classes="characterStatePreviewBadgeText"/>
                                                                 </Border>
                                                             </Grid>
-                                                            <TextBlock Text="{Binding ConfiguredFileName}"
-                                                                       Classes="captionText"
-                                                                       TextTrimming="CharacterEllipsis"/>
-                                                            <TextBlock Text="{Binding ResolvedFileName}"
-                                                                       Classes="captionText"
-                                                                       TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Text="{Binding DetailText}"
+                                                                       Classes="characterStatePreviewDetail"
+                                                                       TextWrapping="Wrap"/>
                                                         </StackPanel>
                                                     </Border>
                                                 </DataTemplate>

@@ -3,7 +3,9 @@
              xmlns:vm="using:DesktopMascot.UI.ViewModels"
              x:Class="DesktopMascot.UI.Views.Controls.ComputerUsePanel"
              x:DataType="vm:FloatingWindowViewModel">
-    <Border Classes="computerUsePanel">
+    <Border Classes="computerUsePanel"
+            MaxHeight="320">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
         <Grid ColumnDefinitions="210,*"
               ColumnSpacing="12">
             <Border Classes="computerUsePreview">
@@ -36,7 +38,8 @@
 
             <StackPanel Grid.Column="1"
                         Spacing="9">
-            <Grid ColumnDefinitions="*,Auto">
+            <Grid ColumnDefinitions="*,Auto,Auto"
+                  ColumnSpacing="8">
                 <StackPanel Spacing="2">
                     <TextBlock Text="Computer Use"
                                Classes="computerUseTitle"/>
@@ -51,6 +54,11 @@
                     <TextBlock Text="{Binding ComputerUseModeText}"
                                Classes="computerUseModeText"/>
                 </Border>
+                <Button Grid.Column="2"
+                        Content="收起"
+                        Classes="computerUseButton"
+                        Command="{Binding HideComputerUsePanelCommand}"
+                        VerticalAlignment="Top"/>
             </Grid>
 
             <Grid ColumnDefinitions="*,Auto">
@@ -97,7 +105,7 @@
                         <StackPanel Spacing="2">
                             <TextBlock Text="{Binding ComputerUseApproval.Title}"
                                        Classes="computerUseActionTitle"/>
-                            <TextBlock Text="需要你确认后，妍才会继续执行桌面动作。"
+                            <TextBlock Text="需要你确认后，当前角色才会继续执行桌面动作。"
                                        Classes="computerUseCaption"/>
                         </StackPanel>
                         <Border Grid.Column="1"
@@ -246,5 +254,6 @@
             </ScrollViewer>
             </StackPanel>
         </Grid>
+        </ScrollViewer>
     </Border>
 </UserControl>

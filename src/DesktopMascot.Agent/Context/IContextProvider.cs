@@ -53,6 +53,15 @@ public interface IContextProvider
     /// <summary>获取屏幕截图</summary>
     Task<string?> CaptureScreenshotAsync(string? outputPath = null, CancellationToken ct = default);
 
+    /// <summary>截取指定屏幕区域，坐标为物理屏幕坐标</summary>
+    Task<string?> CaptureScreenshotRegionAsync(
+        int x,
+        int y,
+        int width,
+        int height,
+        string? outputPath = null,
+        CancellationToken ct = default);
+
     /// <summary>获取浏览器页面内容</summary>
     Task<string?> GetBrowserContentAsync(CancellationToken ct = default);
 

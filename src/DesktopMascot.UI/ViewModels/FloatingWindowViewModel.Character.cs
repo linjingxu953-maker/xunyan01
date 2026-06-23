@@ -10,14 +10,6 @@ namespace DesktopMascot.UI.ViewModels;
 /// <summary>FloatingWindowViewModel — 角色管理、外观和工具方法</summary>
 public partial class FloatingWindowViewModel
 {
-    private static readonly Dictionary<string, CharacterAssetPreset> CharacterAssetPresets = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["default"] = new("微风", "寻研01桌面助手", "微", "#2563EB", "#EEF6FF"),
-        ["yan"] = new("微风", "寻研01桌面助手", "微", "#2563EB", "#EEF6FF"),
-        ["yue guang"] = new("月光", "寻研01夜间助手", "月", "#7C3AED", "#F5F3FF"),
-        ["feng lin yu ren"] = new("枫林渔人", "寻研01桌面助手", "枫", "#047857", "#ECFDF5")
-    };
-
     private static readonly HashSet<string> SupportedCharacterImageExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".png",
@@ -55,6 +47,7 @@ public partial class FloatingWindowViewModel
     public void SetCharacterAssetRootCandidates(IReadOnlyList<string>? rootCandidates)
     {
         _characterAssetRootCandidates = rootCandidates;
+        InlineSettings.SetCharacterAssetRootCandidates(rootCandidates);
         RefreshCharacterSwitchItems();
     }
 
@@ -145,7 +138,7 @@ public partial class FloatingWindowViewModel
             if (!root.Exists)
                 continue;
 
-            foreach (var directory in root.EnumerateDirectories().OrderBy(GetCharacterDirectorySortKey))
+            foreach (var directory in root.EnumerateDirectories().OrderBy(KnownMascotCharacterAssets.GetDirectorySortKey))
             {
                 var folderName = directory.Name;
                 var imageFolder = $"assets/characters/{folderName}";
@@ -261,27 +254,7 @@ public partial class FloatingWindowViewModel
 
     private static MascotCharacterProfile? CreateAssetCharacterProfile(string folderName, string imageFolder)
     {
-        if (!CharacterAssetPresets.TryGetValue(folderName, out var preset))
-            return null;
-
-        var profile = new MascotCharacterProfile
-        {
-            Name = preset.Name,
-            Role = preset.Role,
-            AvatarText = preset.AvatarText,
-            Description = $"{preset.Name} 是寻研01的可切换桌面角色。",
-            Personality = "沉稳可靠",
-            ToneStyle = "友善",
-            LanguageStyle = "标准",
-            ReplyLength = "平衡",
-            Catchphrase = $"我是{preset.Name}，可以继续接任务。",
-            AccentColor = preset.AccentColor,
-            BackgroundColor = preset.BackgroundColor,
-            ImageFolder = imageFolder,
-            AvatarImage = "avatar.png"
-        };
-        profile.EnsureImageDefaults();
-        return profile;
+        return KnownMascotCharacterAssets.CreateProfile(folderName, imageFolder);
     }
 
     private bool IsCurrentCharacterAsset(MascotCharacterProfile profile) =>
@@ -374,20 +347,6 @@ public partial class FloatingWindowViewModel
         return index >= 0 ? normalized[(index + 1)..] : normalized;
     }
 
-    private static string GetCharacterDirectorySortKey(DirectoryInfo directory)
-    {
-        var name = directory.Name;
-        var knownIndex = name.ToLowerInvariant() switch
-        {
-            "feng lin yu ren" => 0,
-            "yan" => 1,
-            "default" => 2,
-            "yue guang" => 3,
-            _ => 99
-        };
-        return $"{knownIndex:D2}-{name}";
-    }
-
     private static string FormatCharacterFolderName(string folderName)
     {
         var text = string.IsNullOrWhiteSpace(folderName)
@@ -433,7 +392,6 @@ public partial class FloatingWindowViewModel
     private static string NormalizeHexColor(string? value, string fallback) { if (string.IsNullOrWhiteSpace(value)) return fallback; var c = value.Trim(); if (c is not ['#', ..] || c.Length != 7) return fallback; try { Color.Parse(c); return c.ToUpperInvariant(); } catch { return fallback; } }
     private static IBrush BrushFrom(string hex) => new SolidColorBrush(Color.Parse(hex));
 
-    private sealed record CharacterAssetPreset(string Name, string Role, string AvatarText, string AccentColor, string BackgroundColor);
     private sealed record CharacterStateAssetRequirement(MascotState State, string DisplayName, string[] Aliases);
     private sealed record CharacterStateImageReadiness(int AvailableCount, int TotalCount, string MissingText);
 }

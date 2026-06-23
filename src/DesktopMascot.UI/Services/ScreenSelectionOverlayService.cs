@@ -33,9 +33,9 @@ public sealed class ScreenSelectionOverlayService
             window.ConfigureForScreen(screen);
         }
 
-        if (owner is not null)
+        if (ShouldUseOwnerForOverlay(owner is not null, owner?.IsVisible == true))
         {
-            window.Show(owner);
+            window.Show(owner!);
         }
         else
         {
@@ -44,6 +44,9 @@ public sealed class ScreenSelectionOverlayService
 
         return window.WaitForSelectionAsync();
     }
+
+    public static bool ShouldUseOwnerForOverlay(bool hasOwner, bool ownerIsVisible) =>
+        hasOwner && ownerIsVisible;
 
     private static Screen? ResolveTargetScreen(Window? owner)
     {
