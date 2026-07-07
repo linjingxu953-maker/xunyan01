@@ -32,9 +32,27 @@ public class ConfigurationManagerTests : IDisposable
         await _manager.SaveAppSettingsAsync(settings);
         var loaded = await _manager.GetAppSettingsAsync();
 
-        Assert.Equal("test-key", loaded.ApiKey);
+        Assert.Equal("", loaded.ApiKey);
         Assert.Equal("gpt-4", loaded.ModelName);
         Assert.Equal("zh-CN", loaded.Language);
+    }
+
+    [Fact]
+    public async Task SaveAppSettings_ShouldNotPersistPlaintextApiKey()
+    {
+        await _manager.SaveAppSettingsAsync(new AppSettings
+        {
+            ProviderName = "OpenAI",
+            ApiKey = "plain-secret",
+            ModelName = "gpt-4",
+            ApiEndpoint = "https://api.openai.com/v1"
+        });
+
+        var rawJson = await File.ReadAllTextAsync(Path.Combine(_testDir, "app_settings.json"));
+        var loaded = await _manager.GetAppSettingsAsync();
+
+        Assert.DoesNotContain("plain-secret", rawJson);
+        Assert.Equal(string.Empty, loaded.ApiKey);
     }
 
     [Fact]
@@ -119,12 +137,12 @@ public class ConfigurationManagerTests : IDisposable
 public class ConfigurationValidationTests
 {
     [Fact]
-    public void AppSettings_EmptyApiKey_ShouldHaveError()
+    public void AppSettings_EmptyApiKey_ShouldNotHaveConfigurationError()
     {
         var settings = new AppSettings { ApiKey = "" };
         var errors = settings.Validate();
 
-        Assert.Contains(errors, e => e.Contains("API Key"));
+        Assert.DoesNotContain(errors, e => e.Contains("API Key"));
     }
 
     [Fact]
@@ -132,7 +150,6 @@ public class ConfigurationValidationTests
     {
         var settings = new AppSettings
         {
-            ApiKey = "test-key",
             ModelName = "gpt-4",
             ApiEndpoint = "https://api.openai.com/v1"
         };

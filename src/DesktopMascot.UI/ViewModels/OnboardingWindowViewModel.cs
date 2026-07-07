@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DesktopMascot.Core.Configuration;
+using DesktopMascot.Core.Services;
 using DesktopMascot.UI.Services;
 
 namespace DesktopMascot.UI.ViewModels;
@@ -10,6 +11,7 @@ public sealed partial class OnboardingWindowViewModel : ObservableObject
 {
     private readonly IConfigurationManager _configurationManager;
     private readonly ISettingsDiagnosticsService _diagnosticsService;
+    private readonly ISettingsService? _settingsService;
     private bool _isApplyingProvider;
     private AppSettings _settings = new();
 
@@ -49,10 +51,12 @@ public sealed partial class OnboardingWindowViewModel : ObservableObject
 
     public OnboardingWindowViewModel(
         IConfigurationManager configurationManager,
-        ISettingsDiagnosticsService diagnosticsService)
+        ISettingsDiagnosticsService diagnosticsService,
+        ISettingsService? settingsService = null)
     {
         _configurationManager = configurationManager;
         _diagnosticsService = diagnosticsService;
+        _settingsService = settingsService;
 
         Providers = new ObservableCollection<ModelProviderOption>(ModelProviderCatalog.CreateDefaults());
 
@@ -86,13 +90,15 @@ public sealed partial class OnboardingWindowViewModel : ObservableObject
         try
         {
             _settings = await _configurationManager.GetAppSettingsAsync(ct);
+            await MigrateLegacyApiKeyAsync(ct);
             AgentMode = _settings.MimoCodeEnabled ? "MimoCode" : "BuiltIn";
-            ApiKey = _settings.ApiKey;
+            ApiKey = string.Empty;
             ApiEndpoint = _settings.ApiEndpoint;
             ModelName = _settings.ModelName;
             SelectedProvider = Providers.FirstOrDefault(x => x.Name == _settings.ProviderName) ??
                                InferProvider(_settings.ApiEndpoint) ??
                                Providers[0];
+            ApiKey = await LoadApiKeyForSelectedProviderAsync(ct);
             MimoCodeExecutablePath = _settings.MimoCodeExecutablePath;
             MimoCodeWorkspacePath = _settings.MimoCodeWorkspaceDirectory;
             MimoCodeModelConfigMode = string.IsNullOrWhiteSpace(_settings.MimoCodeModelConfigMode)
@@ -265,6 +271,30 @@ public sealed partial class OnboardingWindowViewModel : ObservableObject
             return;
 
         ApplyProviderDefaultsIfEmpty();
+        _ = LoadApiKeyForSelectedProviderAndAssignAsync();
+    }
+
+    private async Task LoadApiKeyForSelectedProviderAndAssignAsync(CancellationToken ct = default)
+    {
+        ApiKey = await LoadApiKeyForSelectedProviderAsync(ct);
+    }
+
+    private async Task<string> LoadApiKeyForSelectedProviderAsync(CancellationToken ct = default)
+    {
+        if (_settingsService is null || SelectedProvider is null)
+            return string.Empty;
+
+        return await _settingsService.GetApiKeyAsync(SelectedProvider.Name, ct) ?? string.Empty;
+    }
+
+    private async Task MigrateLegacyApiKeyAsync(CancellationToken ct = default)
+    {
+        if (_settingsService is null || string.IsNullOrWhiteSpace(_settings.ApiKey))
+            return;
+
+        await _settingsService.SetApiKeyAsync(_settings.ProviderName, _settings.ApiKey.Trim(), ct);
+        _settings.ApiKey = string.Empty;
+        await _configurationManager.SaveAppSettingsAsync(_settings, ct);
     }
 
     partial void OnAgentModeChanged(string value)
@@ -288,7 +318,11 @@ public sealed partial class OnboardingWindowViewModel : ObservableObject
         try
         {
             _settings.ProviderName = SelectedProvider.Name;
-            _settings.ApiKey = ApiKey.Trim();
+            if (!string.IsNullOrWhiteSpace(ApiKey) && _settingsService != null)
+            {
+                await _settingsService.SetApiKeyAsync(SelectedProvider.Name, ApiKey.Trim());
+            }
+            _settings.ApiKey = string.Empty;
             _settings.ApiEndpoint = ApiEndpoint.Trim();
             _settings.ModelName = ModelName.Trim();
             _settings.MimoCodeEnabled = IsMimoCodeMode;

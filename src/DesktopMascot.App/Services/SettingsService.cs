@@ -31,22 +31,28 @@ public class SettingsService : ISettingsService
 
     public async Task UpdateSettingsAsync(AppSettings settings, CancellationToken ct = default)
     {
+        if (!string.IsNullOrWhiteSpace(settings.ApiKey))
+        {
+            await _apiKeyStore.SetApiKeyAsync(settings.ProviderName, settings.ApiKey.Trim(), ct);
+            settings.ApiKey = string.Empty;
+        }
+
         await _configManager.SaveAppSettingsAsync(settings, ct);
     }
 
     public async Task<string?> GetApiKeyAsync(string provider, CancellationToken ct = default)
     {
-        return await _apiKeyStore.GetApiKeyAsync(provider, ct);
+        return await _apiKeyStore.GetApiKeyAsync(NormalizeProviderName(provider), ct);
     }
 
     public async Task SetApiKeyAsync(string provider, string apiKey, CancellationToken ct = default)
     {
-        await _apiKeyStore.SetApiKeyAsync(provider, apiKey, ct);
+        await _apiKeyStore.SetApiKeyAsync(NormalizeProviderName(provider), apiKey, ct);
     }
 
     public async Task RemoveApiKeyAsync(string provider, CancellationToken ct = default)
     {
-        await _apiKeyStore.RemoveApiKeyAsync(provider, ct);
+        await _apiKeyStore.RemoveApiKeyAsync(NormalizeProviderName(provider), ct);
     }
 
     public async Task<List<string>> GetConfiguredProvidersAsync(CancellationToken ct = default)
@@ -94,5 +100,20 @@ public class SettingsService : ISettingsService
                 Latency = stopwatch.Elapsed
             };
         }
+    }
+
+    private static string NormalizeProviderName(string provider)
+    {
+        if (string.IsNullOrWhiteSpace(provider))
+            return "openai";
+
+        return provider.Trim().ToLowerInvariant() switch
+        {
+            "moonshot" => "kimi",
+            "glm" => "zhipu",
+            "qwen" => "tongyi",
+            "stepfun ai" => "stepfun",
+            var value => value
+        };
     }
 }

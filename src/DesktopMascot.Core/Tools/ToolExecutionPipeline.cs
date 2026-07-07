@@ -60,7 +60,7 @@ public class ToolExecutionPipeline
         }
 
         // 3. 检查是否需要权限
-        var requiredPermission = tool.Definition.RequiredPermission;
+        var requiredPermission = ToolPermissionPolicy.ResolveRequiredPermission(tool);
         if (requiredPermission > PermissionLevel.L0_Chat)
         {
             // 发布工具调用开始事件
@@ -70,14 +70,14 @@ public class ToolExecutionPipeline
                 request.Arguments));
 
             // 请求权限确认
-            var permissionType = MapToPermissionType(requiredPermission);
+            var permissionType = ToolPermissionPolicy.ResolvePromptPermissionType(tool, requiredPermission);
             var permissionResponse = await _permissionService.RequestPermissionAsync(
                 taskId,
                 permissionType,
                 request.ToolName,
                 $"执行工具 {request.ToolName}",
                 request.Arguments,
-                MapToRiskLevel(requiredPermission),
+                ToolPermissionPolicy.ResolveRiskLevel(requiredPermission),
                 ct);
 
             // 检查权限决策

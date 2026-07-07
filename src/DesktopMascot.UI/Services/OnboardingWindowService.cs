@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using DesktopMascot.Core.Configuration;
+using DesktopMascot.Core.Services;
 using DesktopMascot.UI.ViewModels;
 using DesktopMascot.UI.Views;
 
@@ -11,14 +12,17 @@ public sealed class OnboardingWindowService : IOnboardingWindowService
 {
     private readonly IConfigurationManager _configurationManager;
     private readonly ISettingsDiagnosticsService _diagnosticsService;
+    private readonly ISettingsService? _settingsService;
     private OnboardingWindow? _window;
 
     public OnboardingWindowService(
         IConfigurationManager configurationManager,
-        ISettingsDiagnosticsService diagnosticsService)
+        ISettingsDiagnosticsService diagnosticsService,
+        ISettingsService? settingsService = null)
     {
         _configurationManager = configurationManager;
         _diagnosticsService = diagnosticsService;
+        _settingsService = settingsService;
     }
 
     public async Task ShowOnboardingWindowAsync(CancellationToken ct = default)
@@ -49,7 +53,7 @@ public sealed class OnboardingWindowService : IOnboardingWindowService
             return;
         }
 
-        var viewModel = new OnboardingWindowViewModel(_configurationManager, _diagnosticsService);
+        var viewModel = new OnboardingWindowViewModel(_configurationManager, _diagnosticsService, _settingsService);
         await viewModel.LoadAsync(ct);
 
         var window = new OnboardingWindow

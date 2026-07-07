@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\DesktopMascot.UI\DesktopMascot.UI.csproj" />
+    <ProjectReference Include="..\..\src\DesktopMascot.Agent\DesktopMascot.Agent.csproj" />
   </ItemGroup>
 
 </Project>

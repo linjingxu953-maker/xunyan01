@@ -12,8 +12,10 @@ using DesktopMascot.Core.Learning;
 using DesktopMascot.Core.Models;
 using DesktopMascot.Core.Security;
 using DesktopMascot.Core.Storage;
+using DesktopMascot.Core.Tools;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using AgentToolRegistry = DesktopMascot.Agent.Tools.ToolRegistry;
 
 namespace DesktopMascot.App.Services;
 
@@ -23,10 +25,13 @@ namespace DesktopMascot.App.Services;
 public sealed class ConfiguredAgentEngine : IAgentEngine
 {
     private readonly IConfigurationManager _configurationManager;
-    private readonly ToolRegistry _toolRegistry;
+    private readonly AgentToolRegistry _toolRegistry;
     private readonly ITaskEventBus _eventBus;
     private readonly ITaskEventStream _eventStream;
     private readonly ILogger<AgentOrchestrator> _logger;
+    private readonly ToolExecutionPipeline? _toolPipeline;
+    private readonly LlmProviderFactory? _providerFactory;
+    private readonly IApiKeyStore? _apiKeyStore;
     private readonly MemoryIntegrationService? _memoryService;
     private readonly ITaskHistoryStore? _historyStore;
     private readonly ConversationManager? _conversationManager;
@@ -39,10 +44,13 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
 
     public ConfiguredAgentEngine(
         IConfigurationManager configurationManager,
-        ToolRegistry toolRegistry,
+        AgentToolRegistry toolRegistry,
         ITaskEventBus eventBus,
         ITaskEventStream eventStream,
         ILogger<AgentOrchestrator> logger,
+        ToolExecutionPipeline? toolPipeline = null,
+        LlmProviderFactory? providerFactory = null,
+        IApiKeyStore? apiKeyStore = null,
         MemoryIntegrationService? memoryService = null,
         ITaskHistoryStore? historyStore = null,
         ConversationManager? conversationManager = null,
@@ -58,6 +66,9 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
         _eventBus = eventBus;
         _eventStream = eventStream;
         _logger = logger;
+        _toolPipeline = toolPipeline;
+        _providerFactory = providerFactory;
+        _apiKeyStore = apiKeyStore;
         _memoryService = memoryService;
         _historyStore = historyStore;
         _conversationManager = conversationManager;
@@ -72,25 +83,28 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
     public async Task<TaskResult> ExecuteAsync(AgentTask task, CancellationToken ct = default)
     {
         var settings = await _configurationManager.GetAppSettingsAsync(ct);
+        await MigrateInlineApiKeyAsync(settings, ct);
 
         if (settings.MimoCodeEnabled)
         {
-            var mimoAgent = new MiMoCodeAgent(BuildMimoCodeConfig(settings), _eventStream);
+            var mimoAgent = new MiMoCodeAgent(await BuildMimoCodeConfigAsync(settings, ct), _eventStream);
             return await mimoAgent.ExecuteAsync(task, ct);
         }
 
-        var provider = BuildProvider(settings);
-        var orchestrator = CreateOrchestrator(provider);
+        var provider = await BuildProviderAsync(settings, ct);
+        _toolRegistry.SetLlmProvider(provider);
+        var orchestrator = CreateOrchestrator(provider, settings.MemoryEnabled);
         return await orchestrator.ExecuteAsync(task, ct);
     }
 
     public async IAsyncEnumerable<string> ExecuteStreamingAsync(AgentTask task, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
         var settings = await _configurationManager.GetAppSettingsAsync(ct);
+        await MigrateInlineApiKeyAsync(settings, ct);
 
         if (settings.MimoCodeEnabled)
         {
-            var mimoAgent = new MiMoCodeAgent(BuildMimoCodeConfig(settings), _eventStream);
+            var mimoAgent = new MiMoCodeAgent(await BuildMimoCodeConfigAsync(settings, ct), _eventStream);
             await foreach (var chunk in mimoAgent.ExecuteStreamingAsync(task, ct))
             {
                 yield return chunk;
@@ -98,15 +112,16 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
             yield break;
         }
 
-        var provider = BuildProvider(settings);
-        var orchestrator = CreateOrchestrator(provider);
+        var provider = await BuildProviderAsync(settings, ct);
+        _toolRegistry.SetLlmProvider(provider);
+        var orchestrator = CreateOrchestrator(provider, settings.MemoryEnabled);
         await foreach (var chunk in orchestrator.ExecuteStreamingAsync(task, ct))
         {
             yield return chunk;
         }
     }
 
-    private AgentOrchestrator CreateOrchestrator(ILlmProvider provider)
+    private AgentOrchestrator CreateOrchestrator(ILlmProvider provider, bool memoryEnabled)
     {
         // 优先从 CharacterManager 获取当前角色人格
         var personality = _personality;
@@ -124,7 +139,9 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
             ToolRegistry = _toolRegistry,
             EventBus = _eventBus,
             Logger = _logger,
+            ToolPipeline = _toolPipeline,
             MemoryService = _memoryService,
+            MemoryEnabled = memoryEnabled,
             ComputerUseOrchestrator = computerUseOrchestrator,
             HistoryStore = _historyStore,
             ConversationManager = _conversationManager,
@@ -135,7 +152,7 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
         });
     }
 
-    private static ILlmProvider BuildProvider(AppSettings settings)
+    private async Task<ILlmProvider> BuildProviderAsync(AppSettings settings, CancellationToken ct)
     {
         var config = new LlmProviderConfig
         {
@@ -150,12 +167,26 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
             config.SetApiKey(settings.ApiKey.Trim());
         }
 
+        if (_providerFactory != null)
+        {
+            return await _providerFactory.CreateProviderAsync(config, ct);
+        }
+
         return new OpenAiCompatibleProvider(new HttpClient(), config);
     }
 
-    private static MiMoCodeConfig BuildMimoCodeConfig(AppSettings settings)
+    private async Task<MiMoCodeConfig> BuildMimoCodeConfigAsync(AppSettings settings, CancellationToken ct)
     {
         var useAppProvider = settings.MimoCodeModelConfigMode != "MimoLocalConfig";
+        var providerName = NormalizeProviderName(settings.ProviderName);
+        var apiKey = string.Empty;
+        if (useAppProvider)
+        {
+            apiKey = _apiKeyStore != null
+                ? await _apiKeyStore.GetApiKeyAsync(providerName, ct) ?? string.Empty
+                : settings.ApiKey.Trim();
+        }
+
         return new MiMoCodeConfig
         {
             ExecutablePath = string.IsNullOrWhiteSpace(settings.MimoCodeExecutablePath)
@@ -165,12 +196,22 @@ public sealed class ConfiguredAgentEngine : IAgentEngine
                 ? null
                 : settings.MimoCodeWorkspaceDirectory.Trim(),
             DefaultModel = useAppProvider ? BuildMimoModel(settings) : string.Empty,
-            ProviderName = useAppProvider ? NormalizeProviderName(settings.ProviderName) : string.Empty,
-            ApiKey = useAppProvider ? settings.ApiKey.Trim() : string.Empty,
+            ProviderName = useAppProvider ? providerName : string.Empty,
+            ApiKey = apiKey,
             ApiEndpoint = useAppProvider ? NormalizeBaseUrl(settings.ApiEndpoint) : string.Empty,
             ModelConfigMode = useAppProvider ? "AppProvider" : "MimoLocalConfig",
             PureMode = true
         };
+    }
+
+    private async Task MigrateInlineApiKeyAsync(AppSettings settings, CancellationToken ct)
+    {
+        if (_apiKeyStore == null || string.IsNullOrWhiteSpace(settings.ApiKey))
+            return;
+
+        await _apiKeyStore.SetApiKeyAsync(NormalizeProviderName(settings.ProviderName), settings.ApiKey.Trim(), ct);
+        settings.ApiKey = string.Empty;
+        await _configurationManager.SaveAppSettingsAsync(settings, ct);
     }
 
     private static string BuildMimoModel(AppSettings settings)

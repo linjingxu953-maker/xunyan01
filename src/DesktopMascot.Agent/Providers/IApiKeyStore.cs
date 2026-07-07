@@ -72,7 +72,14 @@ public class FileApiKeyStore : IApiKeyStore
     public Task<string?> GetApiKeyAsync(string provider, CancellationToken ct = default)
     {
         var keys = LoadKeys();
+        var originalProvider = provider;
+        provider = NormalizeProviderName(provider);
         if (keys.TryGetValue(provider, out var encryptedKey))
+        {
+            return Task.FromResult<string?>(CredentialProtector.Unprotect(encryptedKey));
+        }
+        if (!string.Equals(originalProvider, provider, StringComparison.OrdinalIgnoreCase)
+            && keys.TryGetValue(originalProvider, out encryptedKey))
         {
             return Task.FromResult<string?>(CredentialProtector.Unprotect(encryptedKey));
         }
@@ -82,6 +89,7 @@ public class FileApiKeyStore : IApiKeyStore
     public async Task SetApiKeyAsync(string provider, string apiKey, CancellationToken ct = default)
     {
         var keys = LoadKeys();
+        provider = NormalizeProviderName(provider);
         keys[provider] = CredentialProtector.Protect(apiKey);
         await SaveKeysAsync(keys);
     }
@@ -89,6 +97,7 @@ public class FileApiKeyStore : IApiKeyStore
     public async Task RemoveApiKeyAsync(string provider, CancellationToken ct = default)
     {
         var keys = LoadKeys();
+        provider = NormalizeProviderName(provider);
         if (keys.Remove(provider))
         {
             await SaveKeysAsync(keys);
@@ -98,6 +107,7 @@ public class FileApiKeyStore : IApiKeyStore
     public Task<bool> HasApiKeyAsync(string provider, CancellationToken ct = default)
     {
         var keys = LoadKeys();
+        provider = NormalizeProviderName(provider);
         return Task.FromResult(keys.ContainsKey(provider));
     }
 
@@ -105,5 +115,20 @@ public class FileApiKeyStore : IApiKeyStore
     {
         var keys = LoadKeys();
         return Task.FromResult(keys.Keys.ToList());
+    }
+
+    private static string NormalizeProviderName(string provider)
+    {
+        if (string.IsNullOrWhiteSpace(provider))
+            return "openai";
+
+        return provider.Trim().ToLowerInvariant() switch
+        {
+            "moonshot" => "kimi",
+            "glm" => "zhipu",
+            "qwen" => "tongyi",
+            "stepfun ai" => "stepfun",
+            var value => value
+        };
     }
 }

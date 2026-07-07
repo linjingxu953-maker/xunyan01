@@ -13,12 +13,17 @@ namespace DesktopMascot.Agent.Tools;
 public class ScreenUnderstandTool : ITool
 {
     private readonly IContextProvider _contextProvider;
-    private readonly ILlmProvider _llmProvider;
+    private readonly Func<ILlmProvider?> _llmProviderAccessor;
 
     public ScreenUnderstandTool(IContextProvider contextProvider, ILlmProvider llmProvider)
+        : this(contextProvider, () => llmProvider)
+    {
+    }
+
+    public ScreenUnderstandTool(IContextProvider contextProvider, Func<ILlmProvider?> llmProviderAccessor)
     {
         _contextProvider = contextProvider;
-        _llmProvider = llmProvider;
+        _llmProviderAccessor = llmProviderAccessor;
     }
 
     public string Name => "screen_understand";
@@ -120,7 +125,18 @@ public class ScreenUnderstandTool : ITool
                 }}
             };
 
-            var response = await _llmProvider.ChatAsync(messages, null, ct);
+            var llmProvider = _llmProviderAccessor();
+            if (llmProvider == null)
+            {
+                return new ToolResult
+                {
+                    Name = Name,
+                    Success = false,
+                    Error = "未配置可用的视觉 LLM Provider"
+                };
+            }
+
+            var response = await llmProvider.ChatAsync(messages, null, ct);
             if (!response.Success)
             {
                 return new ToolResult

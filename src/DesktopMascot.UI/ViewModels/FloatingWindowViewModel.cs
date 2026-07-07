@@ -14,6 +14,7 @@ using DesktopMascot.Core.Interfaces;
 using DesktopMascot.Core.Memory;
 using DesktopMascot.Core.Models;
 using DesktopMascot.Core.Security;
+using DesktopMascot.Core.Services;
 using DesktopMascot.Core.Storage;
 using DesktopMascot.UI.Services;
 
@@ -39,7 +40,8 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
         ITextToSpeechPreviewService? textToSpeechPreviewService = null,
         IAudioPlaybackService? audioPlaybackService = null,
         IVoiceInputService? voiceInputService = null,
-        IComputerUseControlService? computerUseControlService = null)
+        IComputerUseControlService? computerUseControlService = null,
+        ISettingsService? settingsService = null)
     {
         _taskRouter = taskRouter; _eventBus = eventBus; _eventStream = eventStream;
         _taskHistoryStore = taskHistoryStore;
@@ -55,7 +57,7 @@ public partial class FloatingWindowViewModel : ObservableObject, IDisposable
             onboardingWindowService, characterStore, characterImageService, characterAssetImportService,
             new CharacterAssetPickerService(() => _inlineSettingsOwner), hotkeyService,
             permissionManager, auditLogStore, memoryStore, taskHistoryStore, taskResultActionService,
-            _textToSpeechPreviewService, _audioPlaybackService);
+            _textToSpeechPreviewService, _audioPlaybackService, settingsService);
         InlineSettings.PropertyChanged += OnInlineSettingsPropertyChanged;
 
         _characterStore.ProfileChanged += OnCharacterProfileChanged;

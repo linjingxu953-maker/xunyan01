@@ -4,6 +4,7 @@ using Avalonia.Threading;
 using DesktopMascot.Core.Configuration;
 using DesktopMascot.Core.Memory;
 using DesktopMascot.Core.Security;
+using DesktopMascot.Core.Services;
 using DesktopMascot.Core.Storage;
 using DesktopMascot.UI.ViewModels;
 using DesktopMascot.UI.Views;
@@ -26,6 +27,7 @@ public sealed class SettingsWindowService : ISettingsWindowService
     private readonly ITaskResultActionService _taskResultActionService;
     private readonly ITextToSpeechPreviewService _textToSpeechPreviewService;
     private readonly IAudioPlaybackService _audioPlaybackService;
+    private readonly ISettingsService? _settingsService;
     private SettingsWindow? _window;
 
     public SettingsWindowService(
@@ -42,7 +44,8 @@ public sealed class SettingsWindowService : ISettingsWindowService
         ITaskHistoryStore taskHistoryStore,
         ITaskResultActionService taskResultActionService,
         ITextToSpeechPreviewService textToSpeechPreviewService,
-        IAudioPlaybackService audioPlaybackService)
+        IAudioPlaybackService audioPlaybackService,
+        ISettingsService? settingsService = null)
     {
         _configurationManager = configurationManager;
         _diagnosticsService = diagnosticsService;
@@ -58,6 +61,7 @@ public sealed class SettingsWindowService : ISettingsWindowService
         _taskResultActionService = taskResultActionService;
         _textToSpeechPreviewService = textToSpeechPreviewService;
         _audioPlaybackService = audioPlaybackService;
+        _settingsService = settingsService;
     }
 
     public void ShowSettingsWindow(string? sectionId = null)
@@ -92,7 +96,8 @@ public sealed class SettingsWindowService : ISettingsWindowService
             _taskHistoryStore,
             _taskResultActionService,
             _textToSpeechPreviewService,
-            _audioPlaybackService);
+            _audioPlaybackService,
+            _settingsService);
         _window = window;
         _window.DataContext = viewModel;
         SelectSection(viewModel, sectionId);

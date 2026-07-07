@@ -9,6 +9,7 @@ using DesktopMascot.Core.Configuration;
 using DesktopMascot.Core.Enums;
 using DesktopMascot.Core.Memory;
 using DesktopMascot.Core.Security;
+using DesktopMascot.Core.Services;
 using DesktopMascot.Core.Storage;
 using DesktopMascot.UI.Services;
 
@@ -68,6 +69,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
     private readonly ITaskResultActionService? _taskResultActionService;
     private readonly ITextToSpeechPreviewService _textToSpeechPreviewService;
     private readonly IAudioPlaybackService _audioPlaybackService;
+    private readonly ISettingsService? _settingsService;
     private bool _isApplyingProvider;
     private bool _isApplyingCharacterProfile;
     private bool _isRefreshingCharacterProfiles;
@@ -248,7 +250,8 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         ITaskHistoryStore? taskHistoryStore = null,
         ITaskResultActionService? taskResultActionService = null,
         ITextToSpeechPreviewService? textToSpeechPreviewService = null,
-        IAudioPlaybackService? audioPlaybackService = null)
+        IAudioPlaybackService? audioPlaybackService = null,
+        ISettingsService? settingsService = null)
     {
         _configurationManager = configurationManager;
         _diagnosticsService = diagnosticsService;
@@ -265,6 +268,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         _taskResultActionService = taskResultActionService;
         _textToSpeechPreviewService = textToSpeechPreviewService ?? new UnavailableTextToSpeechPreviewService();
         _audioPlaybackService = audioPlaybackService ?? new MciAudioPlaybackService();
+        _settingsService = settingsService;
 
         Sections =
         [
@@ -469,7 +473,8 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         try
         {
             _settings = await _configurationManager.GetAppSettingsAsync(ct);
-            ApiKey = _settings.ApiKey;
+            await MigrateLegacyApiKeyAsync(ct);
+            ApiKey = string.Empty;
             ApiEndpoint = _settings.ApiEndpoint;
             ModelName = _settings.ModelName;
             _isApplyingProvider = true;
@@ -483,6 +488,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             {
                 _isApplyingProvider = false;
             }
+            ApiKey = await LoadApiKeyForCurrentProviderAsync(ct);
             IsMimoCodeEnabled = _settings.MimoCodeEnabled;
             MimoCodeExecutablePath = _settings.MimoCodeExecutablePath;
             MimoCodeWorkspacePath = _settings.MimoCodeWorkspaceDirectory;
@@ -581,15 +587,21 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
 
         try
         {
+            var apiKey = ApiKey.Trim();
+            if (!string.IsNullOrWhiteSpace(apiKey) && _settingsService != null)
+            {
+                await _settingsService.SetApiKeyAsync(SelectedProvider.Name, apiKey);
+            }
+
             _settings.ProviderName = SelectedProvider.Name;
-            _settings.ApiKey = ApiKey.Trim();
+            _settings.ApiKey = string.Empty;
             _settings.ApiEndpoint = ApiEndpoint.Trim();
             _settings.ModelName = ModelName.Trim();
             _settings.TtsVoice = CleanText(TtsVoice, "默认女声", 32);
             _settings.SpeechRecognitionLanguage = CleanText(SpeechRecognitionLanguage, "zh-CN", 16);
             await _configurationManager.SaveAppSettingsAsync(_settings);
 
-            ModelSettingsStatus = string.IsNullOrWhiteSpace(_settings.ApiKey)
+            ModelSettingsStatus = string.IsNullOrWhiteSpace(apiKey)
                 ? "已保存模型配置，但 API Key 为空。"
                 : $"已保存 {_settings.ProviderName} / {_settings.ModelName}。";
             VoiceSettingsStatus = $"已保存语音配置：{_settings.TtsVoice} / {_settings.SpeechRecognitionLanguage}。";
@@ -2207,6 +2219,7 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
             return;
 
         ApplyProviderDefaults(overwriteExisting: true);
+        _ = LoadApiKeyForSelectedProviderAsync();
         ClearModelConnectionResult();
         ModelSettingsStatus = $"已切换到 {value.DisplayName}，并填入默认端点和模型。";
     }
@@ -2326,6 +2339,29 @@ public sealed partial class SettingsWindowViewModel : ObservableObject
         {
             _isApplyingProvider = false;
         }
+    }
+
+    private async Task LoadApiKeyForSelectedProviderAsync(CancellationToken ct = default)
+    {
+        ApiKey = await LoadApiKeyForCurrentProviderAsync(ct);
+    }
+
+    private async Task<string> LoadApiKeyForCurrentProviderAsync(CancellationToken ct = default)
+    {
+        if (_settingsService is null || SelectedProvider is null)
+            return string.Empty;
+
+        return await _settingsService.GetApiKeyAsync(SelectedProvider.Name, ct) ?? string.Empty;
+    }
+
+    private async Task MigrateLegacyApiKeyAsync(CancellationToken ct = default)
+    {
+        if (_settingsService is null || string.IsNullOrWhiteSpace(_settings.ApiKey))
+            return;
+
+        await _settingsService.SetApiKeyAsync(_settings.ProviderName, _settings.ApiKey.Trim(), ct);
+        _settings.ApiKey = string.Empty;
+        await _configurationManager.SaveAppSettingsAsync(_settings, ct);
     }
 
     private void SetModelConnectionResult(bool success, string title, string detail, string meta)

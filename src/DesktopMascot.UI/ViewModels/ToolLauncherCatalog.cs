@@ -37,7 +37,7 @@ public static class ToolLauncherCatalog
 
         new("ocr", "OCR 文字识别", "内容", "从图片或截图提取文字。", TaskType.ScreenUnderstand, "ocr", "提供图片或截图路径，并说明要提取哪些文字。", "L2 屏幕", ToolLauncherLaunchMode.ScreenSelection, "图片文字", "识别"),
         new("translate", "翻译", "内容", "翻译文本并保留语气、格式或术语。", TaskType.Chat, "translate", "提供待翻译内容和目标语言。", "L0 对话", "英文", "中文", "翻译"),
-        new("pdf", "PDF 处理", "内容", "提取、总结、拆分或合并 PDF 内容。", TaskType.InspectProject, "pdf", "说明 PDF 路径和处理目标。", "L3 文件读取", "PDF", "文档"),
+        new("pdf", "PDF 处理", "内容", "提取、总结、拆分或合并 PDF 内容。", TaskType.InspectProject, "pdf_tool", "说明 PDF 路径和处理目标。", "L3 文件读取", "PDF", "文档"),
         new("note_generator", "笔记生成", "内容", "从资料、网页或课堂内容生成结构化笔记。", TaskType.Chat, "note_generator", "提供资料来源和笔记格式要求。", "L0 对话", "笔记", "总结"),
         new("paper_writing", "论文写作", "内容", "生成论文提纲、段落、润色和引用整理。", TaskType.Chat, "paper_writing", "说明主题、字数、格式和引用要求。", "L0 对话", "论文", "写作"),
         new("course_assist", "课程作业", "内容", "处理大学生作业、网课资料和题目讲解。", TaskType.SolveProblem, "course_assist", "提供题目、课程材料或截图，并说明要解题还是整理。", "L0 对话", "作业", "题目", "网课"),
@@ -51,7 +51,7 @@ public static class ToolLauncherCatalog
         new("calendar", "日程管理", "个人", "创建、查看或整理日程计划。", TaskType.Chat, "calendar", "说明日程内容、时间和提醒要求。", "L0 对话", "日程", "计划"),
         new("email", "邮件草稿", "个人", "生成邮件、回复或整理邮件内容。", TaskType.Chat, "email", "提供收件场景和邮件目标。", "L0 对话", "邮件", "回复"),
         new("notification", "通知提醒", "个人", "创建本地通知、提醒或查看通知历史。", TaskType.Chat, "notification", "说明提醒内容和时间。", "L0 对话", "提醒", "toast"),
-        new("cloud_sync", "云同步", "个人", "同步文件到云端或检查同步计划。", TaskType.WriteFile, "cloud_storage_sync", "说明同步源、目标和冲突处理方式。", "L4 文件写入", "云盘", "同步"),
+        new("cloud_sync", "云同步", "个人", "同步文件到云端或检查同步计划。", TaskType.WriteFile, "cloud_sync", "说明同步源、目标和冲突处理方式。", "L4 文件写入", "云盘", "同步"),
         new("character_switch", "角色切换", "角色", "切换当前角色或应用角色包。", TaskType.Chat, "character_switch", "说明要切换的角色或导入的角色包。", "L0 对话", "角色", "人物"),
         new("character_market", "角色市场", "角色", "浏览、导入或管理角色市场条目。", TaskType.Chat, "character_market", "说明想找的角色风格或管理动作。", "L0 对话", "角色包", "市场")
     ];

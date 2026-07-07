@@ -96,6 +96,7 @@ public class FileConfigurationManager : IConfigurationManager
     public async Task SaveAppSettingsAsync(AppSettings settings, CancellationToken ct = default)
     {
         var filePath = GetFilePath(AppSettingsFile);
+        settings.ApiKey = string.Empty;
         await SaveJsonAsync(filePath, settings);
     }
 

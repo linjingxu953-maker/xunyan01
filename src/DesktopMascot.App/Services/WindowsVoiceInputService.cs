@@ -9,13 +9,15 @@ namespace DesktopMascot.App.Services;
 public sealed class WindowsVoiceInputService : IVoiceInputService
 {
     private readonly IConfigurationManager _configurationManager;
+    private readonly IApiKeyStore? _apiKeyStore;
     private readonly string _recordingDirectory;
     private string? _alias;
     private string? _recordingPath;
 
-    public WindowsVoiceInputService(IConfigurationManager configurationManager)
+    public WindowsVoiceInputService(IConfigurationManager configurationManager, IApiKeyStore? apiKeyStore = null)
     {
         _configurationManager = configurationManager;
+        _apiKeyStore = apiKeyStore;
         _recordingDirectory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "DesktopMascot",
@@ -78,7 +80,12 @@ public sealed class WindowsVoiceInputService : IVoiceInputService
         }
 
         var settings = await _configurationManager.GetAppSettingsAsync(ct);
-        if (string.IsNullOrWhiteSpace(settings.ApiKey))
+        var providerName = NormalizeProviderName(settings.ProviderName);
+        var apiKey = _apiKeyStore != null
+            ? await _apiKeyStore.GetApiKeyAsync(providerName, ct) ?? string.Empty
+            : settings.ApiKey;
+
+        if (string.IsNullOrWhiteSpace(apiKey))
         {
             return new VoiceInputRecognitionResult(
                 false,
@@ -88,7 +95,7 @@ public sealed class WindowsVoiceInputService : IVoiceInputService
                 "请先在设置中心配置 Provider/API Key 后再使用语音输入。");
         }
 
-        var provider = new WhisperSpeechProvider(settings.ApiKey.Trim(), NormalizeBaseUrl(settings.ApiEndpoint));
+        var provider = new WhisperSpeechProvider(apiKey.Trim(), NormalizeBaseUrl(settings.ApiEndpoint));
         var result = await provider.RecognizeFromFileAsync(recordingPath, NormalizeLanguage(language), ct);
         if (!result.Success || string.IsNullOrWhiteSpace(result.Text))
         {
@@ -126,6 +133,21 @@ public sealed class WindowsVoiceInputService : IVoiceInputService
 
     private static string NormalizeBaseUrl(string? baseUrl) =>
         string.IsNullOrWhiteSpace(baseUrl) ? "https://api.openai.com/v1" : baseUrl.Trim().TrimEnd('/');
+
+    private static string NormalizeProviderName(string providerName)
+    {
+        if (string.IsNullOrWhiteSpace(providerName))
+            return "openai";
+
+        return providerName.Trim().ToLowerInvariant() switch
+        {
+            "moonshot" => "kimi",
+            "glm" => "zhipu",
+            "qwen" => "tongyi",
+            "stepfun ai" => "stepfun",
+            var value => value
+        };
+    }
 
     private static VoiceInputStartResult Send(string command)
     {

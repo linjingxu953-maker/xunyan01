@@ -257,6 +257,6 @@ public class EditFileSearchFileTests
         registry.Register(new SearchFileTool(provider));
 
         Assert.True(registry.RequiresConfirmation("edit_file"));
-        Assert.False(registry.RequiresConfirmation("search_file"));
+        Assert.True(registry.RequiresConfirmation("search_file"));
     }
 }

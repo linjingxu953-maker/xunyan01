@@ -8,6 +8,7 @@ using DesktopMascot.Core.Interfaces;
 using DesktopMascot.Core.Learning;
 using DesktopMascot.Core.Security;
 using DesktopMascot.Core.Storage;
+using DesktopMascot.Core.Tools;
 using Microsoft.Extensions.Logging;
 
 namespace DesktopMascot.Agent.Engines;
@@ -21,7 +22,7 @@ public class AgentOrchestratorOptions
     public required ILlmProvider LlmProvider { get; init; }
 
     /// <summary>工具注册表（必选）</summary>
-    public required ToolRegistry ToolRegistry { get; init; }
+    public required DesktopMascot.Agent.Tools.ToolRegistry ToolRegistry { get; init; }
 
     /// <summary>任务事件总线（必选）</summary>
     public required ITaskEventBus EventBus { get; init; }
@@ -35,7 +36,9 @@ public class AgentOrchestratorOptions
     // ---- 可选依赖 ----
 
     public MemoryIntegrationService? MemoryService { get; init; }
+    public bool MemoryEnabled { get; init; } = true;
     public ComputerUseOrchestrator? ComputerUseOrchestrator { get; init; }
+    public ToolExecutionPipeline? ToolPipeline { get; init; }
     public ITaskHistoryStore? HistoryStore { get; init; }
     public ConversationManager? ConversationManager { get; init; }
     public LearningEngine? LearningEngine { get; init; }

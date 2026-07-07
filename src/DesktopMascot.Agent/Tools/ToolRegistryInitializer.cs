@@ -1,121 +1,96 @@
-using DesktopMascot.Core.Tools;
-using DesktopMascot.Core.Character;
 using DesktopMascot.Agent.Context;
 using DesktopMascot.Agent.Models;
 using DesktopMascot.Agent.Providers;
+using DesktopMascot.Core.Character;
 
 namespace DesktopMascot.Agent.Tools;
 
 /// <summary>
-/// 工具注册表初始化器 - 注册所有内置工具
+/// Registers all built-in tools exposed to the Agent and ToolLauncher.
 /// </summary>
 public static class ToolRegistryInitializer
 {
-    /// <summary>
-    /// 注册所有内置工具
-    /// </summary>
-    public static void RegisterBuiltInTools(ToolRegistry registry, IContextProvider contextProvider, ILlmProvider? llmProvider = null, ITextToSpeechProvider? ttsProvider = null, ICharacterManager? characterManager = null, Action<AgentPersonality>? onPersonalityChanged = null, ISpeechRecognitionProvider? speechProvider = null, ICharacterMarketStore? marketStore = null)
+    public static void RegisterBuiltInTools(
+        ToolRegistry registry,
+        IContextProvider contextProvider,
+        ILlmProvider? llmProvider = null,
+        ITextToSpeechProvider? ttsProvider = null,
+        ICharacterManager? characterManager = null,
+        Action<AgentPersonality>? onPersonalityChanged = null,
+        ISpeechRecognitionProvider? speechProvider = null,
+        ICharacterMarketStore? marketStore = null)
     {
         registry.SetContextProvider(contextProvider);
+        if (llmProvider != null)
+        {
+            registry.SetLlmProvider(llmProvider);
+        }
 
-        // 基础工具
         registry.Register(new GetCurrentTimeTool());
         registry.Register(new CalculatorTool());
 
-        // 上下文工具
         registry.Register(new GetActiveWindowTool(contextProvider));
         registry.Register(new ReadFileTool(contextProvider));
-
-        // 屏幕工具
         registry.Register(new ScreenCaptureTool(contextProvider));
         registry.Register(new BrowserContextTool(contextProvider));
         registry.Register(new ClipboardTool(contextProvider));
-
-        // 目录工具
         registry.Register(new ListDirectoryTool(contextProvider));
 
-        // 文件写入和命令执行工具（需权限确认）
         registry.Register(new WriteFileTool(contextProvider));
         registry.Register(new EditFileTool(contextProvider));
         registry.Register(new RunCommandTool());
-
-        // 文件搜索工具
         registry.Register(new SearchFileTool(contextProvider));
 
-        // 计算机控制工具（需权限确认）
         registry.Register(new ComputerUseTool());
+        registry.Register(new ScreenUnderstandTool(contextProvider, () => registry.GetLlmProvider() ?? llmProvider));
 
-        // 屏幕理解工具（需要 LLM）
-        if (llmProvider != null)
-        {
-            registry.Register(new ScreenUnderstandTool(contextProvider, llmProvider));
-        }
-
-        // 文件操作增强工具
+        registry.Register(new FileOrganizerTool());
+        registry.Register(new CompressionTool());
+        registry.Register(new TaskTemplateTool());
         registry.Register(new FileCompareTool());
         registry.Register(new BatchFileProcessorTool());
         registry.Register(new FileVersionTool());
 
-        // 浏览器自动化工具（需权限确认）
         registry.Register(new BrowserAutomationTool());
-
-        // 代码分析和安全工具
         registry.Register(new CodeAnalysisTool());
         registry.Register(new SecurityScanTool());
-
-        // 性能和并发工具
         registry.Register(new PerformanceAnalysisTool());
         registry.Register(new ConcurrencyControlTool());
 
-        // 网络和数据库工具
         registry.Register(new NetworkRequestTool());
         registry.Register(new DatabaseTool());
 
-        // 日历和邮件工具
+        RegisterCompositeTools(registry);
+
         registry.Register(new CalendarTool());
         registry.Register(new EmailTool());
-
-        // 通知工具
         registry.Register(new NotificationTool());
-
-        // 云存储同步（可选功能）
         registry.Register(new CloudStorageSyncTool());
-
-        // 文件加密工具（需权限确认）
         registry.Register(new FileEncryptionTool());
-
-        // 图像处理工具
         registry.Register(new ImageProcessingTool());
-
-        // 视频处理工具（需权限确认）
         registry.Register(new VideoProcessingTool());
         registry.Register(new ShortVideoMakerTool());
 
-        // 语音工具（需要 ITextToSpeechProvider）
         if (ttsProvider != null)
         {
             registry.Register(new TextToSpeechTool(ttsProvider));
         }
 
-        // 角色切换工具
         if (characterManager != null)
         {
             registry.Register(new CharacterSwitchTool(characterManager, onPersonalityChanged));
         }
 
-        // 语音识别工具
         if (speechProvider != null)
         {
             registry.Register(new SpeechRecognitionTool(speechProvider));
         }
 
-        // 角色市场工具
         if (marketStore != null && characterManager != null)
         {
             registry.Register(new CharacterMarketTool(marketStore, characterManager));
         }
 
-        // 网课辅助和考试模式工具（需要 screen_understand + computer_use + browser_context）
         var screenTool = registry.GetTool("screen_understand");
         var computerTool = registry.GetTool("computer_use");
         var browserTool = registry.GetTool("browser_context");
@@ -123,76 +98,101 @@ public static class ToolRegistryInitializer
         {
             registry.Register(new CourseAssistTool(screenTool, computerTool));
             if (browserTool != null)
+            {
                 registry.Register(new ExamModeTool(screenTool, computerTool, browserTool));
+            }
         }
 
-        // Goal 循环引擎
-        var goalEngine = new Core.Tools.GoalEngine();
+        var goalEngine = new DesktopMascot.Core.Tools.GoalEngine();
         registry.Register(new GoalTool(goalEngine));
     }
 
-    /// <summary>
-    /// 获取所有内置工具名称
-    /// </summary>
     public static List<string> GetBuiltInToolNames()
     {
         return new List<string>
         {
-            // 基础
             "get_current_time",
             "calculator",
-            // 上下文
             "get_active_window",
             "read_file",
-            // 屏幕
             "screen_capture",
             "browser_context",
             "clipboard",
             "screen_understand",
-            // 文件
             "list_directory",
             "write_file",
             "edit_file",
             "run_command",
             "search_file",
-            // 计算机控制
+            "file_organizer",
+            "compression",
+            "task_template",
             "computer_use",
-            // 文件操作增强
             "file_compare",
             "batch_file_processor",
             "file_version",
-            // 浏览器
             "browser_automation",
-            // 分析
             "code_analysis",
             "security_scan",
-            // 性能并发
             "performance_analysis",
             "concurrency_control",
-            // 网络数据库
             "network_request",
             "database",
-            // 日历邮件
+            "translate",
+            "ocr",
+            "pdf_tool",
+            "note_generator",
+            "paper_writing",
             "calendar",
             "email",
-            // 通知
             "notification",
-            // 云存储
             "cloud_sync",
-            // 加密
             "file_encryption",
-            // 图像视频
             "image_processing",
             "video_processing",
             "short_video_maker",
-            // 语音
             "text_to_speech",
             "speech_recognition",
-            // 角色
             "character_switch",
             "character_market",
-            // Goal 循环
+            "course_assist",
+            "exam_mode",
             "goal"
         };
+    }
+
+    private static void RegisterCompositeTools(ToolRegistry registry)
+    {
+        var screenUnderstand = registry.GetTool("screen_understand");
+        var networkRequest = registry.GetTool("network_request");
+        var clipboard = registry.GetTool("clipboard");
+        var browserContext = registry.GetTool("browser_context");
+
+        if (screenUnderstand != null)
+        {
+            registry.Register(new OcrTool(screenUnderstand));
+        }
+
+        var ocr = registry.GetTool("ocr");
+        if (ocr != null)
+        {
+            registry.Register(new PdfTool(ocr));
+        }
+
+        if (networkRequest != null && clipboard != null)
+        {
+            registry.Register(new TranslateTool(networkRequest, clipboard));
+        }
+
+        if (browserContext != null && screenUnderstand != null)
+        {
+            registry.Register(new NoteGeneratorTool(browserContext, screenUnderstand));
+        }
+
+        var noteGenerator = registry.GetTool("note_generator");
+        if (noteGenerator != null)
+        {
+            registry.Register(new PaperWritingTool(noteGenerator));
+        }
     }
 }

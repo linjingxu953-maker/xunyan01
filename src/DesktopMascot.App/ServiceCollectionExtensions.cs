@@ -145,15 +145,14 @@ public static class ServiceCollectionExtensions
         {
             var registry = new Agent.Tools.ToolRegistry();
             var contextProvider = sp.GetRequiredService<IContextProvider>();
-            var llmProvider = sp.GetRequiredService<ILlmProvider>();
             var ttsProvider = sp.GetService<ITextToSpeechProvider>();
             var characterManager = sp.GetService<ICharacterManager>();
             var speechProvider = sp.GetService<ISpeechRecognitionProvider>();
             var marketStore = sp.GetService<ICharacterMarketStore>();
-            ToolRegistryInitializer.RegisterBuiltInTools(registry, contextProvider, llmProvider, ttsProvider, characterManager, null, speechProvider, marketStore);
+            ToolRegistryInitializer.RegisterBuiltInTools(registry, contextProvider, null, ttsProvider, characterManager, null, speechProvider, marketStore);
             return registry;
         });
-        services.AddSingleton<ComputerUseOrchestrator>();
+        services.AddSingleton<Core.Tools.IToolRegistry>(sp => sp.GetRequiredService<Agent.Tools.ToolRegistry>());
         services.AddSingleton<IAgentEngine>(sp =>
         {
             var configManager = sp.GetRequiredService<IConfigurationManager>();
@@ -161,6 +160,9 @@ public static class ServiceCollectionExtensions
             var eventBus = sp.GetRequiredService<ITaskEventBus>();
             var eventStream = sp.GetRequiredService<ITaskEventStream>();
             var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<AgentOrchestrator>>();
+            var toolPipeline = sp.GetRequiredService<ToolExecutionPipeline>();
+            var providerFactory = sp.GetRequiredService<LlmProviderFactory>();
+            var apiKeyStore = sp.GetRequiredService<IApiKeyStore>();
             var memoryService = sp.GetService<MemoryIntegrationService>();
             var historyStore = sp.GetService<ITaskHistoryStore>();
             var convManager = sp.GetService<ConversationManager>();
@@ -172,6 +174,7 @@ public static class ServiceCollectionExtensions
 
             return new ConfiguredAgentEngine(
                 configManager, toolRegistry, eventBus, eventStream, logger,
+                toolPipeline, providerFactory, apiKeyStore,
                 memoryService, historyStore, convManager, learnEngine,
                 auditStore, errorHandler, characterManager: characterManager,
                 computerUseControlService: computerUseControlService);

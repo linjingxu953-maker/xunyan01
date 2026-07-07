@@ -1,4 +1,5 @@
 using DesktopMascot.Core.Enums;
+using DesktopMascot.Agent.Tools;
 using DesktopMascot.UI.ViewModels;
 
 namespace DesktopMascot.UI.Tests;
@@ -76,5 +77,23 @@ public sealed class ToolLauncherCatalogTests
         Assert.Equal(ToolLauncherFormKind.Content, items.First(item => item.Id == "translate").FormKind);
         Assert.Equal(ToolLauncherFormKind.Content, items.First(item => item.Id == "course_assist").FormKind);
         Assert.Equal(ToolLauncherFormKind.None, items.First(item => item.Id == "screen_understand").FormKind);
+    }
+
+    [Fact]
+    public void DefaultItems_ShouldReferenceRegisteredBuiltInToolNames()
+    {
+        var registeredToolNames = ToolRegistryInitializer
+            .GetBuiltInToolNames()
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var missing = ToolLauncherCatalog
+            .CreateDefaultItems()
+            .Select(item => item.ToolName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(toolName => !registeredToolNames.Contains(toolName))
+            .OrderBy(toolName => toolName)
+            .ToArray();
+
+        Assert.Empty(missing);
     }
 }

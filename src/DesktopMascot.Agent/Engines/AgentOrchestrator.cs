@@ -15,7 +15,9 @@ using DesktopMascot.Core.Models;
 using DesktopMascot.Core.Security;
 using DesktopMascot.Core.Storage;
 using DesktopMascot.Core.Summary;
+using DesktopMascot.Core.Tools;
 using Microsoft.Extensions.Logging;
+using AgentToolRegistry = DesktopMascot.Agent.Tools.ToolRegistry;
 
 namespace DesktopMascot.Agent.Engines;
 
@@ -25,11 +27,13 @@ namespace DesktopMascot.Agent.Engines;
 public class AgentOrchestrator : IAgentEngine
 {
     private readonly ILlmProvider _llmProvider;
-    private readonly ToolRegistry _toolRegistry;
+    private readonly AgentToolRegistry _toolRegistry;
     private readonly ITaskEventBus _eventBus;
     private readonly ILogger<AgentOrchestrator> _logger;
     private readonly MemoryIntegrationService? _memoryService;
+    private readonly bool _memoryEnabled;
     private readonly ComputerUseOrchestrator? _computerUseOrchestrator;
+    private readonly ToolExecutionPipeline? _toolPipeline;
     private readonly ITaskHistoryStore? _historyStore;
     private readonly IAuditLogStore? _auditLogStore;
     private readonly ErrorHandler? _errorHandler;
@@ -48,7 +52,9 @@ public class AgentOrchestrator : IAgentEngine
         _logger = options.Logger;
         _maxIterations = options.MaxIterations;
         _memoryService = options.MemoryService;
+        _memoryEnabled = options.MemoryEnabled;
         _computerUseOrchestrator = options.ComputerUseOrchestrator;
+        _toolPipeline = options.ToolPipeline;
         _historyStore = options.HistoryStore;
         _conversationManager = options.ConversationManager ?? new ConversationManager();
         _learningEngine = options.LearningEngine ?? new LearningEngine();
@@ -66,7 +72,7 @@ public class AgentOrchestrator : IAgentEngine
     /// <summary>便捷构造函数 — 仅必选依赖，供测试和简单场景使用</summary>
     public AgentOrchestrator(
         ILlmProvider llmProvider,
-        ToolRegistry toolRegistry,
+        AgentToolRegistry toolRegistry,
         ITaskEventBus eventBus,
         ILogger<AgentOrchestrator> logger,
         int maxIterations = 10)
@@ -100,7 +106,7 @@ public class AgentOrchestrator : IAgentEngine
         try
         {
             MemoryContext? memoryContext = null;
-            if (_memoryService != null)
+            if (_memoryEnabled && _memoryService != null)
             {
                 memoryContext = await _memoryService.SearchRelevantMemoriesAsync(task, ct);
             }
@@ -168,7 +174,7 @@ public class AgentOrchestrator : IAgentEngine
 
             await RecordTaskEndAsync(historyRecord, result, ct);
 
-            if (_memoryService != null && result.Success)
+            if (_memoryEnabled && _memoryService != null && result.Success)
             {
                 var proposals = await _memoryService.ProposeMemoriesAsync(task, result, ct);
                 if (proposals.Count > 0)
@@ -311,7 +317,7 @@ public class AgentOrchestrator : IAgentEngine
             Progress = 10
         });
 
-        var screenTool = _toolRegistry.GetTool("screen_understand") as ScreenUnderstandTool;
+        var screenTool = _toolRegistry.GetTool("screen_understand");
         if (screenTool == null)
         {
             return TaskResult.Failed(task.Id, "屏幕理解工具未注册");
@@ -327,7 +333,11 @@ public class AgentOrchestrator : IAgentEngine
             Progress = 40
         });
 
-        var toolResult = await screenTool.ExecuteAsync(arguments, ct);
+        var toolResult = await ExecuteToolCallAsync(task, new ToolCall
+        {
+            Name = "screen_understand",
+            Arguments = arguments
+        }, ct);
 
         if (!toolResult.Success)
         {
@@ -459,16 +469,7 @@ public class AgentOrchestrator : IAgentEngine
                     Progress = Math.Min(90, iteration * 10 + 5)
                 });
 
-                if (_toolRegistry.RequiresConfirmation(toolCall.Name))
-                {
-                    _eventBus.Publish(TaskEvent.PermissionRequested(
-                        task.Id,
-                        toolCall.Name,
-                        "tool_execution",
-                        _toolRegistry.GetConfirmationMessage(toolCall.Name)));
-                }
-
-                var toolResult = await _toolRegistry.ExecuteToolAsync(toolCall, ct);
+                var toolResult = await ExecuteToolCallAsync(task, toolCall, ct);
                 messages.Add(new LlmMessage
                 {
                     Role = "tool",
@@ -478,6 +479,43 @@ public class AgentOrchestrator : IAgentEngine
         }
 
         return TaskResult.Failed(task.Id, $"达到最大迭代次数 ({_maxIterations})");
+    }
+
+    private async Task<ToolResult> ExecuteToolCallAsync(AgentTask task, ToolCall toolCall, CancellationToken ct)
+    {
+        if (_toolPipeline != null)
+        {
+            var response = await _toolPipeline.ExecuteAsync(new ToolCallRequest
+            {
+                ToolName = toolCall.Name,
+                Arguments = toolCall.Arguments,
+                TaskId = task.Id,
+                RequestId = toolCall.Id
+            }, ct);
+
+            return new ToolResult
+            {
+                ToolCallId = response.RequestId,
+                Name = response.ToolName,
+                Success = response.Success,
+                Content = response.Result ?? string.Empty,
+                Error = response.Error
+            };
+        }
+
+        var tool = _toolRegistry.GetTool(toolCall.Name);
+        if (tool != null && ToolPermissionPolicy.ResolveRequiredPermission(tool) > PermissionLevel.L0_Chat)
+        {
+            return new ToolResult
+            {
+                ToolCallId = toolCall.Id,
+                Name = toolCall.Name,
+                Success = false,
+                Error = $"工具 {toolCall.Name} 需要权限管道，但当前 AgentOrchestrator 未配置 ToolExecutionPipeline。"
+            };
+        }
+
+        return await _toolRegistry.ExecuteToolAsync(toolCall, ct);
     }
 
     private static TaskType ResolveTaskType(AgentTask task)
@@ -754,7 +792,7 @@ public class AgentOrchestrator : IAgentEngine
         _logger.LogInformation("Agent 流式执行任务: {Title}", task.Title);
 
         MemoryContext? memoryContext = null;
-        if (_memoryService != null)
+        if (_memoryEnabled && _memoryService != null)
         {
             memoryContext = await _memoryService.SearchRelevantMemoriesAsync(task, ct);
         }
@@ -841,7 +879,7 @@ public class AgentOrchestrator : IAgentEngine
             Progress = 100
         });
 
-        if (_memoryService != null)
+        if (_memoryEnabled && _memoryService != null)
         {
             var result = new TaskResult
             {

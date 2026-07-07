@@ -6,6 +6,7 @@ using DesktopMascot.Agent.Tools;
 using DesktopMascot.Core.Enums;
 using DesktopMascot.Core.Interfaces;
 using DesktopMascot.Core.Models;
+using DesktopMascot.Core.Security;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -22,6 +23,35 @@ public class SummarizePageTests
         _mockLogger = new Mock<ILogger<AgentOrchestrator>>();
     }
 
+    private AgentOrchestrator CreateOrchestratorWithAllowingPipeline(ILlmProvider llmProvider, ToolRegistry registry)
+    {
+        return new AgentOrchestrator(new AgentOrchestratorOptions
+        {
+            LlmProvider = llmProvider,
+            ToolRegistry = registry,
+            EventBus = _mockEventBus.Object,
+            Logger = _mockLogger.Object,
+            ToolPipeline = new DesktopMascot.Core.Tools.ToolExecutionPipeline(
+                registry,
+                new PermissionConfirmationService(new PermissionManager(), new AllowingPermissionPrompt()))
+        });
+    }
+
+    private sealed class AllowingPermissionPrompt : IPermissionPrompt
+    {
+        public Task<PermissionPromptResponse> PromptAsync(PermissionPromptRequest request, CancellationToken ct = default)
+        {
+            return Task.FromResult(new PermissionPromptResponse
+            {
+                RequestId = request.RequestId,
+                Decision = PermissionDecision.AllowOnce
+            });
+        }
+
+        public bool HasPermission(PromptPermissionType type, string scope) => false;
+        public void RevokePermission(PromptPermissionType type, string scope) { }
+    }
+
     [Fact]
     public async Task ExecuteAsync_SummarizePage_ShouldCallLlmWithVisionMessage()
     {
@@ -36,8 +66,7 @@ public class SummarizePageTests
         var registry = new ToolRegistry();
         registry.SetContextProvider(mockContext);
 
-        var orchestrator = new AgentOrchestrator(
-            mockLlm.Object, registry, _mockEventBus.Object, _mockLogger.Object);
+        var orchestrator = CreateOrchestratorWithAllowingPipeline(mockLlm.Object, registry);
 
         var task = new AgentTask
         {
@@ -192,8 +221,7 @@ public class SummarizePageTests
         var registry = new ToolRegistry();
         registry.SetContextProvider(mockContext);
 
-        var orchestrator = new AgentOrchestrator(
-            mockLlm.Object, registry, _mockEventBus.Object, _mockLogger.Object);
+        var orchestrator = CreateOrchestratorWithAllowingPipeline(mockLlm.Object, registry);
 
         var task = new AgentTask
         {
@@ -355,8 +383,7 @@ public class SummarizePageTests
         registry.SetContextProvider(mockContext);
         registry.Register(new ScreenUnderstandTool(mockContext, mockLlm.Object));
 
-        var orchestrator = new AgentOrchestrator(
-            mockLlm.Object, registry, _mockEventBus.Object, _mockLogger.Object);
+        var orchestrator = CreateOrchestratorWithAllowingPipeline(mockLlm.Object, registry);
 
         var task = new AgentTask
         {
@@ -461,8 +488,7 @@ public class SummarizePageTests
         registry.SetContextProvider(mockContext);
         registry.Register(new ScreenUnderstandTool(mockContext, mockLlm.Object));
 
-        var orchestrator = new AgentOrchestrator(
-            mockLlm.Object, registry, _mockEventBus.Object, _mockLogger.Object);
+        var orchestrator = CreateOrchestratorWithAllowingPipeline(mockLlm.Object, registry);
 
         var task = new AgentTask
         {

@@ -22,6 +22,9 @@ Desktop.ini
 ## Logs
 *.log
 
+## Packaged artifacts
+artifacts/
+
 ## Local tooling
 .codegraph/daemon.pid
 .codegraph/cache/
@@ -44,3 +47,14 @@ assets/characters/**/*.doc
 ## Scripts (may contain API keys)
 scripts/*
 !scripts/run-full-tests-safe.ps1
+!scripts/package-internal-win-x64.ps1
+!scripts/package-internal-win-x64-exe.ps1
+
+## Sensitive config files (API keys stored in %AppData%)
+api_keys.json
+app_settings.json
+*.env
+.env*
+
+## User data that shouldn't be committed
+mimo/
