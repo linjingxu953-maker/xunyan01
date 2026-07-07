@@ -88,11 +88,7 @@ powershell -ExecutionPolicy Bypass -File scripts/run-full-tests-safe.ps1
 | 代码分析 | 静态分析、复杂度评估 |
 | 更多... | 通知、日历、缓存、工作流... |
 
-## 开发指南
 
-### 边界规则
-- **MiMo 负责**: Agent 层（工具、编排器）、Core 层（业务逻辑、测试）
-- **Codex 负责**: UI 层（Views、ViewModels、AXAML）
 
 ### 编码规范
 - PascalCase 类名，camelCase 字段，_前缀私有字段
