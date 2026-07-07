@@ -58,3 +58,11 @@ app_settings.json
 
 ## User data that shouldn't be committed
 mimo/
+
+## Internal docs and memory
+AGENTS.md
+docs/
+*.md !README.md !THIRD_PARTY_LICENSES.md
+extracted_conversation.md
+人物图片/
+promos/
