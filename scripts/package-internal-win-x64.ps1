@@ -242,7 +242,7 @@ if (Test-Path -LiteralPath $iconPath) {
 }
 $shortcut.Save()
 
-Write-Output "Installed DesktopMascot to: $InstallDir"
+Write-Output "Installed 寻研01 to: $InstallDir"
 Write-Output "Desktop shortcut created: $shortcutPath"
 Write-Output "No API Key is bundled. Configure Provider/API Key on first run."
 '@
@@ -305,7 +305,7 @@ if ($RemoveUserData) {
     Remove-SafeDirectory -Path (Join-Path $appData "DesktopAIMascot") -AllowedRoot $appData
 }
 
-Write-Output "DesktopMascot app files removed."
+Write-Output "寻研01 app files removed."
 if ($RemoveUserData) {
     Write-Output "User data removed."
 }
@@ -315,7 +315,7 @@ else {
 '@
 
 $readme = @'
-# DesktopMascot Internal Test Package
+# 寻研01 Internal Test Package
 
 ## Install
 

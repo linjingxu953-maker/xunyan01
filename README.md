@@ -1,4 +1,4 @@
-# DesktopMascot - 桌面AI交互小人
+# 寻研01
 
 基于 AI Agent 的桌面智能助理，拥有可视化角色外观，支持屏幕理解、多任务处理、记忆进化等能力。
 
@@ -30,7 +30,7 @@
 ## 项目结构
 
 ```
-DesktopMascot/
+寻研01/
 ├── src/
 │   ├── DesktopMascot.App/        # 主应用入口
 │   ├── DesktopMascot.Core/       # 核心业务逻辑

@@ -1,4 +1,4 @@
-# 桌面AI交互小人 - 项目记忆
+# 寻研01 - 项目记忆
 
 本文件为项目通用记忆，供所有 agent（MiMo、Claude、Codex 等）共享访问。
 
@@ -6,7 +6,7 @@
 
 ## 项目基本信息
 
-- **项目名称**：桌面AI交互小人（DesktopMascot）
+- **项目名称**：寻研01（DesktopMascot）
 - **项目位置**：`C:\Users\wgmo\Desktop\桌面交互ai小人`
 - **技术栈**：C# / Avalonia UI 12.x + .NET 8
 - **平台**：Windows 10/11

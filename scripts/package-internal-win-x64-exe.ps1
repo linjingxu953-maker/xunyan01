@@ -99,7 +99,7 @@ $projectXml = @"
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-    <AssemblyName>$baseName-Setup</AssemblyName>
+    <AssemblyName>寻研01-Setup</AssemblyName>
     <DebugType>None</DebugType>
     <DebugSymbols>false</DebugSymbols>
 $applicationIconLine
@@ -122,7 +122,7 @@ internal static class Program
         try
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
-            Console.WriteLine("DesktopMascot internal-test setup");
+            Console.WriteLine("寻研01 internal-test setup");
 
             var resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("payload.zip");
             if (resourceStream is null)
@@ -174,12 +174,12 @@ internal static class Program
                 throw new InvalidOperationException("install.ps1 failed with exit code " + process.ExitCode + ".");
             }
 
-            Console.WriteLine("DesktopMascot setup finished.");
+            Console.WriteLine("寻研01 setup finished.");
             return 0;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine("DesktopMascot setup failed:");
+            Console.Error.WriteLine("寻研01 setup failed:");
             Console.Error.WriteLine(ex);
             if (!Console.IsInputRedirected)
             {
